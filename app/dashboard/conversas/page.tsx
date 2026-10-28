@@ -164,7 +164,7 @@ const playNotificationSound = () => {
 const QUICK_EMOJIS = ['👍', '✅', '🚀', '❤️', '😂', '🙏', '🔥', '👀', '⚠️', '🎉'];
 
 export default function ConversasPage() {
-  const { theme, changeTheme } = useTheme(); // 🚀 Consome o tema global
+  const { theme, changeTheme } = useTheme();
 
   const themes = [
     { id: 'light', name: 'Claro', color: '#f5f5f7', border: '#d2d2d7' },
@@ -290,7 +290,6 @@ export default function ConversasPage() {
     return teamMembers.find(m => m.user_id === peerInfo.user_id) || null;
   }, [activeChat, currentUser, teamMembers]);
 
-  // 1. CARREGAMENTO INICIAL DOS DADOS & CRIAÇÃO/SINCRONIA DO GRUPO GERAL
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -301,6 +300,11 @@ export default function ConversasPage() {
         if (session?.user) {
           const { data } = await supabase.from('doodoo_perfis').select('*').eq('user_id', session.user.id).maybeSingle();
           perfilAtual = data;
+          
+          await supabase
+            .from('doodoo_perfis')
+            .update({ status_presenca: 'online', last_seen: new Date().toISOString() })
+            .eq('user_id', session.user.id);
         }
 
         if (!perfilAtual) {
@@ -324,7 +328,6 @@ export default function ConversasPage() {
           
           let rawChannels = canaisRes.data || [];
 
-          // 🚀 INTELIGÊNCIA DO GRUPO GERAL: Admin cria ou sincroniza todos automaticamente
           if (perfilAtual.cargo === 'administrador') {
             const allMappedMembers = membersList.map(m => ({
               user_id: m.user_id,
@@ -336,7 +339,6 @@ export default function ConversasPage() {
             let geralDbChannel = rawChannels.find(c => c.nome === 'Geral' && c.is_group);
 
             if (!geralDbChannel) {
-              // Cria se não existir
               const { data: newGeral } = await supabase.from('doodoo_canais').insert([{
                 nome: 'Geral',
                 is_group: true,
@@ -348,14 +350,12 @@ export default function ConversasPage() {
                 rawChannels = [newGeral, ...rawChannels];
               }
             } else {
-              // Sincroniza se faltar alguém novo
               const currentMemberIds = Array.isArray(geralDbChannel.membros) ? geralDbChannel.membros.map((m: any) => m.user_id) : [];
               const missingMembers = allMappedMembers.filter(m => !currentMemberIds.includes(m.user_id));
               
               if (missingMembers.length > 0) {
                 const updatedMembers = [...(geralDbChannel.membros || []), ...missingMembers];
                 await supabase.from('doodoo_canais').update({ membros: updatedMembers }).eq('id', geralDbChannel.id);
-                // Atualiza localmente para esta sessão
                 geralDbChannel.membros = updatedMembers;
               }
             }
@@ -392,17 +392,14 @@ export default function ConversasPage() {
             };
           });
 
-          // 🚀 FILTRO DE PRIVACIDADE: O utilizador TEM que estar na lista de membros
           const canaisValidos = myChannels.filter(c => {
             const souMembro = c.members.some(m => m.user_id === perfilAtual?.user_id);
-            if (!souMembro) return false; // Se não estou no canal, escondo!
+            if (!souMembro) return false; 
             
-            // Se for grupo, exibe sempre. Se for direto, só exibe se já tiver histórico
             if (c.isGroup) return true;
             return recentMsgs.some(m => m.canal_id === c.id);
           });
           
-          // Ordena garantindo que o "Geral" fica sempre no topo
           canaisValidos.sort((a, b) => {
             if (a.name === 'Geral') return -1;
             if (b.name === 'Geral') return 1;
@@ -498,17 +495,19 @@ export default function ConversasPage() {
     if (activeChat) setGroupPhotoUrl(activeChat.foto_url || '');
   }, [activeChat?.id, activeChat?.foto_url]);
 
-  // 3. WEBSOCKET GLOBAL BLINDADO (Tempo real sem precisar de F5)
+  // =======================================================================
+  // 🚀 WEBSOCKET GLOBAL BLINDADO (7 OUVINTES - TEMPO REAL ABSOLUTO SEM F5)
+  // =======================================================================
   useEffect(() => {
     if (!currentUser) return;
 
     const globalSub = supabase
-      .channel('doodoo_whatsapp_realtime_v2')
+      .channel('doodoo_whatsapp_realtime_v3')
+      // 1. Escuta Novas Mensagens
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doodoo_mensagens' }, (payload) => {
         const incoming = mapDbToMessage(payload.new);
         const currentActiveId = activeChatIdRef.current;
 
-        // Atualiza a lista lateral de conversas imediatamente
         setChannels(prev => prev.map(c => {
           if (c.id === incoming.canal_id) {
             const isCurrentlyOpen = c.id === currentActiveId;
@@ -523,11 +522,9 @@ export default function ConversasPage() {
           return c;
         }));
 
-        // Se o utilizador estiver com este chat aberto na tela, insere a mensagem na hora
         if (incoming.canal_id === currentActiveId) {
           setActiveMessages(prev => {
             if (prev.some(m => m.id === incoming.id)) return prev;
-            // Substitui a mensagem temporária (optimistic) pela real vinda do banco
             const tempIndex = prev.findIndex(m => m.status === 'sending' && m.text === incoming.text && m.sender_id === incoming.sender_id);
             if (tempIndex !== -1) {
               const clone = [...prev];
@@ -536,21 +533,87 @@ export default function ConversasPage() {
             }
             return [...prev, incoming];
           });
-
-          if (incoming.sender_id !== currentUser.user_id) {
-            playNotificationSound();
-          }
+          if (incoming.sender_id !== currentUser.user_id) playNotificationSound();
           scrollToBottom('smooth');
         } else if (incoming.sender_id !== currentUser.user_id) {
           playNotificationSound();
           notifyBell('Nova Mensagem', `${incoming.sender}: ${incoming.text}`);
         }
       })
+      // 2. Escuta Atualizações (ex: Visto / Lido por)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'doodoo_mensagens' }, (payload) => {
+        const updated = mapDbToMessage(payload.new);
+        if (updated.canal_id === activeChatIdRef.current) setActiveMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
+      })
+      // 3. Escuta Exclusão de Mensagens (Apaga para todos IMEDIATAMENTE)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'doodoo_mensagens' }, (payload) => {
+        const deletedId = payload.old?.id || (payload.old as any)?.old_record?.id;
+        if (deletedId) {
+          setActiveMessages(prev => prev.filter(m => m.id !== deletedId));
+        }
+      })
+      // 4. Escuta Mudança de Status Online/Offline de qualquer colega
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'doodoo_perfis' }, (payload) => {
+        const updatedProfile = payload.new as DBProfile;
+        setTeamMembers(prev => prev.map(m => m.user_id === updatedProfile.user_id ? { ...m, ...updatedProfile } : m));
+      })
+      // 5. Escuta Novos Grupos sendo criados
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doodoo_canais' }, (payload) => {
+        const newChannel = payload.new;
+        if (Array.isArray(newChannel.membros) && newChannel.membros.some((m: any) => m.user_id === currentUser.user_id)) {
+          setChannels(prev => {
+            if (prev.some(c => c.id === newChannel.id)) return prev;
+            
+            const peer = newChannel.is_direct ? newChannel.membros.find((m: any) => m.user_id !== currentUser.user_id) : null;
+            const cleanName = peer ? peer.name : (newChannel.nome || 'Canal').replace(/^Chat:\s*/i, '');
+            
+            const mapped: ChatChannel = {
+              id: newChannel.id,
+              name: cleanName,
+              isGroup: newChannel.is_group,
+              isDirect: newChannel.is_direct,
+              sector: newChannel.setor,
+              foto_url: newChannel.foto_url,
+              unread: 1,
+              members: newChannel.membros,
+              lastMessage: 'Conversa iniciada',
+              lastMessageTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+              updatedAt: newChannel.created_at
+            };
+            
+            const result = [mapped, ...prev];
+            return result.sort((a, b) => {
+              if (a.name === 'Geral') return -1;
+              if (b.name === 'Geral') return 1;
+              return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+            });
+          });
+        }
+      })
+      // 6. Escuta Alteração de Dados do Grupo (ex: nova foto)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'doodoo_canais' }, (payload) => {
+        const updated = payload.new;
+        setChannels(prev => prev.map(c => c.id === updated.id ? { 
+          ...c, 
+          foto_url: updated.foto_url, 
+          members: updated.membros, 
+          name: c.isDirect ? c.name : updated.nome 
+        } : c));
+      })
+      // 7. Escuta Conversas ou Grupos Sendo Excluídos
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'doodoo_canais' }, (payload) => {
+        const deletedId = payload.old?.id || (payload.old as any)?.old_record?.id;
+        if (deletedId) {
+          setChannels(prev => prev.filter(c => c.id !== deletedId));
+          if (activeChatIdRef.current === deletedId) {
+            setActiveChatId(null);
+            setIsInfoDrawerOpen(false);
+          }
+        }
+      })
       .subscribe();
 
-    return () => { 
-      supabase.removeChannel(globalSub); 
-    };
+    return () => { supabase.removeChannel(globalSub); };
   }, [currentUser, scrollToBottom]);
 
   const notifyBell = (title: string, desc: string) => {
@@ -882,7 +945,6 @@ export default function ConversasPage() {
   const filteredChannels = useMemo(() => {
     const list = !searchQuery.trim() ? channels : channels.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
     return [...list].sort((a, b) => {
-       // O Canal Geral fica sempre fixo no topo
        if (a.name === 'Geral') return -1;
        if (b.name === 'Geral') return 1;
        return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
@@ -1482,7 +1544,6 @@ export default function ConversasPage() {
                           </div>
 
                           <div className="flex items-center space-x-2">
-                          {/* 🚀 REMOVIDO O BLOQUEIO: Agora o Admin pode promover qualquer um, inclusive no Geral */}
                           {isCurrentAdmin && member.user_id !== currentUser.user_id && (
                             <button 
                               onClick={() => toggleAdminMember(member.user_id)}
@@ -1492,7 +1553,6 @@ export default function ConversasPage() {
                             </button>
                           )}
 
-                          {/* A Lixeira continua bloqueada no Geral por segurança */}
                           {isCurrentAdmin && member.user_id !== currentUser.user_id && activeChat.name !== 'Geral' && (
                             <button 
                               onClick={() => handleRemoveMemberFromGroup(member.user_id, member.name)}
