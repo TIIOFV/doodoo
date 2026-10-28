@@ -73,8 +73,8 @@ export default function AgendaPage() {
   
   const [viewMode, setViewMode] = useState<'dia' | 'semana'>('semana');
 
-  // Inicialização segura da data para o cliente
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  // Data estática de referência fixa para passar pelo prerender estático da Vercel
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date('2026-01-01T00:00:00'));
 
   useEffect(() => {
     setIsMounted(true);
