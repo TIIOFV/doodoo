@@ -126,7 +126,8 @@ export default function TarefasPage() {
   const [authError, setAuthError] = useState(false);
 
   const [smartList, setSmartList] = useState<'meu-dia' | 'todas' | 'importante' | 'rotinas' | 'concluidas'>('meu-dia');
-  const [selectedPersonFilter, setSelectedPersonFilter] = useState<string>('minha_fila');
+  const [viewMode, setViewMode] = useState<'minha' | 'delegadas'>('minha');
+  const [delegatedFilterPerson, setDelegatedFilterPerson] = useState<string>('todos'); // 🚀 Filtro individual na aba delegadas
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
@@ -250,57 +251,42 @@ export default function TarefasPage() {
       )
       .subscribe();
 
-    const syncInterval = setInterval(async () => {
-      const { data } = await supabase.from('doodoo_tarefas').select('*').eq('setor', currentUser.setor).order('created_at', { ascending: false });
-      if (data) {
-        const mapped = data.map(mapDbToTask);
-        setTasks(prev => {
-          const pendingTemp = prev.filter(t => t.id.startsWith('temp-'));
-          if (pendingTemp.length === 0 && JSON.stringify(prev) === JSON.stringify(mapped)) return prev;
-          return [...pendingTemp, ...mapped];
-        });
-      }
-    }, 6000);
-
-    return () => { supabase.removeChannel(taskSubscription); clearInterval(syncInterval); };
+    return () => { supabase.removeChannel(taskSubscription); };
   }, [currentUser, notifyBell]);
 
   const allowedAssignees = useMemo(() => {
     if (!currentUser) return [];
-    let visibleUsers: DBProfile[] = [];
-    
-    switch (currentUser.cargo) {
-      case 'administrador': 
-      case 'gestor': 
-      case 'coordenador': 
-        visibleUsers = teamMembers; 
-        break;
-      case 'supervisor': 
-      case 'analista': 
-      case 'colaborador':
-        visibleUsers = teamMembers.filter(u => ['administrador', 'gestor', 'coordenador'].includes(u.cargo) || u.id === currentUser.id); 
-        break;
-      default: 
-        visibleUsers = teamMembers.filter(u => u.id === currentUser.id);
-    }
+    const isManager = ['administrador', 'gestor', 'coordenador'].includes(currentUser.cargo);
 
-    return visibleUsers.map(u => {
-      let label = u.nome;
-      if (u.id === currentUser.id) label = `${u.nome} (Minha Fila)`;
-      else if (['administrador', 'gestor', 'coordenador'].includes(u.cargo)) label = `${u.nome} (Gestão)`;
-      else { const cargoFormatado = u.cargo.charAt(0).toUpperCase() + u.cargo.slice(1); label = `${u.nome} (${cargoFormatado})`; }
-      return { label, value: u.nome };
-    });
+    if (isManager) {
+      return teamMembers.map(u => ({
+        label: u.id === currentUser.id ? `${u.nome} (Minha Fila)` : `${u.nome} (${u.cargo})`,
+        value: u.nome
+      }));
+    } else {
+      return teamMembers
+        .filter(u => u.id === currentUser.id || ['administrador', 'gestor', 'coordenador'].includes(u.cargo))
+        .map(u => ({
+          label: u.id === currentUser.id ? `${u.nome} (Para mim)` : `${u.nome} (Gestão / Escalar)`,
+          value: u.nome
+        }));
+    }
   }, [currentUser, teamMembers]);
 
-  const auditDropdownOptions = useMemo(() => {
+  // Contagem de tarefas delegadas por você
+  const delegatedCount = useMemo(() => {
+    if (!currentUser) return 0;
+    return tasks.filter(t => t.assignedBy === currentUser.nome && t.assignee !== currentUser.nome && t.status !== 'concluida').length;
+  }, [tasks, currentUser]);
+
+  // Lista de pessoas para quem você delegou tarefas (para o filtro individual)
+  const delegatedPeopleList = useMemo(() => {
     if (!currentUser) return [];
-    let options = teamMembers.filter(m => m.nome !== currentUser.nome);
-    if (!['administrador', 'gestor', 'coordenador'].includes(currentUser.cargo)) {
-        options = options.filter(m => ['administrador', 'gestor', 'coordenador'].includes(m.cargo));
-    }
-    return options;
-  }, [teamMembers, currentUser]);
+    const names = tasks
+      .filter(t => t.assignedBy === currentUser.nome && t.assignee !== currentUser.nome)
+      .map(t => t.assignee);
+    return Array.from(new Set(names));
+  }, [tasks, currentUser]);
 
   const visibleTasks = useMemo(() => {
     if (!currentUser) return [];
@@ -308,23 +294,21 @@ export default function TarefasPage() {
     return tasks.filter(task => {
       if (task.sector !== currentUser.setor) return false;
       
-      if (selectedPersonFilter === 'minha_fila') {
+      if (viewMode === 'minha') {
         if (task.assignee !== currentUser.nome) return false;
       } else {
-        if (task.assignee !== selectedPersonFilter) return false;
-        const requestedByMe = task.assignedBy === currentUser.nome;
-        const isAdmin = currentUser.cargo === 'administrador';
-        
-        if (!requestedByMe && !isAdmin) return false;
+        if (task.assignedBy !== currentUser.nome || task.assignee === currentUser.nome) return false;
+        // 🚀 Aplicação do filtro individual por pessoa na aba delegadas
+        if (delegatedFilterPerson !== 'todos' && task.assignee !== delegatedFilterPerson) return false;
       }
       
       if (searchQuery.trim() !== '') {
         const q = searchQuery.toLowerCase();
-        return ( task.title.toLowerCase().includes(q) || task.description.toLowerCase().includes(q) || task.category.toLowerCase().includes(q) || task.assignee.toLowerCase().includes(q) );
+        return (task.title.toLowerCase().includes(q) || task.description.toLowerCase().includes(q) || task.category.toLowerCase().includes(q) || task.assignee.toLowerCase().includes(q));
       }
       return true;
     });
-  }, [tasks, currentUser, selectedPersonFilter, searchQuery]);
+  }, [tasks, currentUser, viewMode, delegatedFilterPerson, searchQuery]);
 
   const filteredTasks = useMemo(() => {
     return visibleTasks.filter(t => {
@@ -339,7 +323,6 @@ export default function TarefasPage() {
 
   const selectedTask = useMemo(() => tasks.find(t => t.id === selectedTaskId) || null, [tasks, selectedTaskId]);
   const isManagerView = ['administrador', 'gestor', 'coordenador'].includes(currentUser?.cargo || '');
-  
   const canEditTask = selectedTask && currentUser && (selectedTask.assignedBy === currentUser.nome || isManagerView);
 
   useEffect(() => {
@@ -410,11 +393,7 @@ export default function TarefasPage() {
     setTasks(prev => prev.map(t => t.id === selectedTask.id ? { ...t, title: finalTitle, description: finalDesc } : t));
     setIsEditingTask(false);
 
-    await supabase.from('doodoo_tarefas').update({ 
-      titulo: finalTitle, 
-      descricao: finalDesc 
-    }).eq('id', selectedTask.id);
-    
+    await supabase.from('doodoo_tarefas').update({ titulo: finalTitle, descricao: finalDesc }).eq('id', selectedTask.id);
     notifyBell('Tarefa Atualizada', 'Título e descrição salvos com sucesso.');
   };
 
@@ -533,7 +512,7 @@ export default function TarefasPage() {
       
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 rounded-[2.5rem] border overflow-hidden shadow-2xl backdrop-blur-xl" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
         
-        {/* COLUNA 1: MENU DE LISTAS */}
+        {/* COLUNA 1: MENU DE LISTAS E ALTERNÂNCIA COM CONTADOR */}
         <div className="lg:col-span-3 border-r p-5 flex flex-col justify-between" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
           <div className="space-y-4">
             <div className="space-y-3 pb-4 border-b" style={{ borderColor: 'var(--border-input)' }}>
@@ -555,6 +534,19 @@ export default function TarefasPage() {
                 <div className="w-7 h-7 rounded-lg bg-brand-panel text-white font-extrabold flex items-center justify-center text-[10px] flex-shrink-0">{getInitials(currentUser.nome)}</div>
                 <div className="flex flex-col overflow-hidden"><span className="truncate w-full text-xs font-extrabold leading-tight">{currentUser.nome}</span><span className="text-[9px] font-bold opacity-50 uppercase tracking-wider">{currentUser.cargo}</span></div>
               </div>
+            </div>
+
+            {/* 🚀 ALTERNÂNCIA COM CONTADOR NO BOTÃO "O QUE DELEGUEI" */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
+              <button onClick={() => { setViewMode('minha'); setSelectedTaskId(null); }} className={`py-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${viewMode === 'minha' ? 'bg-brand-panel text-white shadow-xs' : 'opacity-60 hover:opacity-100'}`}>Minha Fila</button>
+              <button onClick={() => { setViewMode('delegadas'); setSelectedTaskId(null); }} className={`py-2 px-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${viewMode === 'delegadas' ? 'bg-brand-panel text-white shadow-xs' : 'opacity-60 hover:opacity-100'}`}>
+                <span>Delegadas</span>
+                {delegatedCount > 0 && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${viewMode === 'delegadas' ? 'bg-white/20 text-white' : 'bg-brand-panel/10 text-brand-panel'}`}>
+                    {delegatedCount}
+                  </span>
+                )}
+              </button>
             </div>
 
             <div className="space-y-1.5">
@@ -582,17 +574,8 @@ export default function TarefasPage() {
             </div>
           </div>
 
-          <div className="pt-3 border-t space-y-1.5" style={{ borderColor: 'var(--border-input)' }}>
-            <label className="text-[10px] font-bold uppercase tracking-wider opacity-50 block px-1">Auditar Filas de Trabalho</label>
-            <select 
-              value={selectedPersonFilter} 
-              onChange={(e) => { setSelectedPersonFilter(e.target.value); setSelectedTaskId(null); }} 
-              className="w-full p-2.5 rounded-xl border text-xs font-bold outline-none cursor-pointer focus:border-blue-500 transition-colors" 
-              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
-            >
-              <option value="minha_fila">Minha Fila (Para mim)</option>
-              {auditDropdownOptions.map(m => ( <option key={m.user_id} value={m.nome}>{m.nome} ({m.cargo})</option> ))}
-            </select>
+          <div className="pt-3 border-t text-center text-[10px] opacity-40 font-bold uppercase tracking-wider" style={{ borderColor: 'var(--border-input)' }}>
+            {viewMode === 'minha' ? 'Exibindo Fila Pessoal' : 'Exibindo Tarefas Delegadas'}
           </div>
         </div>
 
@@ -603,7 +586,21 @@ export default function TarefasPage() {
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40" />
               <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Pesquisar tarefas..." className="w-full pl-9 pr-4 py-2 rounded-xl border text-xs font-medium outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
             </div>
-            <button onClick={openCreateModal} className="px-4 py-2 rounded-xl bg-brand-panel text-white text-xs font-extrabold shadow-sm hover:opacity-95 flex items-center space-x-1.5 flex-shrink-0">
+
+            {/* 🚀 FILTRO INDIVIDUAL POR PESSOA NA ABA DELEGADAS */}
+            {viewMode === 'delegadas' && delegatedPeopleList.length > 0 && (
+              <select 
+                value={delegatedFilterPerson} 
+                onChange={(e) => setDelegatedFilterPerson(e.target.value)} 
+                className="px-3 py-2 rounded-xl border text-xs font-bold outline-none cursor-pointer focus:border-blue-500" 
+                style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
+              >
+                <option value="todos">Todas as Pessoas</option>
+                {delegatedPeopleList.map(name => <option key={name} value={name}>{name}</option>)}
+              </select>
+            )}
+
+            <button onClick={openCreateModal} className="px-4 py-2 rounded-xl bg-brand-panel text-white text-xs font-extrabold shadow-sm hover:opacity-95 flex items-center space-x-1.5 flex-shrink-0 cursor-pointer">
               <Plus className="w-4 h-4" /><span>Nova Tarefa</span>
             </button>
           </div>
@@ -628,7 +625,7 @@ export default function TarefasPage() {
                         <p className={`text-xs font-extrabold leading-snug truncate ${isDone ? 'line-through opacity-45' : ''}`}>{task.title}</p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] opacity-60 font-medium">
-                        <span className="font-extrabold text-blue-500">{task.assignee === currentUser.nome ? 'Minha Fila' : task.assignee}</span>
+                        <span className="font-extrabold text-blue-500">{viewMode === 'delegadas' ? `Para: ${task.assignee}` : `Criado por: ${task.assignedBy}`}</span>
                         <span>•</span>
                         <span className="px-1.5 flex items-center" style={{ color: catColor }}><div className="w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: catColor }}></div>{task.category}</span>
                         <span>•</span>
@@ -643,7 +640,7 @@ export default function TarefasPage() {
                 </div>
               );
             })}
-            {filteredTasks.length === 0 && <div className="h-60 flex flex-col items-center justify-center text-center opacity-40"><CheckCircle2 className="w-8 h-8 stroke-1" /><p className="text-xs mt-2 font-semibold">Tudo limpo nesta fila.</p></div>}
+            {filteredTasks.length === 0 && <div className="h-60 flex flex-col items-center justify-center text-center opacity-40"><CheckCircle2 className="w-8 h-8 stroke-1" /><p className="text-xs mt-2 font-semibold">Tudo limpo nesta lista.</p></div>}
           </div>
         </div>
 
@@ -666,7 +663,7 @@ export default function TarefasPage() {
                   <h3 className="text-sm font-extrabold leading-snug break-words flex items-start">
                     <span className="flex-1">{selectedTask.title}</span>
                     {canEditTask && (
-                      <button onClick={() => { setIsEditingTask(true); setEditTitle(selectedTask.title); setEditDesc(selectedTask.description); }} className="ml-2 p-1.5 rounded-lg text-blue-500 hover:bg-blue-500/10 transition-colors">
+                      <button onClick={() => { setIsEditingTask(true); setEditTitle(selectedTask.title); setEditDesc(selectedTask.description); }} className="ml-2 p-1.5 rounded-lg text-blue-500 hover:bg-blue-500/10 transition-colors cursor-pointer">
                         <Edit2 className="w-4 h-4" />
                       </button>
                     )}
@@ -704,9 +701,9 @@ export default function TarefasPage() {
                   <span className="text-[10px] font-semibold opacity-50 block mb-1">Responsável pela Execução</span>
                   {canEditTask ? (
                     <select value={selectedTask.assignee} onChange={(e) => updateTaskMetadata(selectedTask.id, 'assignee', e.target.value)} className="w-full p-2 rounded-xl border text-xs font-bold text-blue-500 outline-none cursor-pointer" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-                      {allowedAssignees.map(a => ( <option key={a.value} value={a.value}>{a.label}</option> ))}
+                      {teamMembers.map(m => ( <option key={m.user_id} value={m.nome}>{m.nome} ({m.cargo})</option> ))}
                     </select>
-                  ) : ( <div className="p-2 rounded-xl border text-xs font-bold text-blue-500" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>{selectedTask.assignee === currentUser.nome ? `${currentUser.nome} (Minha Fila)` : selectedTask.assignee}</div> )}
+                  ) : ( <div className="p-2 rounded-xl border text-xs font-bold text-blue-500" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>{selectedTask.assignee}</div> )}
                 </div>
               </div>
 
@@ -716,8 +713,8 @@ export default function TarefasPage() {
                   <div className="space-y-2">
                     <textarea rows={4} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="w-full p-3 rounded-2xl border text-xs leading-relaxed outline-none focus:border-blue-500 resize-none" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
                     <div className="flex justify-end space-x-2">
-                      <button onClick={() => setIsEditingTask(false)} className="px-3 py-1.5 rounded-lg border text-xs font-bold hover:opacity-80" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
-                      <button onClick={handleSaveTaskInfo} className="px-4 py-1.5 rounded-lg bg-brand-panel text-white text-xs font-bold shadow-sm">Salvar Alterações</button>
+                      <button onClick={() => setIsEditingTask(false)} className="px-3 py-1.5 rounded-lg border text-xs font-bold hover:opacity-80 cursor-pointer" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
+                      <button onClick={handleSaveTaskInfo} className="px-4 py-1.5 rounded-lg bg-brand-panel text-white text-xs font-bold shadow-sm cursor-pointer">Salvar Alterações</button>
                     </div>
                   </div>
                 ) : (
@@ -747,8 +744,8 @@ export default function TarefasPage() {
                           <input type="text" value={editStepText} onChange={e => setEditStepText(e.target.value)} placeholder="Título da etapa" className="w-full p-2 rounded-lg border text-xs font-bold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
                           <textarea rows={2} value={editStepNote} onChange={e => setEditStepNote(e.target.value)} placeholder="Detalhes, links ou o que foi feito..." className="w-full p-2 rounded-lg border text-xs outline-none focus:border-blue-500 resize-none" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
                           <div className="flex justify-end space-x-2 pt-1">
-                            <button onClick={() => setEditingStepId(null)} className="px-3 py-1.5 rounded-lg border text-[11px] font-bold hover:opacity-80" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
-                            <button onClick={() => handleSaveStepEdit(selectedTask.id, step.id)} className="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-bold">Salvar</button>
+                            <button onClick={() => setEditingStepId(null)} className="px-3 py-1.5 rounded-lg border text-[11px] font-bold hover:opacity-80 cursor-pointer" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
+                            <button onClick={() => handleSaveStepEdit(selectedTask.id, step.id)} className="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-bold cursor-pointer">Salvar</button>
                           </div>
                         </div>
                       ) : (
@@ -773,7 +770,7 @@ export default function TarefasPage() {
                 <div className="p-3 rounded-xl border space-y-2" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
                   <input type="text" value={stepInput} onChange={(e) => setStepInput(e.target.value)} placeholder="Nova etapa (título)..." className="w-full px-3 py-2 rounded-lg border text-xs font-bold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddStep(selectedTask.id); } }} />
                   <textarea rows={1} value={stepNoteInput} onChange={(e) => setStepNoteInput(e.target.value)} placeholder="Observações da etapa (opcional)" className="w-full px-3 py-2 rounded-lg border text-[11px] outline-none resize-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
-                  <button type="button" onClick={() => handleAddStep(selectedTask.id)} className="w-full py-2 rounded-lg bg-brand-panel text-white text-xs font-extrabold shadow-sm">+ Adicionar Etapa</button>
+                  <button type="button" onClick={() => handleAddStep(selectedTask.id)} className="w-full py-2 rounded-lg bg-brand-panel text-white text-xs font-extrabold shadow-sm cursor-pointer">+ Adicionar Etapa</button>
                 </div>
               </div>
 

@@ -48,6 +48,8 @@ interface Message {
   lidoPor?: string[];
   replyTo?: ReplyInfo;
   created_at: string;
+  deleted?: boolean;
+  metadata?: any;
 }
 
 interface ChatChannel {
@@ -104,7 +106,9 @@ const mapDbToMessage = (dbMsg: any): Message => ({
   dateLabel: getDateLabel(dbMsg.created_at), type: dbMsg.tipo || 'text', status: 'sent',
   mediaUrl: dbMsg.metadata?.mediaUrl, fileName: dbMsg.metadata?.fileName, fileSize: dbMsg.metadata?.fileSize,
   eventDetails: dbMsg.metadata?.eventDetails, acceptedBy: dbMsg.metadata?.acceptedBy || [],
-  lidoPor: dbMsg.metadata?.lidoPor || [], replyTo: dbMsg.metadata?.replyTo, created_at: dbMsg.created_at
+  lidoPor: dbMsg.metadata?.lidoPor || [], replyTo: dbMsg.metadata?.replyTo, created_at: dbMsg.created_at,
+  deleted: dbMsg.metadata?.deleted || false,
+  metadata: dbMsg.metadata
 });
 
 const getRealUserStatus = (profile?: DBProfile | null): { status: UserStatusType; label: string; color: string; lastSeenText: string } => {
@@ -246,7 +250,6 @@ export default function ConversasPage() {
     return teamMembers.find(m => m.user_id === peerInfo.user_id) || null;
   }, [activeChat, currentUser, teamMembers]);
 
-  // ATUALIZA O BADGE DE NÃO LIDOS DO MENU GLOBAL
   useEffect(() => {
     if (!isLoading && currentUser) {
       const totalUnread = channels.reduce((acc, c) => acc + (c.unread || 0), 0);
@@ -254,7 +257,6 @@ export default function ConversasPage() {
     }
   }, [channels, isLoading, currentUser]);
 
-  // CARREGAMENTO INICIAL COM ALGORITMO DE DESDUPLICAÇÃO
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -277,13 +279,13 @@ export default function ConversasPage() {
           setCurrentUser(perfilAtual);
           if (perfilAtual.status_presenca) setUserStatus(perfilAtual.status_presenca);
           
-          const trintaDias = new Date();
-          trintaDias.setDate(trintaDias.getDate() - 30);
+          const seteDias = new Date();
+          seteDias.setDate(seteDias.getDate() - 7);
           
           const [equipeRes, canaisRes, ultimasMsgsRes] = await Promise.all([
             supabase.from('doodoo_perfis').select('*').eq('status', 'ativo'),
             supabase.from('doodoo_canais').select('*').order('created_at', { ascending: false }),
-            supabase.from('doodoo_mensagens').select('*').gte('created_at', trintaDias.toISOString()).order('created_at', { ascending: false })
+            supabase.from('doodoo_mensagens').select('*').gte('created_at', seteDias.toISOString()).order('created_at', { ascending: false })
           ]);
 
           const membersList: DBProfile[] = equipeRes.data || [];
@@ -318,7 +320,6 @@ export default function ConversasPage() {
             
             const msgsForThisChannel = recentMsgs.filter(m => m.canal_id === c.id);
             
-            // CONTAGEM DE NÃO LIDOS
             const unreadCount = msgsForThisChannel.filter(m => {
               const lidos = m.metadata?.lidoPor || [];
               return !lidos.includes(perfilAtual?.nome) && m.sender_id !== perfilAtual?.user_id;
@@ -326,8 +327,18 @@ export default function ConversasPage() {
 
             if (unreadCount > 0 && !chatToFocusFirst) chatToFocusFirst = c.id; 
 
+            let lastMsgText = '';
             const lastMsgObj = msgsForThisChannel[0];
-            const lastMsgText = lastMsgObj ? (lastMsgObj.tipo === 'image' ? '📷 Imagem' : lastMsgObj.tipo === 'file' ? `📎 Arquivo Anexado` : lastMsgObj.texto) : (c.is_direct ? 'Conversa iniciada' : `${listaMembros.length} participantes`);
+            if (lastMsgObj) {
+              if (lastMsgObj.metadata?.deleted) {
+                lastMsgText = '🚫 Mensagem apagada';
+              } else {
+                lastMsgText = lastMsgObj.tipo === 'image' ? '📷 Imagem' : lastMsgObj.tipo === 'file' ? `📎 Arquivo Anexado` : lastMsgObj.texto;
+              }
+            } else {
+              lastMsgText = c.is_direct ? 'Conversa iniciada' : `${listaMembros.length} participantes`;
+            }
+
             const lastMsgTime = lastMsgObj ? new Date(lastMsgObj.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
             
             return {
@@ -336,14 +347,11 @@ export default function ConversasPage() {
             };
           });
 
-          // 🚀 ALGORITMO DE DESDUPLICAÇÃO PARA CONVERSAS DIRETAS E REMOÇÃO DE CANAIS FANTASMAS
           const directChatsMap = new Map<string, ChatChannel>();
           const groupChats: ChatChannel[] = [];
 
           mappedChannels.forEach(c => {
-            // Se eu não for membro da conversa, ignora
             if (!c.members.some(m => m.user_id === perfilAtual?.user_id)) return;
-
             if (c.isGroup) {
               groupChats.push(c);
             } else {
@@ -356,11 +364,9 @@ export default function ConversasPage() {
                   directChatsMap.set(peer.user_id, c);
                 } else {
                   const existingHasMsg = recentMsgs.some(m => m.canal_id === existing.id);
-                  // Preferência ABSOLUTA: O chat que tem mensagens vence!
                   if (hasMsg && !existingHasMsg) {
                     directChatsMap.set(peer.user_id, c);
                   } else if (hasMsg === existingHasMsg) {
-                    // Se os dois tiverem mensagem (ou os dois não tiverem), ganha o mais recente
                     if (new Date(c.updatedAt || 0) > new Date(existing.updatedAt || 0)) {
                       directChatsMap.set(peer.user_id, c);
                     }
@@ -370,14 +376,11 @@ export default function ConversasPage() {
             }
           });
 
-          // Une os grupos com as diretas desduplicadas
           let canaisValidos = [...groupChats, ...Array.from(directChatsMap.values())];
 
-          // OCULTA CONVERSAS VAZIAS (A menos que seja a que está aberta via link/pendência)
           canaisValidos = canaisValidos.filter(c => {
             if (c.isGroup) return true;
             if (c.id === targetId || c.id === chatToFocusFirst) return true;
-            // Se for conversa 1-1, só mostra no menu se já tiverem trocado mensagem!
             return recentMsgs.some(m => m.canal_id === c.id);
           });
           
@@ -389,7 +392,6 @@ export default function ConversasPage() {
 
           setChannels(canaisValidos);
 
-          // SELEÇÃO PADRÃO
           setActiveChatId(prev => {
             if (prev && canaisValidos.some(c => c.id === prev)) return prev; 
             if (targetId && canaisValidos.some(c => c.id === targetId)) return targetId; 
@@ -447,14 +449,14 @@ export default function ConversasPage() {
   }, [channels, currentUser, teamMembers]);
 
   const fetchMessagesForActiveChannel = useCallback(async (channelId: string, isSilentSync = false) => {
-    const limite30Dias = new Date();
-    limite30Dias.setDate(limite30Dias.getDate() - 30); 
+    const seteDias = new Date();
+    seteDias.setDate(seteDias.getDate() - 7); 
 
     const { data: msgData } = await supabase
       .from('doodoo_mensagens')
       .select('*')
       .eq('canal_id', channelId)
-      .gte('created_at', limite30Dias.toISOString())
+      .gte('created_at', seteDias.toISOString())
       .order('created_at', { ascending: true });
 
     if (msgData) {
@@ -514,8 +516,12 @@ export default function ConversasPage() {
 
   useEffect(() => {
     if (!currentUser) return;
+    
+    // 🔥 CRIAMOS UM NOME DE CANAL 100% ÚNICO PARA PREVENIR QUALQUER COLISÃO NO NEXT.JS
+    const channelName = `chat_sync_${currentUser.user_id}_${Math.random().toString(36).substring(7)}`;
+
     const globalSub = supabase
-      .channel('doodoo_whatsapp_realtime_v3')
+      .channel(channelName)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doodoo_mensagens' }, (payload) => {
         const incoming = mapDbToMessage(payload.new);
         const currentActiveId = activeChatIdRef.current;
@@ -526,7 +532,7 @@ export default function ConversasPage() {
                const isCurrentlyOpen = c.id === currentActiveId;
                return {
                  ...c, 
-                 lastMessage: incoming.type === 'image' ? '📷 Imagem' : incoming.type === 'file' ? `📎 ${incoming.fileName}` : incoming.text,
+                 lastMessage: incoming.deleted ? '🚫 Mensagem apagada' : incoming.type === 'image' ? '📷 Imagem' : incoming.type === 'file' ? `📎 ${incoming.fileName}` : incoming.text,
                  lastMessageTime: incoming.time, 
                  unread: isCurrentlyOpen ? 0 : (c.unread || 0) + 1, 
                  updatedAt: incoming.created_at
@@ -535,7 +541,6 @@ export default function ConversasPage() {
              return c;
            });
            
-           // Ordena as conversas sempre que chega mensagem, colocando a nova no topo!
            return updatedChannels.sort((a, b) => {
              if (a.name === 'Geral') return -1;
              if (b.name === 'Geral') return 1;
@@ -566,6 +571,13 @@ export default function ConversasPage() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'doodoo_mensagens' }, (payload) => {
         const updated = mapDbToMessage(payload.new);
         if (updated.canal_id === activeChatIdRef.current) setActiveMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
+        
+        setChannels(prev => prev.map(c => {
+           if (c.id === updated.canal_id) {
+              return { ...c, lastMessage: updated.deleted ? '🚫 Mensagem apagada' : c.lastMessage };
+           }
+           return c;
+        }));
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'doodoo_mensagens' }, (payload) => {
         const deletedId = payload.old?.id || (payload.old as any)?.old_record?.id;
@@ -616,11 +628,6 @@ export default function ConversasPage() {
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title, desc } }));
   };
 
-  const handleForceLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/';
-  };
-
   const sendToDatabase = async (tipo: 'text' | 'image' | 'file' | 'event', texto: string, metadata: any = {}) => {
     if (!currentUser || !activeChatId) return;
 
@@ -651,7 +658,8 @@ export default function ConversasPage() {
       id: tempId, canal_id: targetChannelId, sender_id: currentUser.user_id, sender: currentUser.nome,
       text: texto, time: timeFormatted, dateLabel: 'Hoje', type: tipo, status: 'sending',
       mediaUrl: metadata.mediaUrl, fileName: metadata.fileName, fileSize: metadata.fileSize,
-      eventDetails: metadata.eventDetails, acceptedBy: [], lidoPor: [currentUser.nome], replyTo: replyData, created_at: nowIso
+      eventDetails: metadata.eventDetails, acceptedBy: [], lidoPor: [currentUser.nome], replyTo: replyData, created_at: nowIso,
+      metadata: { ...metadata, lidoPor: [currentUser.nome], replyTo: replyData }
     };
 
     setActiveMessages(prev => [...prev, optimisticMsg]);
@@ -719,10 +727,16 @@ export default function ConversasPage() {
     setConfirmModal({
       isOpen: true, title: 'Apagar Mensagem', message: 'Deseja apagar esta mensagem para todos na conversa?',
       onConfirm: async () => {
-        setActiveMessages(prev => prev.filter(m => m.id !== msgId));
+        const msgToUpdate = activeMessages.find(m => m.id === msgId);
+        
+        setActiveMessages(prev => prev.map(m => m.id === msgId ? { ...m, deleted: true } : m));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        await supabase.from('doodoo_mensagens').delete().eq('id', msgId);
-        notifyBell('Mensagem Apagada', 'A mensagem foi removida da conversa.');
+        
+        await supabase.from('doodoo_mensagens').update({ 
+           metadata: { ...(msgToUpdate?.metadata || {}), deleted: true } 
+        }).eq('id', msgId);
+        
+        notifyBell('Mensagem Apagada', 'A mensagem foi ocultada da conversa.');
       }
     });
   };
@@ -866,15 +880,9 @@ export default function ConversasPage() {
       </div>
     );
   }
-
+  
   if (authError || !currentUser) {
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center space-y-5">
-        <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center"><AlertTriangle className="w-10 h-10 text-red-500 opacity-80" /></div>
-        <div className="text-center space-y-1.5"><h3 className="text-xl font-extrabold tracking-tight">Sessão Expirada</h3></div>
-        <button onClick={handleForceLogout} className="mt-2 px-6 py-3 rounded-2xl bg-brand-panel text-white text-xs font-extrabold shadow-lg"><LogOut className="w-4 h-4 mr-2 inline" />Sair</button>
-      </div>
-    );
+    return <div className="w-full h-full bg-transparent"></div>; 
   }
 
   return (
@@ -889,7 +897,7 @@ export default function ConversasPage() {
           <div className="space-y-4">
             <div className="space-y-3 pb-4 border-b" style={{ borderColor: 'var(--border-input)' }}>
               <div className="flex items-center justify-between">
-                <div><h3 className="font-extrabold text-sm tracking-tight">Chat Corporativo</h3><p className="text-[10px] font-bold uppercase tracking-widest opacity-45">Messenger • 30 dias</p></div>
+                <div><h3 className="font-extrabold text-sm tracking-tight">Chat Corporativo</h3><p className="text-[10px] font-bold uppercase tracking-widest opacity-45">Messenger • 7 dias</p></div>
                 <div className="flex items-center px-2 py-1 rounded-xl border shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
                   <Palette className="w-3.5 h-3.5 mr-1.5 opacity-40 flex-shrink-0" />
                   <div className="flex items-center space-x-1">
@@ -941,14 +949,14 @@ export default function ConversasPage() {
                     </div>
                     <div className="overflow-hidden flex-1">
                       <div className="flex items-center justify-between"><p className="text-xs font-extrabold truncate">{displayName}</p>{chat.lastMessageTime && <span className={`text-[9px] font-bold ml-1 flex-shrink-0 ${isActive ? 'text-white/80' : 'opacity-45'}`}>{chat.lastMessageTime}</span>}</div>
-                      <div className="flex items-center justify-between mt-0.5"><p className={`text-[11px] truncate ${isActive ? 'text-white/85' : 'opacity-60'}`}>{chat.lastMessage || (chat.isDirect ? getRealUserStatus(peerForChannel).label : `${chat.members.length} membros`)}</p>{chat.unread > 0 && !isActive && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[9px] font-extrabold shadow-sm animate-bounce">{chat.unread}</span>}</div>
+                      <div className="flex items-center justify-between mt-0.5"><p className={`text-[11px] truncate ${isActive ? 'text-white/85' : 'opacity-60'}`}>{chat.lastMessage || (chat.isDirect ? getRealUserStatus(peerForChannel).label : `${chat.members.length} membros`)}</p>{chat.unread > 0 && !isActive && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-extrabold shadow-sm animate-bounce">{chat.unread}</span>}</div>
                     </div>
                   </button>
                 );
               })}
             </div>
           </div>
-          <div className="pt-3 border-t text-center text-[10px] opacity-40 font-bold uppercase tracking-wider" style={{ borderColor: 'var(--border-input)' }}>Criptografia & Retenção de 30 dias</div>
+          <div className="pt-3 border-t text-center text-[10px] opacity-40 font-bold uppercase tracking-wider" style={{ borderColor: 'var(--border-input)' }}>Criptografia & Retenção de 7 dias</div>
         </div>
 
         {/* COLUNA 2: ÁREA DE MENSAGENS */}
@@ -980,17 +988,33 @@ export default function ConversasPage() {
                   <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} ${showDateChip ? 'mt-4' : 'mt-1'}`}>
                     {showDateChip && <div className="flex justify-center w-full my-3"><span className="px-3 py-1 rounded-lg text-[11px] font-bold shadow-sm opacity-90" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>{msg.dateLabel}</span></div>}
                     <div className={`flex flex-col group relative max-w-[85%] sm:max-w-md`}>
-                      <div className="absolute top-0 -left-12 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {isMe && <button type="button" onClick={() => confirmDeleteMessage(msg.id)} className="p-1 text-red-500 hover:bg-red-500/10 rounded-full" title="Apagar"><Trash2 className="w-3.5 h-3.5" /></button>}
-                        <button type="button" onClick={() => { setReplyingTo({ id: msg.id, sender: msg.sender, text: msg.text }); inputFieldRef.current?.focus(); }} className="p-1 opacity-60 hover:opacity-100 hover:bg-black/5 rounded-full" title="Responder"><Reply className="w-3.5 h-3.5" /></button>
-                      </div>
-                      <div className={`px-2.5 pt-1.5 pb-2 rounded-xl text-[14px] shadow-sm relative ${isMe ? 'bg-emerald-600 text-white' : ''} ${showTail ? (isMe ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''}`} style={!isMe ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', borderWidth: '1px' } : undefined}>
-                        {!isMe && !activeChat.isDirect && showTail && <span className="text-[12px] font-bold text-blue-500 block mb-0.5">{msg.sender}</span>}
-                        {msg.replyTo && <div className={`mb-1.5 p-1.5 rounded-lg border-l-4 text-[12px] ${isMe ? 'bg-black/20 border-white/60 text-white/90' : 'bg-black/5 border-blue-500 opacity-80'}`}><p className="font-bold text-[11px]">{msg.replyTo.sender}</p><p className="truncate">{msg.replyTo.text}</p></div>}
-                        {msg.type === 'image' && msg.mediaUrl ? <div className="space-y-1 mb-1"><img src={msg.mediaUrl} alt="Mídia" className="w-64 h-48 object-cover rounded-lg" /></div> : msg.type === 'file' ? <div className="flex items-center space-x-2 pr-4 pb-1"><div className={`p-2 rounded-lg ${isMe ? 'bg-white/20 text-white' : 'bg-blue-500/10 text-blue-500'}`}><FileText className="w-5 h-5" /></div><div className="overflow-hidden flex-1 max-w-[150px]"><p className="text-[13px] font-bold truncate">{msg.fileName}</p><p className="text-[10px] opacity-70">{msg.fileSize}</p></div><a href={msg.mediaUrl || '#'} download={msg.fileName} className="p-1.5 rounded-full hover:bg-black/10 cursor-pointer"><Download className="w-4 h-4" /></a></div> : msg.type === 'event' && msg.eventDetails ? <div className="space-y-1.5 min-w-[200px] pb-1"><div className="flex items-center space-x-1 text-[11px] font-bold opacity-90"><Calendar className="w-3 h-3" /><span>Convite</span></div><h4 className="text-[14px] font-bold leading-tight">{msg.eventDetails.title}</h4><p className="text-[12px] opacity-85">📅 {msg.eventDetails.date} às {msg.eventDetails.time}</p><div className="pt-1.5 mt-1 border-t border-white/20 flex items-center justify-between text-[11px]"><span className="opacity-80">{msg.acceptedBy?.length || 0} confirmados</span><button onClick={() => handleAcceptChatEvent(msg)} disabled={hasAccepted} className={`px-2 py-0.5 rounded-md font-bold transition-all ${hasAccepted ? 'bg-emerald-500 text-white' : 'bg-white text-slate-900 shadow-sm'}`}><Check className="w-3 h-3 inline mr-0.5" />{hasAccepted ? 'Sim' : 'Confirmar'}</button></div></div> : <span className="whitespace-pre-wrap break-words pr-2">{msg.text}</span>}
-                        <div className={`float-right flex items-center space-x-0.5 ml-3 mt-2 text-[10px] ${isMe ? 'text-white/70' : 'opacity-50'}`}><span className="pt-[1px]">{msg.time}</span>{isMe && (msg.status === 'sending' ? <Clock className="w-3 h-3 animate-spin" /> : msg.status === 'error' ? <AlertTriangle className="w-3 h-3 text-red-300" /> : <CheckCheck className={`w-3.5 h-3.5 ${isRead ? 'text-sky-300' : 'opacity-70'}`} />)}</div>
-                        <div className="clear-both"></div>
-                      </div>
+                      
+                      {/* 🚀 SOFT DELETE APLICADO AQUI NA INTERFACE */}
+                      {msg.deleted ? (
+                        <div className={`px-3 py-2 rounded-xl text-[13px] shadow-sm italic opacity-60 flex items-center border`} style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
+                           <span className="mr-1.5">🚫</span> Esta mensagem foi apagada.
+                        </div>
+                      ) : (
+                        <>
+                          <div className="absolute top-0 -left-12 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {isMe && <button type="button" onClick={() => confirmDeleteMessage(msg.id)} className="p-1 text-red-500 hover:bg-red-500/10 rounded-full" title="Apagar"><Trash2 className="w-3.5 h-3.5" /></button>}
+                            <button type="button" onClick={() => { setReplyingTo({ id: msg.id, sender: msg.sender, text: msg.text }); inputFieldRef.current?.focus(); }} className="p-1 opacity-60 hover:opacity-100 hover:bg-black/5 rounded-full" title="Responder"><Reply className="w-3.5 h-3.5" /></button>
+                          </div>
+                          
+                          <div className={`px-2.5 pt-1.5 pb-2 rounded-xl text-[14px] shadow-sm relative ${isMe ? 'bg-emerald-600 text-white' : ''} ${showTail ? (isMe ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''}`} style={!isMe ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', borderWidth: '1px' } : undefined}>
+                            {!isMe && !activeChat.isDirect && showTail && <span className="text-[12px] font-bold text-blue-500 block mb-0.5">{msg.sender}</span>}
+                            {msg.replyTo && <div className={`mb-1.5 p-1.5 rounded-lg border-l-4 text-[12px] ${isMe ? 'bg-black/20 border-white/60 text-white/90' : 'bg-black/5 border-blue-500 opacity-80'}`}><p className="font-bold text-[11px]">{msg.replyTo.sender}</p><p className="truncate">{msg.replyTo.text}</p></div>}
+                            
+                            {msg.type === 'image' && msg.mediaUrl ? <div className="space-y-1 mb-1"><img src={msg.mediaUrl} alt="Mídia" className="w-64 h-48 object-cover rounded-lg" /></div> 
+                             : msg.type === 'file' ? <div className="flex items-center space-x-2 pr-4 pb-1"><div className={`p-2 rounded-lg ${isMe ? 'bg-white/20 text-white' : 'bg-blue-500/10 text-blue-500'}`}><FileText className="w-5 h-5" /></div><div className="overflow-hidden flex-1 max-w-[150px]"><p className="text-[13px] font-bold truncate">{msg.fileName}</p><p className="text-[10px] opacity-70">{msg.fileSize}</p></div><a href={msg.mediaUrl || '#'} download={msg.fileName} className="p-1.5 rounded-full hover:bg-black/10 cursor-pointer"><Download className="w-4 h-4" /></a></div> 
+                             : msg.type === 'event' && msg.eventDetails ? <div className="space-y-1.5 min-w-[200px] pb-1"><div className="flex items-center space-x-1 text-[11px] font-bold opacity-90"><Calendar className="w-3 h-3" /><span>Convite</span></div><h4 className="text-[14px] font-bold leading-tight">{msg.eventDetails.title}</h4><p className="text-[12px] opacity-85">📅 {msg.eventDetails.date} às {msg.eventDetails.time}</p><div className="pt-1.5 mt-1 border-t border-white/20 flex items-center justify-between text-[11px]"><span className="opacity-80">{msg.acceptedBy?.length || 0} confirmados</span><button onClick={() => handleAcceptChatEvent(msg)} disabled={hasAccepted} className={`px-2 py-0.5 rounded-md font-bold transition-all ${hasAccepted ? 'bg-emerald-500 text-white' : 'bg-white text-slate-900 shadow-sm'}`}><Check className="w-3 h-3 inline mr-0.5" />{hasAccepted ? 'Sim' : 'Confirmar'}</button></div></div> 
+                             : <span className="whitespace-pre-wrap break-words pr-2">{msg.text}</span>}
+                            
+                            <div className={`float-right flex items-center space-x-0.5 ml-3 mt-2 text-[10px] ${isMe ? 'text-white/70' : 'opacity-50'}`}><span className="pt-[1px]">{msg.time}</span>{isMe && (msg.status === 'sending' ? <Clock className="w-3 h-3 animate-spin" /> : msg.status === 'error' ? <AlertTriangle className="w-3 h-3 text-red-300" /> : <CheckCheck className={`w-3.5 h-3.5 ${isRead ? 'text-sky-300' : 'opacity-70'}`} />)}</div>
+                            <div className="clear-both"></div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
@@ -1031,7 +1055,7 @@ export default function ConversasPage() {
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
               {infoTab === 'members' && !activeChat.isDirect && <div className="space-y-3">{isCurrentAdmin && activeChat.name !== 'Geral' && <button onClick={() => setIsAddMemberModalOpen(true)} className="w-full py-2.5 rounded-xl bg-brand-panel text-white font-bold text-[12px] flex items-center justify-center space-x-1.5 shadow-sm"><UserPlus className="w-4 h-4" /><span>Adicionar Participante</span></button>}<div className="space-y-1">{activeChat.members.map((member, idx) => { const memberProfile = teamMembers.find(m => m.user_id === member.user_id); return <div key={idx} className="p-3 rounded-xl flex items-center justify-between text-[12px] hover:bg-black/5" style={{ backgroundColor: 'var(--bg-card)' }}><div className="flex items-center space-x-3 overflow-hidden"><div className="w-8 h-8 rounded-full bg-brand-panel text-white font-bold flex items-center justify-center text-[11px] flex-shrink-0">{memberProfile?.avatar_url ? <img src={memberProfile.avatar_url} alt="" className="w-full h-full rounded-full object-cover" /> : getInitials(member.name)}</div><div className="truncate"><p className="font-bold truncate">{member.name} {member.user_id === currentUser.user_id && '(Você)'}</p><p className="text-[11px] opacity-60 truncate">{member.role} {member.isAdmin ? '• Admin' : ''}</p></div></div><div className="flex items-center space-x-2">{isCurrentAdmin && member.user_id !== currentUser.user_id && <button onClick={() => toggleAdminMember(member.user_id)} className="text-[10px] font-bold text-brand-panel hover:underline">{member.isAdmin ? 'Remover Admin' : 'Dar Admin'}</button>}{isCurrentAdmin && member.user_id !== currentUser.user_id && activeChat.name !== 'Geral' && <button onClick={() => handleRemoveMemberFromGroup(member.user_id, member.name)} className="text-red-500 hover:scale-110 ml-2" title="Remover"><Trash2 className="w-4 h-4" /></button>}</div></div>; })}</div></div>}
               {infoTab === 'notes' && <div className="space-y-3"><form onSubmit={handleAddNote} className="space-y-2"><textarea rows={3} value={newNoteText} onChange={(e) => setNewNoteText(e.target.value)} placeholder="Fixar aviso no grupo..." className="w-full p-3 rounded-xl border text-[12px] outline-none resize-none" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} /><button type="submit" className="w-full py-2 rounded-xl bg-brand-panel text-white font-bold text-[12px] shadow-sm">+ Fixar Nota</button></form><div className="space-y-2 pt-2">{chatNotes.map(note => <div key={note.id} className="p-3 rounded-xl border text-[12px] space-y-1 shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}><div className="flex justify-between font-bold opacity-60 text-[10px]"><span>{note.autor_nome}</span><span>{new Date(note.created_at).toLocaleDateString('pt-BR')}</span></div><p className="whitespace-pre-wrap">{note.conteudo}</p></div>)}</div></div>}
-              {infoTab === 'media' && <div className="grid grid-cols-2 gap-2">{activeMessages.filter(m => m.type === 'image' && m.mediaUrl).map(m => <div key={m.id} className="rounded-xl overflow-hidden border aspect-square"><img src={m.mediaUrl} alt="Mídia" className="w-full h-full object-cover" /></div>)}</div>}
+              {infoTab === 'media' && <div className="grid grid-cols-2 gap-2">{activeMessages.filter(m => m.type === 'image' && m.mediaUrl && !m.deleted).map(m => <div key={m.id} className="rounded-xl overflow-hidden border aspect-square"><img src={m.mediaUrl} alt="Mídia" className="w-full h-full object-cover" /></div>)}</div>}
             </div>
             <div className="p-4 border-t" style={{ borderColor: 'var(--border-input)' }}><button onClick={() => handleCloseChat(activeChat.id)} className="w-full py-3 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold text-[13px] flex items-center justify-center space-x-2 transition-colors"><Trash2 className="w-4 h-4" /><span>Sair da Conversa</span></button></div>
           </div>

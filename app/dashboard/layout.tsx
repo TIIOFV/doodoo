@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutGrid, MessageSquare, CheckSquare, Calendar, StickyNote, 
-  Settings, LogOut, Bell, Palette, ChevronLeft, ChevronRight, X, Sun, Moon, CloudSun, Sparkles, ExternalLink, CheckCheck, Menu 
+  Settings, LogOut, Bell, Palette, ChevronLeft, ChevronRight, X, Sun, Moon, CloudSun, Sparkles, ExternalLink, CheckCheck, Menu, AlertTriangle, ShieldAlert
 } from 'lucide-react';
 import { supabase } from './../lib/supabase';
 import { useTheme } from '../contexts/ThemeContext'; 
@@ -64,6 +64,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [allowedTabs, setAllowedTabs] = useState<string[]>(['visao_geral', 'chat', 'tarefas', 'agenda', 'anotacoes']);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
 
   useEffect(() => {
     const savedNotifs = localStorage.getItem('doodoo_notificacoes');
@@ -91,7 +94,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     else { setGreeting('Boa noite'); setGreetingIcon(Moon); }
   }, []);
 
-  // 🚀 ESCUTA A ATUALIZAÇÃO REAL DE NÃO LIDOS VINDA DO CHAT (Mantém sincronizado com a tela de conversas)
   useEffect(() => {
     const handleUpdateChatBadge = (e: any) => setUnreadChatCount(e.detail);
     window.addEventListener('doodoo:update_unread_chat', handleUpdateChatBadge);
@@ -101,63 +103,71 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const fetchProfileAndPermissions = async () => {
       try {
+        setIsLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const { data: perfilData } = await supabase.from('doodoo_perfis').select('*').eq('user_id', session.user.id).maybeSingle();
-          let userProfile = perfilData;
-          if (!userProfile) {
-             const { data: fallback } = await supabase.from('doodoo_perfis').select('*').ilike('nome', '%Pedro%').limit(1).maybeSingle();
-             userProfile = fallback || await supabase.from('doodoo_perfis').select('*').limit(1).maybeSingle();
-          }
-
-          if (userProfile) {
-            setCurrentUser(userProfile as DBProfile);
-            
-            // Permissões
-            const { data: permissoesDb } = await supabase.from('doodoo_permissoes').select('*');
-            if (permissoesDb && permissoesDb.length > 0) {
-              const myAllowedTabs = permissoesDb
-                .filter(p => p.cargos_permitidos.includes(userProfile.cargo) || (p.usuarios_permitidos && p.usuarios_permitidos.includes(userProfile.user_id)))
-                .map(p => p.aba_key.replace('tarefas_todas', 'tarefas').replace('tarefas_minha', 'tarefas'));
-              setAllowedTabs(Array.from(new Set(myAllowedTabs)));
-            }
-
-            // 🚀 BUSCA PRECISA DE NÃO LIDOS: Garante que o menu mostre exatamente as pendências do banco
-            const { data: canais } = await supabase.from('doodoo_canais').select('id, membros');
-            const meusCanaisIds = canais?.filter(c => c.membros?.some((m:any) => m.user_id === userProfile.user_id)).map(c => c.id) || [];
-            
-            if (meusCanaisIds.length > 0) {
-              const trintaDias = new Date();
-              trintaDias.setDate(trintaDias.getDate() - 30);
-              const { data: msgs } = await supabase.from('doodoo_mensagens')
-                .select('sender_id, metadata, canal_id')
-                .gte('created_at', trintaDias.toISOString())
-                .in('canal_id', meusCanaisIds);
-              
-              if (msgs) {
-                const unread = msgs.filter(m => m.sender_id !== userProfile.user_id && !(m.metadata?.lidoPor || []).includes(userProfile.nome)).length;
-                setUnreadChatCount(unread);
-              }
-            }
-          }
+        
+        if (!session?.user) {
+           setAuthError(true);
+           setIsLoading(false);
+           return;
         }
-      } catch (error) { console.error("Erro no Layout:", error); }
+
+        const { data: perfilData, error: perfilError } = await supabase.from('doodoo_perfis').select('*').eq('user_id', session.user.id).maybeSingle();
+        let userProfile = perfilData;
+        
+        if (!userProfile) {
+           const { data: fallback } = await supabase.from('doodoo_perfis').select('*').ilike('nome', '%Pedro%').limit(1).maybeSingle();
+           userProfile = fallback || await supabase.from('doodoo_perfis').select('*').limit(1).maybeSingle();
+        }
+
+        if (userProfile) {
+          setCurrentUser(userProfile as DBProfile);
+          
+          const { data: permissoesDb } = await supabase.from('doodoo_permissoes').select('*');
+          if (permissoesDb && permissoesDb.length > 0) {
+            const myAllowedTabs = permissoesDb
+              .filter(p => p.cargos_permitidos.includes(userProfile.cargo) || (p.usuarios_permitidos && p.usuarios_permitidos.includes(userProfile.user_id)))
+              .map(p => p.aba_key.replace('tarefas_todas', 'tarefas').replace('tarefas_minha', 'tarefas'));
+            setAllowedTabs(Array.from(new Set(myAllowedTabs)));
+          }
+
+          const { data: canais } = await supabase.from('doodoo_canais').select('id, membros');
+          const meusCanaisIds = canais?.filter(c => c.membros?.some((m:any) => m.user_id === userProfile.user_id)).map(c => c.id) || [];
+          
+          if (meusCanaisIds.length > 0) {
+            const trintaDias = new Date();
+            trintaDias.setDate(trintaDias.getDate() - 30);
+            const { data: msgs } = await supabase.from('doodoo_mensagens')
+              .select('sender_id, metadata, canal_id')
+              .gte('created_at', trintaDias.toISOString())
+              .in('canal_id', meusCanaisIds);
+            
+            if (msgs) {
+              const unread = msgs.filter(m => m.sender_id !== userProfile.user_id && !(m.metadata?.lidoPor || []).includes(userProfile.nome)).length;
+              setUnreadChatCount(unread);
+            }
+          }
+        } else {
+          setAuthError(true);
+        }
+      } catch (error) { 
+        console.error("Erro no Layout:", error);
+        setAuthError(true);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchProfileAndPermissions();
   }, []);
 
   useEffect(() => {
     if (!currentUser) return;
-    supabase.removeChannel(supabase.channel('global_layout_listener'));
 
-    const globalListener = supabase.channel('global_layout_listener')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doodoo_mensagens' }, (payload) => {
-        const msg = payload.new;
+    const globalListener = supabase.channel('doodoo_bussiness_network')
+      .on('broadcast', { event: 'nova_mensagem' }, (payload) => {
+        const msg = payload.payload;
         if (msg.sender_id !== currentUser.user_id) {
-          
-          // 🚀 Só incrementa badge visual manualmente se não estiver na página de chat (se estiver, a página de chat sincroniza o total real)
           if (!window.location.pathname.startsWith('/dashboard/conversas')) setUnreadChatCount(prev => prev + 1);
-          
           let title = `💬 Mensagem de ${msg.sender_nome}`;
           let desc = msg.tipo === 'image' ? 'Enviou uma imagem' : msg.tipo === 'file' ? 'Enviou um arquivo' : msg.texto;
           let link = `/dashboard/conversas?chatId=${msg.canal_id}`;
@@ -243,6 +253,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const currentPageTitle = mainNav.find((item) => item.path === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(item.path))?.name || 'Configurações';
 
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/'; };
+
+  // 🚀 TELA GIGANTE DE ERRO OU CARREGAMENTO (Com o truque para o Next.js)
+  if (authError || (!currentUser && !isLoading) || isLoading) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center transition-colors" style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-main)' }}>
+        
+        {isLoading ? (
+          <>
+            <div className="animate-spin text-blue-500 mb-4"><LogoDooDoo className="w-12 h-12" /></div>
+            <p className="text-xs font-extrabold uppercase tracking-widest opacity-60">A iniciar Workspace...</p>
+          </>
+        ) : (
+          <div className="max-w-md w-full p-10 text-center space-y-6 animate-in zoom-in-95 duration-300">
+            <div className="w-24 h-24 mx-auto rounded-full bg-red-500/10 flex items-center justify-center border-4 border-red-500/20">
+              <ShieldAlert className="w-12 h-12 text-red-500" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-extrabold tracking-tight">Sessão Expirada</h1>
+              <p className="text-sm font-medium opacity-70">Por motivos de segurança, a sua sessão foi encerrada. Por favor, inicie sessão novamente para continuar.</p>
+            </div>
+            <button onClick={handleLogout} className="w-full py-4 rounded-2xl bg-brand-panel text-white font-extrabold shadow-lg transition-colors flex items-center justify-center text-[15px] cursor-pointer hover:opacity-90">
+              <LogOut className="w-5 h-5 mr-2" /> Fazer Login
+            </button>
+          </div>
+        )}
+
+        {/* O SEGREDO MÁGICO: Renderizar o children oculto para o Next.js não dar o erro de "Dropped segment" */}
+        <div style={{ display: 'none' }}>{children}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden transition-colors duration-500" style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-main)' }}>

@@ -4,10 +4,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   Settings, Shield, Bell, Users, Palette, 
   Save, Check, UserPlus, Trash2, X, Loader2, Search, Activity,
-  ChevronLeft, ChevronRight, Lock, Unlock, AlertTriangle, LogOut, Tags, Plus
+  ChevronLeft, ChevronRight, Lock, Unlock, AlertTriangle, LogOut, Tags, Plus, DownloadCloud, Database, Archive
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../contexts/ThemeContext';
+import JSZip from 'jszip'; // Biblioteca de ZIP
 
 type RoleType = 'administrador' | 'gestor' | 'coordenador' | 'supervisor' | 'analista' | 'colaborador';
 
@@ -66,6 +67,7 @@ export default function ConfiguracoesPage() {
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'geral' | 'usuarios' | 'permissoes' | 'categorias' | 'notificacoes' | 'logs'>('geral');
+  const [logTab, setLogTab] = useState<'sistema' | 'retencao'>('sistema');
 
   const isAdmin = currentUser?.cargo === 'administrador';
   const isManager = isAdmin || currentUser?.cargo === 'gestor' || currentUser?.cargo === 'coordenador';
@@ -85,14 +87,9 @@ export default function ConfiguracoesPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#3B82F6');
 
-  const [isExceptionsModalOpen, setIsExceptionsModalOpen] = useState(false);
-  const [selectedTabForExceptions, setSelectedTabForExceptions] = useState<TabPermission | null>(null);
-  const [selectedUsersForExceptions, setSelectedUsersForExceptions] = useState<string[]>([]);
-  
-  // 🚀 NOVO ESTADO DE PESQUISA DO VIP
-  const [vipSearchQuery, setVipSearchQuery] = useState('');
-
+  const [selectedExceptionUserId, setSelectedExceptionUserId] = useState<string | null>(null);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
+  const [adminChannels, setAdminChannels] = useState<{id: string, name: string, isGroup: boolean}[]>([]);
 
   const notifyBell = (title: string, desc: string) => {
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title, desc } }));
@@ -142,6 +139,20 @@ export default function ConfiguracoesPage() {
             
             const { data: logsDb } = await supabase.from('doodoo_logs').select('*').order('created_at', { ascending: false }).limit(50);
             if (logsDb) setSystemLogs(logsDb);
+          }
+
+          if (perfilAtual.cargo === 'administrador') {
+            const { data: canaisAdmin } = await supabase.from('doodoo_canais').select('id, nome, is_group, is_direct, membros');
+            if (canaisAdmin) {
+              const mapped = canaisAdmin.map(c => {
+                 let cName = c.nome || 'Canal Sem Nome';
+                 if (c.is_direct && c.membros?.length === 2) {
+                   cName = `Direta: ${c.membros[0].name.split(' ')[0]} & ${c.membros[1].name.split(' ')[0]}`;
+                 }
+                 return { id: c.id, name: cName, isGroup: c.is_group };
+              });
+              setAdminChannels(mapped);
+            }
           }
         } else { setAuthError(true); }
       } catch (error) { setAuthError(true); } finally { setIsLoading(false); }
@@ -233,15 +244,25 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  const handleSaveExceptions = async () => {
-    if (!selectedTabForExceptions) return;
-    setTabPermissions(prev => prev.map(tab => tab.tabKey === selectedTabForExceptions.tabKey ? { ...tab, allowedUsers: selectedUsersForExceptions } : tab));
-    setIsExceptionsModalOpen(false);
+  const toggleUserException = async (userId: string, tabKey: string) => {
+    const currentTab = tabPermissions.find(t => t.tabKey === tabKey);
+    if (!currentTab) return;
     
-    const { error } = await supabase.from('doodoo_permissoes').update({ usuarios_permitidos: selectedUsersForExceptions }).eq('aba_key', selectedTabForExceptions.tabKey);
-    if (!error) {
-      notifyBell('Acesso VIP Atualizado', `Exceções salvas para a aba ${selectedTabForExceptions.tabName}.`);
-      registerLog('Acesso VIP', `Atualizou a lista de exceções individuais para a aba "${selectedTabForExceptions.tabName}" (${selectedUsersForExceptions.length} usuários VIPs).`);
+    const exists = currentTab.allowedUsers.includes(userId);
+    const updatedUsers = exists ? currentTab.allowedUsers.filter(id => id !== userId) : [...currentTab.allowedUsers, userId];
+    
+    setTabPermissions(prev => prev.map(tab => tab.tabKey === tabKey ? { ...tab, allowedUsers: updatedUsers } : tab));
+    
+    const { error } = await supabase.from('doodoo_permissoes').update({ usuarios_permitidos: updatedUsers }).eq('aba_key', tabKey);
+    
+    if (error) {
+      setTabPermissions(prev => prev.map(tab => tab.tabKey === tabKey ? { ...tab, allowedUsers: currentTab.allowedUsers } : tab));
+      notifyBell('Erro', 'Falha ao salvar a exceção no banco.');
+    } else {
+      const user = companyUsers.find(u => u.user_id === userId);
+      const acaoTxt = exists ? 'Removeu' : 'Concedeu';
+      notifyBell('Acesso VIP Atualizado', `${acaoTxt} o acesso de ${user?.nome?.split(' ')[0]} à aba ${currentTab.tabName}.`);
+      registerLog('Alteração VIP', `${acaoTxt} acesso individual à aba "${currentTab.tabName}" para ${user?.nome}.`);
     }
   };
 
@@ -275,6 +296,129 @@ export default function ConfiguracoesPage() {
     else setCurrentUser({ ...currentUser, [field]: !newValue });
   };
 
+  const handleDownloadTranscript = async (canalId: string, canalNome: string) => {
+    notifyBell('A Preparar Transcript', 'O seu download iniciará em breve...');
+    const { data } = await supabase.from('doodoo_mensagens').select('*').eq('canal_id', canalId).order('created_at', { ascending: true });
+    
+    if (!data || data.length === 0) {
+      return notifyBell('Sem dados', 'Nenhuma mensagem encontrada neste canal.');
+    }
+    
+    let txt = `========================================================\n`;
+    txt += ` AUDITORIA DE CHAT - DOO DOO OS\n`;
+    txt += ` Conversa: ${canalNome}\n`;
+    txt += ` Exportado em: ${new Date().toLocaleString('pt-BR')}\n`;
+    txt += `========================================================\n\n`;
+    
+    data.forEach(m => {
+       const dataStr = new Date(m.created_at).toLocaleDateString('pt-BR');
+       const horaStr = new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+       
+       let textoFormatado = m.texto ? m.texto.replace(/\n/g, ' ') : '';
+       
+       if (m.tipo === 'image') textoFormatado = `📷 [IMAGEM ANEXADA] ${m.metadata?.mediaUrl || ''}`;
+       if (m.tipo === 'file') textoFormatado = `📎 [ARQUIVO] ${m.metadata?.fileName || ''} (${m.metadata?.mediaUrl || ''})`;
+       if (m.tipo === 'event') textoFormatado = `📅 [REUNIÃO] ${m.metadata?.eventDetails?.title || ''} - ${m.metadata?.eventDetails?.date} às ${m.metadata?.eventDetails?.time}`;
+       
+       if (m.metadata?.deleted) {
+          textoFormatado = `🚫 [MENSAGEM APAGADA PELO USUÁRIO] (Conteúdo Original: "${textoFormatado}")`;
+       }
+       
+       txt += `[${dataStr} ${horaStr}] ${m.sender_nome}: ${textoFormatado}\n`;
+    });
+    
+    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `Auditoria_Chat_${canalNome.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    registerLog('Download de Dados', `Efetuou o download do transcript (.txt) do canal "${canalNome}".`);
+  };
+
+  const handleDownloadZipBackup = async () => {
+    notifyBell('A Gerar Backup', 'Isto pode demorar alguns segundos...');
+    try {
+      const { data: allMsgs } = await supabase.from('doodoo_mensagens').select('*').order('created_at', { ascending: true });
+      if (!allMsgs || allMsgs.length === 0) return notifyBell('Sem dados', 'A base de dados de mensagens está vazia.');
+
+      const zip = new JSZip();
+      
+      const grouped = allMsgs.reduce((acc: any, m: any) => {
+        if (!acc[m.canal_id]) acc[m.canal_id] = [];
+        acc[m.canal_id].push(m);
+        return acc;
+      }, {});
+
+      Object.keys(grouped).forEach(canalId => {
+         const canal = adminChannels.find(c => c.id === canalId) || { name: `Canal_Desconhecido_${canalId.substring(0,6)}` };
+         const msgs = grouped[canalId];
+         
+         let txt = `========================================================\n`;
+         txt += ` AUDITORIA GLOBAL DE CHAT - DOO DOO OS\n`;
+         txt += ` Conversa: ${canal.name}\n`;
+         txt += ` Exportado em: ${new Date().toLocaleString('pt-BR')}\n`;
+         txt += `========================================================\n\n`;
+
+         msgs.forEach((m: any) => {
+           const dataStr = new Date(m.created_at).toLocaleDateString('pt-BR');
+           const horaStr = new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+           let textoFormatado = m.texto ? m.texto.replace(/\n/g, ' ') : '';
+           
+           if (m.tipo === 'image') textoFormatado = `📷 [IMAGEM ANEXADA] ${m.metadata?.mediaUrl || ''}`;
+           if (m.tipo === 'file') textoFormatado = `📎 [ARQUIVO] ${m.metadata?.fileName || ''} (${m.metadata?.mediaUrl || ''})`;
+           if (m.tipo === 'event') textoFormatado = `📅 [REUNIÃO] ${m.metadata?.eventDetails?.title || ''}`;
+           if (m.metadata?.deleted) textoFormatado = `🚫 [MENSAGEM APAGADA PELO USUÁRIO] (Conteúdo Original: "${textoFormatado}")`;
+           
+           txt += `[${dataStr} ${horaStr}] ${m.sender_nome}: ${textoFormatado}\n`;
+         });
+         
+         zip.file(`Auditoria_Chat_${canal.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`, txt);
+      });
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `DooDoo_Backup_Total_Mensagens_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      registerLog('Backup Global', `Realizou um Backup Geral em ZIP de todo o histórico de chats do sistema.`);
+    } catch (e) {
+      notifyBell('Erro', 'Ocorreu um problema ao gerar o ZIP. Certifique-se que o pacote jszip está instalado.');
+    }
+  };
+
+  const handlePurgeChannel = async (canalId: string, canalNome: string) => {
+    if (window.confirm(`ATENÇÃO: Deseja apagar permanentemente TODAS as mensagens do canal "${canalNome}"? Esta ação não pode ser desfeita.`)) {
+      await supabase.from('doodoo_mensagens').delete().eq('canal_id', canalId);
+      notifyBell('Histórico Excluído', `As mensagens de ${canalNome} foram apagadas.`);
+      registerLog('Exclusão de Dados', `Apagou manualmente todo o histórico de mensagens do canal "${canalNome}".`);
+    }
+  };
+
+  const handlePurgeOldGlobal = async () => {
+    if (window.confirm(`ATENÇÃO: Deseja forçar a exclusão de TODAS as mensagens do sistema com mais de 7 dias para libertar espaço na base de dados?`)) {
+      const seteDias = new Date();
+      seteDias.setDate(seteDias.getDate() - 7);
+      
+      const { error } = await supabase.from('doodoo_mensagens').delete().lt('created_at', seteDias.toISOString());
+      if (!error) {
+        notifyBell('Limpeza Concluída', 'Mensagens antigas removidas da base de dados.');
+        registerLog('Limpeza de Base de Dados', 'Forçou a limpeza global de mensagens do chat mais antigas que 7 dias.');
+        
+        // Atualiza os logs imediatamente para refletir a nova data na interface
+        const newLog = { autor_nome: currentUser?.nome || 'Sistema', acao: 'Limpeza de Base de Dados', detalhes: 'Forçou a limpeza global de mensagens do chat mais antigas que 7 dias.' };
+        setSystemLogs(prev => [{ ...newLog, id: Date.now().toString(), created_at: new Date().toISOString() }, ...prev]);
+      } else {
+        notifyBell('Erro', 'Ocorreu um erro ao limpar a base de dados.');
+      }
+    }
+  };
+
   useEffect(() => { setCurrentPage(1); }, [userSearch]);
 
   const searchedUsers = useMemo(() => {
@@ -285,8 +429,27 @@ export default function ConfiguracoesPage() {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const currentUsers = searchedUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  if (isLoading) return <div className="w-full h-full flex flex-col items-center justify-center"><Loader2 className="w-8 h-8 animate-spin opacity-50 text-blue-500" /></div>;
-  if (authError || !currentUser) return <div className="w-full h-full flex items-center justify-center"><button onClick={handleForceLogout} className="px-6 py-3 rounded-2xl bg-brand-panel text-white font-bold"><LogOut className="w-4 h-4 inline mr-2" />Sair</button></div>;
+  const usersWithExceptions = useMemo(() => {
+    return companyUsers.filter(u => tabPermissions.some(tab => tab.allowedUsers.includes(u.user_id)));
+  }, [companyUsers, tabPermissions]);
+
+  // 🚀 BUSCA A DATA DA ÚLTIMA LIMPEZA GLOBAL
+  const dataUltimaLimpeza = useMemo(() => {
+    const ultimoRegisto = systemLogs.find(log => log.acao === 'Limpeza de Base de Dados');
+    return ultimoRegisto ? new Date(ultimoRegisto.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Nunca realizada';
+  }, [systemLogs]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin opacity-50 text-blue-500" />
+      </div>
+    );
+  }
+  
+  if (authError || !currentUser) {
+    return <div className="w-full h-full bg-transparent"></div>; 
+  }
 
   return (
     <div className="w-full h-full flex flex-col animate-in fade-in duration-300">
@@ -333,7 +496,7 @@ export default function ConfiguracoesPage() {
               {isAdmin && (
                 <>
                   <div className="pt-3 pb-1"><p className="text-[10px] font-extrabold uppercase tracking-widest opacity-40 px-2">Sistema</p></div>
-                  <button onClick={() => setActiveTab('logs')} className={`w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'logs' ? 'bg-brand-panel text-white shadow-xs' : 'hover:bg-black/5 opacity-75'}`}><Activity className="w-4 h-4" /><span>Auditoria de Logs</span></button>
+                  <button onClick={() => setActiveTab('logs')} className={`w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'logs' ? 'bg-brand-panel text-white shadow-xs' : 'hover:bg-black/5 opacity-75'}`}><Activity className="w-4 h-4" /><span>Auditoria & Dados</span></button>
                 </>
               )}
             </div>
@@ -352,7 +515,7 @@ export default function ConfiguracoesPage() {
                 {activeTab === 'permissoes' && 'Permissões e Exceções VIP'}
                 {activeTab === 'categorias' && 'Categorias das Tarefas'}
                 {activeTab === 'notificacoes' && 'Privacidade'}
-                {activeTab === 'logs' && 'Auditoria de Sistema (Logs)'}
+                {activeTab === 'logs' && 'Auditoria de Sistema & Dados'}
               </h2>
             </div>
             {savedSuccess && (
@@ -382,6 +545,7 @@ export default function ConfiguracoesPage() {
             </form>
           )}
 
+          {/* 🚀 TABELA DE COLABORADORES COM PAGINAÇÃO RESTAURADA */}
           {activeTab === 'usuarios' && isManager && (
             <div className="space-y-5 max-w-5xl">
               <div className="flex items-center justify-between">
@@ -395,8 +559,8 @@ export default function ConfiguracoesPage() {
                     {currentUsers.map(user => (
                       <tr key={user.id} className={user.status === 'bloqueado' ? 'opacity-50' : ''}>
                         <td className="p-4 font-bold flex items-center space-x-3">{user.avatar_url ? <img src={user.avatar_url} alt="" className="w-8 h-8 rounded-lg object-cover" /> : <div className="w-8 h-8 rounded-lg bg-brand-panel text-white flex items-center justify-center">{getInitials(user.nome)}</div>}<span>{user.nome}</span></td>
-                        <td className="p-4"><select value={user.cargo} disabled={user.status === 'bloqueado'} onChange={(e) => handleUpdateUserRoleAndSector(user.id, 'cargo', e.target.value)} className="w-full p-1.5 rounded-lg border font-bold text-[11px] uppercase bg-transparent" style={{ borderColor: 'var(--border-input)' }}><option value="administrador">Admin</option><option value="gestor">Gestor</option><option value="coordenador">Coordenador</option><option value="supervisor">Supervisor</option><option value="analista">Analista</option><option value="colaborador">Colaborador</option></select></td>
-                        <td className="p-4"><select value={user.setor} disabled={user.status === 'bloqueado'} onChange={(e) => handleUpdateUserRoleAndSector(user.id, 'setor', e.target.value)} className="w-full p-1.5 rounded-lg border font-bold text-[11px] bg-transparent" style={{ borderColor: 'var(--border-input)' }}>{SECTORS.map(s => <option key={s} value={s}>{s}</option>)}</select></td>
+                        <td className="p-4"><select value={user.cargo} disabled={user.status === 'bloqueado'} onChange={(e) => handleUpdateUserRoleAndSector(user.id, 'cargo', e.target.value)} className="w-full p-1.5 rounded-lg border font-bold text-[11px] uppercase bg-transparent" style={{ borderColor: 'var(--border-input)', color: 'var(--text-main)' }}><option value="administrador">Admin</option><option value="gestor">Gestor</option><option value="coordenador">Coordenador</option><option value="supervisor">Supervisor</option><option value="analista">Analista</option><option value="colaborador">Colaborador</option></select></td>
+                        <td className="p-4"><select value={user.setor} disabled={user.status === 'bloqueado'} onChange={(e) => handleUpdateUserRoleAndSector(user.id, 'setor', e.target.value)} className="w-full p-1.5 rounded-lg border font-bold text-[11px] bg-transparent" style={{ borderColor: 'var(--border-input)', color: 'var(--text-main)' }}>{SECTORS.map(s => <option key={s} value={s}>{s}</option>)}</select></td>
                         <td className="p-4 text-right flex items-center justify-end space-x-1">
                           <button onClick={() => handleToggleUserStatus(user.id, user.nome, user.status)} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg">{user.status === 'bloqueado' ? <Unlock className="w-4 h-4"/> : <Lock className="w-4 h-4"/>}</button>
                           <button onClick={() => handleDeleteUser(user.id, user.nome)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"><Trash2 className="w-4 h-4"/></button>
@@ -405,6 +569,17 @@ export default function ConfiguracoesPage() {
                     ))}
                   </tbody>
                 </table>
+                
+                {/* 🚀 PAGINAÇÃO RESTAURADA */}
+                {totalPages > 1 && (
+                  <div className="p-4 border-t flex items-center justify-between bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-input)' }}>
+                    <span className="text-[10px] font-bold opacity-50">Página {currentPage} de {totalPages}</span>
+                    <div className="flex space-x-2">
+                      <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg border hover:bg-black/10 disabled:opacity-30 cursor-pointer transition-colors" style={{ borderColor: 'var(--border-input)' }}><ChevronLeft className="w-4 h-4" /></button>
+                      <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1.5 rounded-lg border hover:bg-black/10 disabled:opacity-30 cursor-pointer transition-colors" style={{ borderColor: 'var(--border-input)' }}><ChevronRight className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -418,7 +593,7 @@ export default function ConfiguracoesPage() {
               </form>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {taskCategories.map(cat => (
-                  <div key={cat.id} className="p-3 rounded-xl border flex items-center justify-between shadow-xs bg-white dark:bg-slate-800" style={{ borderColor: 'var(--border-input)' }}>
+                  <div key={cat.id} className="p-3 rounded-xl border flex items-center justify-between shadow-xs" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
                     <div className="flex items-center space-x-2.5 overflow-hidden"><span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cat.cor }}></span><span className="text-xs font-bold truncate">{cat.nome}</span></div>
                     <button onClick={() => handleDeleteCategory(cat.id, cat.nome)} className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-md cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
@@ -428,78 +603,217 @@ export default function ConfiguracoesPage() {
           )}
 
           {activeTab === 'permissoes' && isManager && (
-            <div className="space-y-5 max-w-6xl">
-              <div className="rounded-2xl border overflow-hidden shadow-xs overflow-x-auto" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-                <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
-                  <thead>
-                    <tr className="border-b opacity-55 font-extrabold uppercase text-[9px]" style={{ borderColor: 'var(--border-input)' }}>
-                      <th className="p-4">Funcionalidade</th>
-                      <th className="p-4 text-center">Admin/Gestor</th>
-                      <th className="p-4 text-center">Coordenador</th>
-                      <th className="p-4 text-center">Supervisor</th>
-                      <th className="p-4 text-center">Analista</th>
-                      <th className="p-4 text-center">Colaborador</th>
-                      <th className="p-4 text-center text-blue-500">Exceções Individuais</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y" style={{ borderColor: 'var(--border-input)' }}>
-                    {tabPermissions.map(tab => (
-                      <tr key={tab.tabKey} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                        <td className="p-4 font-bold">{tab.tabName}</td>
-                        {(['gestor', 'coordenador', 'supervisor', 'analista', 'colaborador'] as RoleType[]).map(role => {
-                          const hasAccess = tab.allowedRoles.includes(role);
-                          return (
-                            <td key={role} className="p-4 text-center">
-                              <button onClick={() => toggleRolePermission(tab.tabKey, role)} className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${hasAccess ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'opacity-40 hover:opacity-100'}`} style={!hasAccess ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' } : undefined}>
-                                {hasAccess ? 'Acesso Livre' : 'Bloqueado'}
-                              </button>
-                            </td>
-                          );
-                        })}
-                        <td className="p-4 text-center">
-                          <button onClick={() => { 
-                            setSelectedTabForExceptions(tab); 
-                            setSelectedUsersForExceptions(tab.allowedUsers || []); 
-                            setVipSearchQuery(''); // 🚀 Limpa a pesquisa ao abrir o modal
-                            setIsExceptionsModalOpen(true); 
-                          }} className="px-3 py-1 rounded-lg text-[10px] font-bold border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors cursor-pointer shadow-sm">
-                            + Exceções ({tab.allowedUsers?.length || 0})
-                          </button>
-                        </td>
+            <div className="space-y-8 max-w-6xl">
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-sm font-extrabold flex items-center"><Users className="w-4 h-4 mr-2 text-brand-panel"/> Matriz de Acesso por Cargo</h3>
+                  <p className="text-[11px] opacity-60 mt-1">Defina as permissões nativas. Todos os utilizadores do cargo selecionado terão acesso imediato à aba.</p>
+                </div>
+                <div className="rounded-2xl border overflow-hidden shadow-xs overflow-x-auto" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
+                  <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+                    <thead>
+                      <tr className="border-b opacity-55 font-extrabold uppercase text-[9px]" style={{ borderColor: 'var(--border-input)' }}>
+                        <th className="p-4">Funcionalidade</th>
+                        <th className="p-4 text-center">Admin/Gestor</th>
+                        <th className="p-4 text-center">Coordenador</th>
+                        <th className="p-4 text-center">Supervisor</th>
+                        <th className="p-4 text-center">Analista</th>
+                        <th className="p-4 text-center">Colaborador</th>
                       </tr>
+                    </thead>
+                    <tbody className="divide-y" style={{ borderColor: 'var(--border-input)' }}>
+                      {tabPermissions.map(tab => (
+                        <tr key={tab.tabKey} className="hover:bg-black/5 transition-colors">
+                          <td className="p-4 font-bold">{tab.tabName}</td>
+                          {(['gestor', 'coordenador', 'supervisor', 'analista', 'colaborador'] as RoleType[]).map(role => {
+                            const hasAccess = tab.allowedRoles.includes(role);
+                            return (
+                              <td key={role} className="p-4 text-center">
+                                <button onClick={() => toggleRolePermission(tab.tabKey, role)} className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${hasAccess ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'opacity-40 hover:opacity-100'}`} style={!hasAccess ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' } : undefined}>
+                                  {hasAccess ? 'Acesso Livre' : 'Bloqueado'}
+                                </button>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="space-y-5 pt-4 border-t" style={{ borderColor: 'var(--border-input)' }}>
+                <div>
+                  <h3 className="text-sm font-extrabold flex items-center text-blue-500"><Shield className="w-4 h-4 mr-2"/> Acessos Individuais (Exceções VIP)</h3>
+                  <p className="text-[11px] opacity-60 mt-1">
+                    Selecione um colaborador para dar ou retirar acesso a funcionalidades independentemente do seu cargo.
+                  </p>
+                </div>
+                
+                {usersWithExceptions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <span className="text-[10px] font-bold opacity-50 mr-1 uppercase">VIPs Ativos:</span>
+                    {usersWithExceptions.map(u => (
+                       <button 
+                         key={u.user_id} 
+                         onClick={() => setSelectedExceptionUserId(u.user_id)} 
+                         className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${selectedExceptionUserId === u.user_id ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-blue-500/10 text-blue-500 border-blue-500/30 hover:bg-blue-500/20'}`}
+                       >
+                          {u.nome.split(' ')[0]}
+                       </button>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                )}
+
+                <div className="max-w-md relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 opacity-40" />
+                  <select 
+                     value={selectedExceptionUserId || ''} 
+                     onChange={(e) => setSelectedExceptionUserId(e.target.value)}
+                     className="w-full pl-9 pr-3 py-3 rounded-xl border text-xs font-bold outline-none focus:border-blue-500 shadow-sm appearance-none cursor-pointer"
+                     style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
+                  >
+                     <option value="" disabled>Buscar e selecionar colaborador...</option>
+                     {companyUsers.map(u => (
+                       <option key={u.user_id} value={u.user_id}>{u.nome} ({u.cargo})</option>
+                     ))}
+                  </select>
+                </div>
+
+                {selectedExceptionUserId && (
+                   <div className="p-5 rounded-2xl border shadow-sm animate-in fade-in slide-in-from-bottom-4" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
+                      <div className="flex items-center space-x-3 mb-5 pb-5 border-b" style={{ borderColor: 'var(--border-input)' }}>
+                         <div className="w-10 h-10 rounded-xl bg-brand-panel text-white font-extrabold flex items-center justify-center text-xs shadow-sm">
+                           {getInitials(companyUsers.find(u => u.user_id === selectedExceptionUserId)?.nome || '')}
+                         </div>
+                         <div>
+                           <p className="font-extrabold text-sm">{companyUsers.find(u => u.user_id === selectedExceptionUserId)?.nome}</p>
+                           <p className="text-[10px] uppercase font-bold opacity-50 tracking-wider mt-0.5">{companyUsers.find(u => u.user_id === selectedExceptionUserId)?.cargo}</p>
+                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                         {tabPermissions.map(tab => {
+                            const user = companyUsers.find(u => u.user_id === selectedExceptionUserId);
+                            const userRole = (user?.cargo || '').toLowerCase();
+                            const hasRoleAccess = tab.allowedRoles.some(r => r.toLowerCase() === userRole);
+                            const isVip = tab.allowedUsers.includes(selectedExceptionUserId);
+
+                            return (
+                               <div key={tab.tabKey} className={`p-4 rounded-xl border flex flex-col justify-between space-y-3 transition-colors ${isVip ? 'border-blue-500 bg-blue-500/5' : ''}`} style={{ backgroundColor: 'var(--bg-card)', borderColor: isVip ? '' : 'var(--border-input)' }}>
+                                  <span className="font-bold text-xs">{tab.tabName}</span>
+                                  <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: 'var(--border-input)' }}>
+                                     {hasRoleAccess ? (
+                                        <span className="text-[9px] font-extrabold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">Acesso Nativo do Cargo</span>
+                                     ) : (
+                                        <label className="flex items-center space-x-2 cursor-pointer w-full justify-between group">
+                                           <span className={`text-[10px] font-bold transition-opacity ${isVip ? 'text-blue-500' : 'opacity-40 group-hover:opacity-80'}`}>{isVip ? 'Exceção Concedida' : 'Sem Acesso'}</span>
+                                           <input type="checkbox" checked={isVip} onChange={() => toggleUserException(selectedExceptionUserId, tab.tabKey)} className="w-4 h-4 rounded accent-blue-600 cursor-pointer" />
+                                        </label>
+                                     )}
+                                  </div>
+                               </div>
+                            );
+                         })}
+                      </div>
+                   </div>
+                )}
               </div>
             </div>
           )}
 
           {activeTab === 'logs' && isAdmin && ( 
             <div className="space-y-4 max-w-5xl">
-              <div className="rounded-2xl border overflow-hidden shadow-xs" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b opacity-55 font-extrabold uppercase text-[10px]" style={{ borderColor: 'var(--border-input)' }}>
-                      <th className="p-4">Data / Hora</th>
-                      <th className="p-4">Autor</th>
-                      <th className="p-4">Ação</th>
-                      <th className="p-4 w-1/2">Detalhes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y" style={{ borderColor: 'var(--border-input)' }}>
-                    {systemLogs.map(log => (
-                      <tr key={log.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                        <td className="p-4 whitespace-nowrap opacity-70">
-                          {new Date(log.created_at).toLocaleDateString('pt-BR')} às {new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' })}
-                        </td>
-                        <td className="p-4 font-bold">{log.autor_nome}</td>
-                        <td className="p-4 font-semibold text-blue-500">{log.acao}</td>
-                        <td className="p-4 opacity-80">{log.detalhes}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              
+              <div className="flex space-x-2 border-b pb-4 mb-4" style={{ borderColor: 'var(--border-input)' }}>
+                <button onClick={() => setLogTab('sistema')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${logTab === 'sistema' ? 'bg-brand-panel text-white' : 'hover:bg-black/5 opacity-60 hover:opacity-100'}`}>Auditoria de Ações</button>
+                <button onClick={() => setLogTab('retencao')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center ${logTab === 'retencao' ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-black/5 opacity-60 hover:opacity-100'}`}><Database className="w-4 h-4 mr-1.5" /> Retenção do Chat</button>
               </div>
+
+              {logTab === 'sistema' ? (
+                <div className="rounded-2xl border overflow-hidden shadow-xs" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b opacity-55 font-extrabold uppercase text-[10px]" style={{ borderColor: 'var(--border-input)' }}>
+                        <th className="p-4">Data / Hora</th>
+                        <th className="p-4">Autor</th>
+                        <th className="p-4">Ação</th>
+                        <th className="p-4 w-1/2">Detalhes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y" style={{ borderColor: 'var(--border-input)' }}>
+                      {systemLogs.map(log => (
+                        <tr key={log.id} className="hover:bg-black/5 transition-colors">
+                          <td className="p-4 whitespace-nowrap opacity-70">
+                            {new Date(log.created_at).toLocaleDateString('pt-BR')} às {new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' })}
+                          </td>
+                          <td className="p-4 font-bold">{log.autor_nome}</td>
+                          <td className="p-4 font-semibold text-blue-500">{log.acao}</td>
+                          <td className="p-4 opacity-80">{log.detalhes}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  
+                  <div className="p-5 rounded-2xl border flex items-center justify-between shadow-sm bg-emerald-500/5 border-emerald-500/20">
+                    <div>
+                      <h3 className="font-extrabold text-sm text-emerald-600 flex items-center"><Archive className="w-4 h-4 mr-2" /> Backup Completo (ZIP)</h3>
+                      <p className="text-xs opacity-70 mt-1 max-w-xl">Baixe todas as mensagens e históricos de todos os canais do sistema em um único arquivo ZIP antes de realizar limpezas.</p>
+                    </div>
+                    <button onClick={handleDownloadZipBackup} className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm transition-colors cursor-pointer flex items-center">
+                      <DownloadCloud className="w-4 h-4 mr-2" /> Baixar ZIP
+                    </button>
+                  </div>
+
+                  <div className="p-5 rounded-2xl border shadow-sm bg-blue-500/5 border-blue-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-extrabold text-sm text-blue-600 flex items-center"><Database className="w-4 h-4 mr-2" /> Gestão de Espaço do Banco de Dados</h3>
+                      <p className="text-xs opacity-70 mt-1 max-w-xl">O sistema retém e exibe mensagens por 7 dias para os utilizadores. Você pode forçar a exclusão imediata de todas as mensagens mais antigas que 7 dias para libertar espaço da base de dados do Supabase.</p>
+                      
+                      {/* 🚀 DATA DA ÚLTIMA LIMPEZA RESTAURADA E POSICIONADA AQUI */}
+                      <div className="mt-3 inline-flex items-center px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20">
+                        <span className="text-[10px] font-bold opacity-70 mr-1.5">Última Limpeza Global efetuada em:</span>
+                        <span className="text-[10px] font-extrabold text-blue-600">{dataUltimaLimpeza}</span>
+                      </div>
+                    </div>
+                    
+                    <button onClick={handlePurgeOldGlobal} className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-sm transition-colors cursor-pointer flex-shrink-0">
+                      Forçar Limpeza Global
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                     <h3 className="font-extrabold text-xs uppercase tracking-widest opacity-60">Extração Individual de Canais</h3>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {adminChannels.map(canal => (
+                          <div key={canal.id} className="p-4 rounded-xl border flex flex-col justify-between space-y-4 shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
+                             <div className="flex items-center space-x-3">
+                               <div className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center font-bold text-white shadow-inner bg-brand-panel">
+                                 {getInitials(canal.name)}
+                               </div>
+                               <div className="overflow-hidden">
+                                 <p className="font-extrabold text-sm truncate">{canal.name}</p>
+                                 <p className="text-[10px] uppercase font-bold opacity-50 mt-0.5">{canal.isGroup ? 'Canal / Grupo' : 'Conversa Direta'}</p>
+                               </div>
+                             </div>
+
+                             <div className="flex space-x-2 pt-3 border-t" style={{ borderColor: 'var(--border-input)' }}>
+                               <button onClick={() => handleDownloadTranscript(canal.id, canal.name)} className="flex-1 py-2 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 text-[11px] font-extrabold transition-colors flex items-center justify-center cursor-pointer">
+                                 <DownloadCloud className="w-3.5 h-3.5 mr-1.5" /> Baixar Transcript (.txt)
+                               </button>
+                               <button onClick={() => handlePurgeChannel(canal.id, canal.name)} className="px-3 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 text-[11px] font-extrabold transition-colors cursor-pointer" title="Apagar Histórico deste Canal">
+                                 <Trash2 className="w-3.5 h-3.5" />
+                               </button>
+                             </div>
+                          </div>
+                        ))}
+                     </div>
+                  </div>
+                </div>
+              )}
             </div> 
           )}
 
@@ -518,95 +832,9 @@ export default function ConfiguracoesPage() {
           )}
         </div>
       </div>
-
-      {/* 🚀 MODAL VIP TOTALMENTE REFEITO (PESQUISÁVEL E FÁCIL) */}
-      {isExceptionsModalOpen && selectedTabForExceptions && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-            
-            <div className="px-6 py-4 border-b flex items-center justify-between bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-input)' }}>
-              <div>
-                <h3 className="font-extrabold text-sm text-blue-500">Acessos VIP (Exceções)</h3>
-                <p className="text-[10px] font-bold opacity-60 uppercase mt-0.5">Aba: {selectedTabForExceptions.tabName}</p>
-              </div>
-              <button onClick={() => setIsExceptionsModalOpen(false)} className="p-2 rounded-xl hover:bg-black/10 cursor-pointer"><X className="w-4 h-4" /></button>
-            </div>
-            
-            {/* BARRA DE PESQUISA */}
-            <div className="p-4 border-b" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 opacity-40" />
-                <input 
-                  type="text" 
-                  value={vipSearchQuery}
-                  onChange={(e) => setVipSearchQuery(e.target.value)}
-                  placeholder="Pesquisar colaborador por nome..." 
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-bold outline-none focus:border-blue-500 shadow-sm"
-                  style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
-                />
-              </div>
-            </div>
-            
-            {/* LISTA COMPLETA E PESQUISÁVEL COM CHECKBOX */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar" style={{ backgroundColor: 'var(--bg-input)' }}>
-              {companyUsers
-                .filter(u => u.nome.toLowerCase().includes(vipSearchQuery.toLowerCase()) || u.cargo.toLowerCase().includes(vipSearchQuery.toLowerCase()))
-                .map(u => {
-                  const userRole = (u.cargo || '').toLowerCase();
-                  const hasRoleAccess = Array.isArray(selectedTabForExceptions.allowedRoles) 
-                    ? selectedTabForExceptions.allowedRoles.some(r => (r || '').toLowerCase() === userRole)
-                    : false;
-                    
-                  const isVip = selectedUsersForExceptions.includes(u.user_id);
-                  
-                  return (
-                    <label key={u.id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${isVip ? 'border-blue-500 bg-blue-500/5' : 'hover:border-blue-500 bg-white dark:bg-slate-800'}`} style={{ borderColor: isVip ? '' : 'var(--border-input)' }}>
-                      <div className="flex items-center space-x-3">
-                         <div className="w-8 h-8 rounded-lg bg-brand-panel text-white font-bold flex items-center justify-center text-[10px]">{getInitials(u.nome)}</div>
-                         <div>
-                           <span className="font-bold text-xs block">{u.nome}</span>
-                           <span className="text-[9px] uppercase tracking-wider opacity-60">{u.cargo} • {u.setor}</span>
-                         </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        {hasRoleAccess && !isVip && (
-                          <span className="text-[9px] font-extrabold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">Acesso Geral Ativo</span>
-                        )}
-                        <input 
-                          type="checkbox" 
-                          checked={isVip} 
-                          onChange={(e) => { 
-                            if (e.target.checked) setSelectedUsersForExceptions(prev => [...prev, u.user_id]); 
-                            else setSelectedUsersForExceptions(prev => prev.filter(id => id !== u.user_id)); 
-                          }} 
-                          className="w-4.5 h-4.5 rounded accent-blue-600 cursor-pointer" 
-                        />
-                      </div>
-                    </label>
-                  );
-              })}
-              
-              {companyUsers.filter(u => u.nome.toLowerCase().includes(vipSearchQuery.toLowerCase())).length === 0 && (
-                 <div className="text-center p-4 border border-dashed rounded-xl opacity-50 text-[11px] font-bold" style={{ borderColor: 'var(--border-input)' }}>
-                   Nenhum colaborador encontrado com "{vipSearchQuery}".
-                 </div>
-              )}
-            </div>
-
-            <div className="p-4 border-t flex justify-between items-center" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}>
-              <span className="text-[10px] font-bold opacity-50">{selectedUsersForExceptions.length} selecionado(s)</span>
-              <div className="flex space-x-2">
-                <button onClick={() => setIsExceptionsModalOpen(false)} className="px-4 py-2.5 rounded-xl border text-xs font-bold hover:opacity-80 transition-opacity">Cancelar</button>
-                <button onClick={handleSaveExceptions} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-extrabold hover:bg-blue-700 shadow-sm flex items-center transition-colors cursor-pointer"><Check className="w-4 h-4 mr-1.5" /> Salvar VIPs</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       
       {/* Modal Novo Colaborador */}
-      {isUserModalOpen && ( <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in"> <div className="w-full max-w-md rounded-3xl border shadow-xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}> <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)' }}><h3 className="font-extrabold text-sm">Novo Colaborador</h3><button onClick={() => setIsUserModalOpen(false)} className="p-1.5 rounded-lg hover:bg-black/5"><X className="w-4 h-4" /></button></div> <form onSubmit={handleCreateUser} className="p-6 space-y-4 text-xs"> <div><label className="font-bold opacity-60 block mb-1">Nome Completo</label><input type="text" required value={newUserName} onChange={(e) => setNewUserName(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border font-semibold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} /></div> <div><label className="font-bold opacity-60 block mb-1">E-mail</label><input type="email" required value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border font-semibold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} /></div> <div className="grid grid-cols-2 gap-3"> <div><label className="font-bold opacity-60 block mb-1">Cargo</label><select value={newUserRole} onChange={(e: any) => setNewUserRole(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border font-bold outline-none cursor-pointer" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}><option value="administrador">Administrador</option><option value="gestor">Gestor</option><option value="coordenador">Coordenador</option><option value="supervisor">Supervisor</option><option value="analista">Analista</option><option value="colaborador">Colaborador</option></select></div> <div><label className="font-bold opacity-60 block mb-1">Setor</label><select value={newUserSector} onChange={(e) => setNewUserSector(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border font-bold outline-none cursor-pointer" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}>{SECTORS.map(s => <option key={s} value={s}>{s}</option>)}</select></div> </div> <div className="flex justify-end space-x-2 pt-4 border-t" style={{ borderColor: 'var(--border-input)' }}><button type="button" onClick={() => setIsUserModalOpen(false)} className="px-4 py-2 rounded-xl border font-bold">Cancelar</button><button type="submit" className="px-5 py-2 rounded-xl bg-brand-panel text-white font-extrabold">Salvar</button></div> </form> </div> </div> )}
+      {isUserModalOpen && ( <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in" style={{ color: 'var(--text-main)' }}> <div className="w-full max-w-md rounded-3xl border shadow-xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}> <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)' }}><h3 className="font-extrabold text-sm">Novo Colaborador</h3><button onClick={() => setIsUserModalOpen(false)} className="p-1.5 rounded-lg hover:bg-black/5"><X className="w-4 h-4" /></button></div> <form onSubmit={handleCreateUser} className="p-6 space-y-4 text-xs"> <div><label className="font-bold opacity-60 block mb-1">Nome Completo</label><input type="text" required value={newUserName} onChange={(e) => setNewUserName(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border font-semibold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} /></div> <div><label className="font-bold opacity-60 block mb-1">E-mail</label><input type="email" required value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border font-semibold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} /></div> <div className="grid grid-cols-2 gap-3"> <div><label className="font-bold opacity-60 block mb-1">Cargo</label><select value={newUserRole} onChange={(e: any) => setNewUserRole(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border font-bold outline-none cursor-pointer" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}><option value="administrador">Administrador</option><option value="gestor">Gestor</option><option value="coordenador">Coordenador</option><option value="supervisor">Supervisor</option><option value="analista">Analista</option><option value="colaborador">Colaborador</option></select></div> <div><label className="font-bold opacity-60 block mb-1">Setor</label><select value={newUserSector} onChange={(e) => setNewUserSector(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border font-bold outline-none cursor-pointer" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}>{SECTORS.map(s => <option key={s} value={s}>{s}</option>)}</select></div> </div> <div className="flex justify-end space-x-2 pt-4 border-t" style={{ borderColor: 'var(--border-input)' }}><button type="button" onClick={() => setIsUserModalOpen(false)} className="px-4 py-2 rounded-xl border font-bold" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button><button type="submit" className="px-5 py-2 rounded-xl bg-brand-panel text-white font-extrabold">Salvar</button></div> </form> </div> </div> )}
     </div>
   );
 }
