@@ -4,62 +4,24 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { 
   CheckSquare, Plus, Trash2, Bell, Send, Sun, 
   X, Star, Search, Repeat, Shield, 
-  CheckCircle2, AlertTriangle, ChevronRight, Palette, Loader2, LogOut, Clock, Flame, Tag, Edit2
+  CheckCircle2, AlertTriangle, ChevronRight, Palette, Loader2, LogOut, Clock, Flame, Tag, Edit2, ArrowLeft, Calendar
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../contexts/ThemeContext';
 
 type RoleType = 'administrador' | 'gestor' | 'coordenador' | 'supervisor' | 'analista' | 'colaborador';
 
-interface DBProfile {
-  id: string;
-  user_id: string;
-  nome: string;
-  email: string;
-  cargo: RoleType;
-  setor: string;
-  avatar_url?: string;
-}
-
-interface SubStep {
-  id: number;
-  text: string;
-  note?: string;
-  done: boolean;
-}
-
-interface ChatComment {
-  id: number;
-  author: string;
-  text: string;
-  time: string;
-  isAlert?: boolean;
-}
+interface DBProfile { id: string; user_id: string; nome: string; email: string; cargo: RoleType; setor: string; avatar_url?: string; }
+interface SubStep { id: number; text: string; note?: string; done: boolean; }
+interface ChatComment { id: number; author: string; text: string; time: string; isAlert?: boolean; }
 
 interface TaskItem {
-  id: string; 
-  title: string;
-  description: string;
-  category: string;
-  priority: 'Normal' | 'Urgente';
-  status: 'pendente' | 'andamento' | 'bloqueado' | 'concluida';
-  important: boolean;
-  myDay: boolean;
-  isRoutine: boolean;
-  assignee: string;
-  sector: string;
-  assignedBy: string;
-  dueDate: string; 
-  dueTime: string; 
-  steps: SubStep[];
-  chat: ChatComment[];
+  id: string; title: string; description: string; category: string; priority: 'Normal' | 'Urgente'; status: 'pendente' | 'andamento' | 'bloqueado' | 'concluida';
+  important: boolean; myDay: boolean; isRoutine: boolean; assignee: string; sector: string; assignedBy: string; dueDate: string; dueTime: string; createdAt: string; 
+  steps: SubStep[]; chat: ChatComment[];
 }
 
-interface TaskCategory {
-  id: string;
-  nome: string;
-  cor: string;
-}
+interface TaskCategory { id: string; nome: string; cor: string; }
 
 const getInitials = (name: string) => {
   if (!name) return '..';
@@ -85,37 +47,23 @@ const isTaskOverdue = (dueDate: string, dueTime: string, status: string): boolea
 };
 
 const mapDbToTask = (dbTask: any): TaskItem => ({
-  id: dbTask.id,
-  title: dbTask.titulo || 'Sem título',
-  description: dbTask.descricao || '',
-  category: dbTask.categoria || 'Geral',
-  priority: dbTask.prioridade === 'Urgente' ? 'Urgente' : 'Normal',
-  status: dbTask.status || 'pendente',
-  important: Boolean(dbTask.importante),
-  myDay: Boolean(dbTask.meu_dia),
-  isRoutine: Boolean(dbTask.rotina),
-  assignee: dbTask.responsavel || '',
-  sector: dbTask.setor || 'Geral',
-  assignedBy: dbTask.atribuido_por || 'Sistema',
-  dueDate: dbTask.data_limite || '',
-  dueTime: dbTask.hora_limite || '17:00',
-  steps: Array.isArray(dbTask.etapas) ? dbTask.etapas : [],
-  chat: Array.isArray(dbTask.chat) ? dbTask.chat : []
+  id: dbTask.id, title: dbTask.titulo || 'Sem título', description: dbTask.descricao || '', category: dbTask.categoria || 'Geral',
+  priority: dbTask.prioridade === 'Urgente' ? 'Urgente' : 'Normal', status: dbTask.status || 'pendente', important: Boolean(dbTask.importante),
+  myDay: Boolean(dbTask.meu_dia), isRoutine: Boolean(dbTask.rotina), assignee: dbTask.responsavel || '', sector: dbTask.setor || 'Geral',
+  assignedBy: dbTask.atribuido_por || 'Sistema', dueDate: dbTask.data_limite || '', dueTime: dbTask.hora_limite || '17:00',
+  createdAt: dbTask.created_at || '', steps: Array.isArray(dbTask.etapas) ? dbTask.etapas : [], chat: Array.isArray(dbTask.chat) ? dbTask.chat : []
 });
 
-export default function TarefasPage() {
-  const { theme, changeTheme } = useTheme();
+const formatLinks = (text: string) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.split(urlRegex).map((part, i) => 
+    urlRegex.test(part) ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline hover:opacity-80 transition-opacity break-words text-blue-500">{part}</a> : part
+  );
+};
 
+export default function TarefasPage() {
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => { setIsMounted(true); }, []);
-
-  const themes = [
-    { id: 'light', name: 'Claro', color: '#f5f5f7', border: '#d2d2d7' },
-    { id: 'dark', name: 'Escuro', color: '#0f172a', border: '#475569' },
-    { id: 'ocean', name: 'Oceano', color: '#005bb5', border: '#005bb5' },
-    { id: 'nature', name: 'Natureza', color: '#2e8b57', border: '#2e8b57' },
-    { id: 'sunset', name: 'Pôr do Sol', color: '#d9534f', border: '#d9534f' },
-  ];
 
   const [currentUser, setCurrentUser] = useState<DBProfile | null>(null);
   const [teamMembers, setTeamMembers] = useState<DBProfile[]>([]);
@@ -124,10 +72,11 @@ export default function TarefasPage() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); 
 
   const [smartList, setSmartList] = useState<'meu-dia' | 'todas' | 'importante' | 'rotinas' | 'concluidas'>('meu-dia');
   const [viewMode, setViewMode] = useState<'minha' | 'delegadas'>('minha');
-  const [delegatedFilterPerson, setDelegatedFilterPerson] = useState<string>('todos'); // 🚀 Filtro individual na aba delegadas
+  const [delegatedFilterPerson, setDelegatedFilterPerson] = useState<string>('todos'); 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
@@ -158,8 +107,15 @@ export default function TarefasPage() {
   const [chatInput, setChatInput] = useState('');
   const [isDifficultyAlert, setIsDifficultyAlert] = useState(false);
   const taskChatEndRef = useRef<HTMLDivElement>(null);
+  const inputFieldRef = useRef<HTMLTextAreaElement>(null);
 
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+  const glassContainerStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-card) 50%, transparent)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid color-mix(in srgb, var(--border-input) 40%, transparent)', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)' };
+  const glassSidebarStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-input) 30%, transparent)', borderRight: '1px solid color-mix(in srgb, var(--border-input) 40%, transparent)' };
+  const glassItemStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-card) 70%, transparent)', border: '1px solid color-mix(in srgb, var(--border-input) 50%, transparent)' };
+  const solidCardStyle = { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-input)', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)' };
+  const solidInputStyle = { backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-input)', color: 'var(--text-main)' };
 
   const notifyBell = useCallback((title: string, desc: string) => {
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title, desc } }));
@@ -273,18 +229,14 @@ export default function TarefasPage() {
     }
   }, [currentUser, teamMembers]);
 
-  // Contagem de tarefas delegadas por você
   const delegatedCount = useMemo(() => {
     if (!currentUser) return 0;
     return tasks.filter(t => t.assignedBy === currentUser.nome && t.assignee !== currentUser.nome && t.status !== 'concluida').length;
   }, [tasks, currentUser]);
 
-  // Lista de pessoas para quem você delegou tarefas (para o filtro individual)
   const delegatedPeopleList = useMemo(() => {
     if (!currentUser) return [];
-    const names = tasks
-      .filter(t => t.assignedBy === currentUser.nome && t.assignee !== currentUser.nome)
-      .map(t => t.assignee);
+    const names = tasks.filter(t => t.assignedBy === currentUser.nome && t.assignee !== currentUser.nome).map(t => t.assignee);
     return Array.from(new Set(names));
   }, [tasks, currentUser]);
 
@@ -298,7 +250,6 @@ export default function TarefasPage() {
         if (task.assignee !== currentUser.nome) return false;
       } else {
         if (task.assignedBy !== currentUser.nome || task.assignee === currentUser.nome) return false;
-        // 🚀 Aplicação do filtro individual por pessoa na aba delegadas
         if (delegatedFilterPerson !== 'todos' && task.assignee !== delegatedFilterPerson) return false;
       }
       
@@ -351,7 +302,9 @@ export default function TarefasPage() {
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim() || !currentUser) return;
+    if (!newTitle.trim() || !currentUser || isSaving) return;
+    setIsSaving(true);
+    
     const target = newAssignee || currentUser.nome;
     const formattedDate = newDate ? newDate.split('-').reverse().join('/') : getLocalTodayISO().split('-').reverse().join('/');
     const stepsPayload = newSteps.map((s, idx) => ({ id: Date.now() + idx, text: s.text, note: s.note, done: false }));
@@ -360,7 +313,7 @@ export default function TarefasPage() {
     const tempId = `temp-${Date.now()}`;
     const optimisticTask: TaskItem = {
       id: tempId, title: newTitle.trim(), description: newDesc.trim() || 'Sem observações adicionais.', category: newCategory, priority: newPriority, status: 'pendente', important: isUrgent,
-      myDay: true, isRoutine: newIsRoutine, assignee: target, sector: currentUser.setor, assignedBy: currentUser.nome, dueDate: formattedDate, dueTime: newTime, steps: stepsPayload, chat: []
+      myDay: true, isRoutine: newIsRoutine, assignee: target, sector: currentUser.setor, assignedBy: currentUser.nome, dueDate: formattedDate, dueTime: newTime, steps: stepsPayload, chat: [], createdAt: new Date().toISOString()
     };
 
     setTasks(prev => [optimisticTask, ...prev]); setSelectedTaskId(tempId); setIsCreateModalOpen(false);
@@ -383,6 +336,7 @@ export default function TarefasPage() {
     } else {
       setTasks(prev => prev.filter(t => t.id !== tempId)); setSelectedTaskId(null); notifyBell('Erro', 'Não foi possível gravar.');
     }
+    setIsSaving(false);
   };
 
   const handleSaveTaskInfo = async () => {
@@ -397,10 +351,92 @@ export default function TarefasPage() {
     notifyBell('Tarefa Atualizada', 'Título e descrição salvos com sucesso.');
   };
 
-  const changeTaskStatus = async (taskId: string, status: TaskItem['status'], e?: React.MouseEvent) => {
+  // 🚀 MOTOR DE RENOVAÇÃO DE ROTINAS (Gera a próxima semana automaticamente)
+  const completeTaskAndCloneRoutine = async (taskId: string, finalSteps?: SubStep[]) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const stepsToSave = finalSteps || task.steps;
+
+    // 1. Marca a atual como concluída
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'concluida', steps: stepsToSave } : t));
+    await supabase.from('doodoo_tarefas').update({ status: 'concluida', etapas: stepsToSave }).eq('id', taskId);
+
+    // 2. Se for rotina, duplica para a próxima semana
+    if (task.isRoutine) {
+      let nextDateStr = '';
+      if (task.dueDate) {
+        const parts = task.dueDate.split('/');
+        if (parts.length === 3) {
+          const [day, month, year] = parts.map(Number);
+          const nextDateObj = new Date(year, month - 1, day);
+          nextDateObj.setDate(nextDateObj.getDate() + 7); // + 1 semana fixa para rotinas padrão
+          nextDateStr = `${String(nextDateObj.getDate()).padStart(2, '0')}/${String(nextDateObj.getMonth() + 1).padStart(2, '0')}/${nextDateObj.getFullYear()}`;
+        }
+      }
+      if (!nextDateStr) {
+         const now = new Date();
+         now.setDate(now.getDate() + 7);
+         nextDateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      }
+
+      // Reinicia a checklist para a próxima semana
+      const cleanSteps = stepsToSave.map(s => ({ ...s, done: false, id: Date.now() + Math.random() }));
+      const tempId = `temp-routine-${Date.now()}`;
+      
+      const newTask: TaskItem = {
+          ...task,
+          id: tempId,
+          status: 'pendente',
+          dueDate: nextDateStr,
+          chat: [],
+          steps: cleanSteps,
+          myDay: false, // Desmarca de hoje para não poluir
+          createdAt: new Date().toISOString()
+      };
+
+      setTasks(prev => [newTask, ...prev]);
+
+      const { data, error } = await supabase.from('doodoo_tarefas').insert([{
+          usuario_id: currentUser?.user_id,
+          titulo: task.title,
+          descricao: task.description,
+          categoria: task.category,
+          prioridade: task.priority,
+          status: 'pendente',
+          importante: task.important,
+          meu_dia: false,
+          rotina: true,
+          responsavel: task.assignee,
+          setor: task.sector,
+          atribuido_por: task.assignedBy,
+          data_limite: nextDateStr,
+          hora_limite: task.dueTime,
+          etapas: cleanSteps,
+          chat: [],
+          metadata: { clonedFrom: task.id }
+      }]).select().single();
+
+      if (data && !error) {
+          const realTask = mapDbToTask(data);
+          setTasks(prev => prev.map(t => t.id === tempId ? realTask : t));
+          notifyBell('🔁 Rotina Renovada', `A próxima ocorrência foi agendada automaticamente para ${nextDateStr}.`);
+      }
+    }
+  };
+
+  // 🚀 Lógica Centralizada de Troca de Status
+  const changeTaskStatus = async (taskId: string, newStatus: TaskItem['status'], e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t));
-    await supabase.from('doodoo_tarefas').update({ status }).eq('id', taskId);
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (newStatus === 'concluida' && task.isRoutine && task.status !== 'concluida') {
+        await completeTaskAndCloneRoutine(taskId);
+    } else {
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+        await supabase.from('doodoo_tarefas').update({ status: newStatus }).eq('id', taskId);
+    }
   };
 
   const toggleTaskFlag = async (taskId: string, field: 'important' | 'myDay' | 'isRoutine', e?: React.MouseEvent) => {
@@ -424,9 +460,17 @@ export default function TarefasPage() {
     if (!task) return;
     const updatedSteps = task.steps.map(s => s.id === stepId ? { ...s, done: !s.done } : s);
     const allDone = updatedSteps.length > 0 && updatedSteps.every(s => s.done);
-    const newStatus: TaskItem['status'] = allDone ? 'concluida' : updatedSteps.some(s => s.done) ? 'andamento' : 'pendente';
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, steps: updatedSteps, status: newStatus } : t));
-    await supabase.from('doodoo_tarefas').update({ etapas: updatedSteps, status: newStatus }).eq('id', taskId);
+    
+    const isCompleting = allDone && task.status !== 'concluida';
+    const newStatus = allDone ? 'concluida' : updatedSteps.some(s => s.done) ? 'andamento' : 'pendente';
+    
+    if (isCompleting && task.isRoutine) {
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, steps: updatedSteps } : t));
+        completeTaskAndCloneRoutine(taskId, updatedSteps);
+    } else {
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, steps: updatedSteps, status: newStatus } : t));
+        await supabase.from('doodoo_tarefas').update({ etapas: updatedSteps, status: newStatus }).eq('id', taskId);
+    }
   };
 
   const handleAddStep = async (taskId: string) => {
@@ -457,16 +501,38 @@ export default function TarefasPage() {
     await supabase.from('doodoo_tarefas').update({ etapas: updatedSteps }).eq('id', taskId);
   };
 
+  // 🚀 LÓGICA DE TEXTAREA AUTO-EXPANSÍVEL PARA O CHAT DA TAREFA
+  const handleInputResize = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setChatInput(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault(); 
+      if (chatInput.trim() && selectedTask) {
+        handleSendChat(selectedTask.id);
+      }
+    }
+  };
+
   const handleSendChat = async (taskId: string) => {
     if (!chatInput.trim() || !currentUser || !isMounted) return;
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
-    const msg: ChatComment = { id: Date.now(), author: currentUser.nome, text: chatInput.trim(), time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), isAlert: isDifficultyAlert };
+    
+    const now = new Date();
+    const formattedTime = `${now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    
+    const msg: ChatComment = { id: Date.now(), author: currentUser.nome, text: chatInput.trim(), time: formattedTime, isAlert: isDifficultyAlert };
     const newChat = [...task.chat, msg];
-    setChatInput(''); setIsDifficultyAlert(false);
+    
+    setChatInput(''); 
+    setIsDifficultyAlert(false);
+    if (inputFieldRef.current) inputFieldRef.current.style.height = 'auto'; // Reset tamanho do textarea
     
     const newStatus = isDifficultyAlert ? 'bloqueado' : task.status;
-    
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, chat: newChat, status: newStatus } : t));
     
     await supabase.from('doodoo_tarefas').update({ 
@@ -476,11 +542,16 @@ export default function TarefasPage() {
     }).eq('id', taskId);
     
     if (isDifficultyAlert) notifyBell('Dificuldade Sinalizada', 'A sua dificuldade foi registada.');
+    setTimeout(() => { taskChatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 100);
   };
 
   const handleSendReminder = async (task: TaskItem) => {
     if (!currentUser || !isMounted) return;
-    const reminder: ChatComment = { id: Date.now(), author: currentUser.nome, text: `🔔 Solicitou posicionamento / atualização de status para ${task.assignee}.`, time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), isAlert: true };
+    
+    const now = new Date();
+    const formattedTime = `${now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    
+    const reminder: ChatComment = { id: Date.now(), author: currentUser.nome, text: `🔔 Solicitou posicionamento / atualização de status para ${task.assignee}.`, time: formattedTime, isAlert: true };
     const newChat = [...task.chat, reminder];
     
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, chat: newChat } : t));
@@ -495,117 +566,148 @@ export default function TarefasPage() {
 
   const confirmDeleteTask = (id: string, title: string) => {
     setConfirmModal({
-      isOpen: true, title: 'Excluir Tarefa', message: `Tem certeza que deseja excluir "${title}"? O histórico será apagado.`,
+      isOpen: true, title: 'Excluir Tarefa', message: `Tem certeza que deseja excluir permanentemente "${title}"? O histórico será apagado.`,
       onConfirm: async () => {
         setTasks(prev => prev.filter(t => t.id !== id)); setSelectedTaskId(null); setConfirmModal(prev => ({ ...prev, isOpen: false }));
         await supabase.from('doodoo_tarefas').delete().eq('id', id);
-        notifyBell('Tarefa Excluída', 'A demanda foi removida.');
+        notifyBell('Tarefa Excluída', 'A demanda foi removida com sucesso.');
       }
     });
   };
 
-  if (isLoading || !isMounted) return <div className="w-full h-full flex flex-col items-center justify-center"><Loader2 className="w-8 h-8 animate-spin opacity-50 text-blue-500" /></div>;
+  const formatCreatedAt = (dateString: string) => {
+    if (!dateString) return 'Data desconhecida';
+    const date = new Date(dateString);
+    return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  };
+
+  if (isLoading || !isMounted) return <div className="w-full h-full flex flex-col items-center justify-center"><Loader2 className="w-10 h-10 animate-spin opacity-50 text-blue-500" /></div>;
   if (authError || !currentUser) return <div className="w-full h-full flex flex-col items-center justify-center"><button onClick={handleForceLogout} className="px-6 py-3 rounded-2xl bg-brand-panel text-white font-bold"><LogOut className="w-4 h-4 mr-2 inline" />Sair</button></div>;
 
   return (
-    <div className="w-full h-full flex flex-col animate-in fade-in duration-300">
+    <div className="w-full h-full flex-1 flex flex-col animate-in fade-in duration-300 relative z-0">
       
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 rounded-[2.5rem] border overflow-hidden shadow-2xl backdrop-blur-xl" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
+      <div className="w-full flex-1 flex flex-col lg:flex-row rounded-t-[2rem] rounded-bl-none rounded-br-none md:rounded-b-[2.5rem] md:rounded-[2.5rem] border-t border-l-0 border-r-0 border-b-0 md:border overflow-hidden relative z-10" style={glassContainerStyle}>
         
-        {/* COLUNA 1: MENU DE LISTAS E ALTERNÂNCIA COM CONTADOR */}
-        <div className="lg:col-span-3 border-r p-5 flex flex-col justify-between" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-          <div className="space-y-4">
-            <div className="space-y-3 pb-4 border-b" style={{ borderColor: 'var(--border-input)' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-extrabold text-sm tracking-tight">Tarefas & Rotinas</h3>
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">Setor {currentUser.setor}</p>
+        {/* ==========================================================
+            COLUNA 1: MENU DE LISTAS E ALTERNÂNCIA
+            ========================================================== */}
+        {!selectedTaskId && (
+          <div className="lg:hidden flex flex-col border-b flex-shrink-0" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
+            <div className="flex items-center justify-between p-5 md:p-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-panel flex items-center justify-center text-white shadow-md">
+                  <CheckSquare className="w-5 h-5" />
                 </div>
-                <div className="flex items-center px-2 py-1 rounded-xl border shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-                  <Palette className="w-3.5 h-3.5 mr-1.5 opacity-40 flex-shrink-0" />
-                  <div className="flex items-center space-x-1">
-                    {themes.map((t) => (
-                      <button key={t.id} onClick={() => changeTheme(t.id)} style={{ width: '10px', height: '10px', backgroundColor: t.color, borderColor: t.border, boxShadow: theme === t.id ? `0 0 0 2px var(--bg-card), 0 0 0 2.5px ${t.border}` : 'none' }} className={`rounded-full border transition-all flex-shrink-0 ${theme === t.id ? 'scale-110' : 'opacity-70 hover:opacity-100'}`} />
-                    ))}
+                <div>
+                  <h3 className="font-extrabold text-[15px] tracking-tight">Fila de Tarefas</h3>
+                  <div className="flex items-center space-x-1.5 opacity-60">
+                    <Shield className="w-3 h-3 text-blue-500" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">{currentUser.nome}</span>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center space-x-2.5 px-3 py-2 rounded-xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-                <div className="w-7 h-7 rounded-lg bg-brand-panel text-white font-extrabold flex items-center justify-center text-[10px] flex-shrink-0">{getInitials(currentUser.nome)}</div>
-                <div className="flex flex-col overflow-hidden"><span className="truncate w-full text-xs font-extrabold leading-tight">{currentUser.nome}</span><span className="text-[9px] font-bold opacity-50 uppercase tracking-wider">{currentUser.cargo}</span></div>
+            </div>
+            
+            <div className="px-5 pb-4">
+              <div className="grid grid-cols-2 gap-2 p-1.5 rounded-xl border" style={glassItemStyle}>
+                <button onClick={() => { setViewMode('minha'); setSelectedTaskId(null); }} className={`py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm ${viewMode === 'minha' ? 'bg-brand-panel text-white' : 'opacity-70 hover:opacity-100'}`}>Minhas</button>
+                <button onClick={() => { setViewMode('delegadas'); setSelectedTaskId(null); }} className={`py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center space-x-2 shadow-sm ${viewMode === 'delegadas' ? 'bg-brand-panel text-white' : 'opacity-70 hover:opacity-100'}`}>
+                  <span>Delegadas</span>
+                  {delegatedCount > 0 && <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${viewMode === 'delegadas' ? 'bg-white/20' : 'bg-black/10 dark:bg-white/10'}`}>{delegatedCount}</span>}
+                </button>
               </div>
             </div>
 
-            {/* 🚀 ALTERNÂNCIA COM CONTADOR NO BOTÃO "O QUE DELEGUEI" */}
-            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-              <button onClick={() => { setViewMode('minha'); setSelectedTaskId(null); }} className={`py-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${viewMode === 'minha' ? 'bg-brand-panel text-white shadow-xs' : 'opacity-60 hover:opacity-100'}`}>Minha Fila</button>
-              <button onClick={() => { setViewMode('delegadas'); setSelectedTaskId(null); }} className={`py-2 px-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${viewMode === 'delegadas' ? 'bg-brand-panel text-white shadow-xs' : 'opacity-60 hover:opacity-100'}`}>
+            <div className="flex overflow-x-auto px-5 pb-5 space-x-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+              {[
+                { id: 'meu-dia', icon: Sun, label: 'Meu Dia' },
+                { id: 'todas', icon: CheckSquare, label: 'Todas' },
+                { id: 'importante', icon: Star, label: 'Urgentes' },
+                { id: 'rotinas', icon: Repeat, label: 'Rotinas' },
+                { id: 'concluidas', icon: CheckCircle2, label: 'Concluídas' }
+              ].map(list => (
+                <button key={list.id} onClick={() => setSmartList(list.id as any)} className={`px-4 py-2.5 rounded-full text-[12px] font-extrabold whitespace-nowrap transition-transform active:scale-95 shadow-sm flex items-center space-x-2 ${smartList === list.id ? 'bg-brand-panel text-white' : 'border border-[var(--border-input)] opacity-70 hover:opacity-100'}`} style={smartList !== list.id ? { backgroundColor: 'var(--bg-card)' } : {}}>
+                  <list.icon className="w-4 h-4" />
+                  <span>{list.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="hidden lg:flex flex-col w-[280px] xl:w-[320px] flex-shrink-0" style={glassSidebarStyle}>
+          <div className="p-6 md:p-8 space-y-6 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            <div className="space-y-3 pb-4 border-b" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 50%, transparent)' }}>
+              <div>
+                <h3 className="font-extrabold text-base tracking-tight">Tarefas & Rotinas</h3>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-panel mt-1">Setor {currentUser.setor}</p>
+              </div>
+              <div className="flex items-center space-x-3 p-3 rounded-2xl border" style={glassItemStyle}>
+                <div className="w-9 h-9 rounded-xl bg-brand-panel text-white font-extrabold flex items-center justify-center text-[12px] flex-shrink-0 shadow-sm">{getInitials(currentUser.nome)}</div>
+                <div className="flex flex-col overflow-hidden"><span className="truncate w-full text-xs font-extrabold leading-tight">{currentUser.nome}</span><span className="text-[9px] font-bold opacity-60 uppercase tracking-wider">{currentUser.cargo}</span></div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 p-1.5 rounded-xl border shadow-sm" style={glassItemStyle}>
+              <button onClick={() => { setViewMode('minha'); setSelectedTaskId(null); }} className={`py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'minha' ? 'bg-brand-panel text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>Minha Fila</button>
+              <button onClick={() => { setViewMode('delegadas'); setSelectedTaskId(null); }} className={`py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${viewMode === 'delegadas' ? 'bg-brand-panel text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>
                 <span>Delegadas</span>
-                {delegatedCount > 0 && (
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${viewMode === 'delegadas' ? 'bg-white/20 text-white' : 'bg-brand-panel/10 text-brand-panel'}`}>
-                    {delegatedCount}
-                  </span>
-                )}
+                {delegatedCount > 0 && <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${viewMode === 'delegadas' ? 'bg-white/20 text-white' : 'bg-brand-panel/10 text-brand-panel'}`}>{delegatedCount}</span>}
               </button>
             </div>
 
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest opacity-40 px-2 mb-1">Listas Inteligentes</p>
-              <button onClick={() => setSmartList('meu-dia')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${smartList === 'meu-dia' ? 'bg-brand-panel text-white shadow-xs' : 'hover:bg-black/5 opacity-75'}`}>
-                <div className="flex items-center space-x-2.5"><Sun className={`w-4 h-4 ${smartList === 'meu-dia' ? 'text-white' : 'text-amber-500'}`} /><span>Meu Dia</span></div>
+            <div className="space-y-2">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest opacity-40 px-2 mb-2">Filtros Inteligentes</p>
+              <button onClick={() => setSmartList('meu-dia')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${smartList === 'meu-dia' ? 'bg-brand-panel text-white shadow-md' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
+                <div className="flex items-center space-x-3"><Sun className={`w-4 h-4 ${smartList === 'meu-dia' ? 'text-white' : 'text-amber-500'}`} /><span>Meu Dia</span></div>
                 <span className="text-[11px] font-extrabold">{visibleTasks.filter(t => t.myDay && t.status !== 'concluida').length}</span>
               </button>
-              <button onClick={() => setSmartList('todas')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${smartList === 'todas' ? 'bg-brand-panel text-white shadow-xs' : 'hover:bg-black/5 opacity-75'}`}>
-                <div className="flex items-center space-x-2.5"><CheckSquare className="w-4 h-4" /><span>Todas em Aberto</span></div>
+              <button onClick={() => setSmartList('todas')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${smartList === 'todas' ? 'bg-brand-panel text-white shadow-md' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
+                <div className="flex items-center space-x-3"><CheckSquare className="w-4 h-4" /><span>Todas em Aberto</span></div>
                 <span className="text-[11px] font-extrabold">{visibleTasks.filter(t => t.status !== 'concluida').length}</span>
               </button>
-              <button onClick={() => setSmartList('importante')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${smartList === 'importante' ? 'bg-brand-panel text-white shadow-xs' : 'hover:bg-black/5 opacity-75'}`}>
-                <div className="flex items-center space-x-2.5"><Star className={`w-4 h-4 ${smartList === 'importante' ? 'text-white' : 'text-amber-400'}`} /><span>Urgentes & VIPs</span></div>
+              <button onClick={() => setSmartList('importante')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${smartList === 'importante' ? 'bg-brand-panel text-white shadow-md' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
+                <div className="flex items-center space-x-3"><Star className={`w-4 h-4 ${smartList === 'importante' ? 'text-white' : 'text-amber-400'}`} /><span>Urgentes & VIPs</span></div>
                 <span className="text-[11px] font-extrabold">{visibleTasks.filter(t => (t.important || t.priority === 'Urgente') && t.status !== 'concluida').length}</span>
               </button>
-              <button onClick={() => setSmartList('rotinas')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${smartList === 'rotinas' ? 'bg-brand-panel text-white shadow-xs' : 'hover:bg-black/5 opacity-75'}`}>
-                <div className="flex items-center space-x-2.5"><Repeat className={`w-4 h-4 ${smartList === 'rotinas' ? 'text-white' : 'text-blue-500'}`} /><span>Rotinas do Setor</span></div>
+              <button onClick={() => setSmartList('rotinas')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${smartList === 'rotinas' ? 'bg-brand-panel text-white shadow-md' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
+                <div className="flex items-center space-x-3"><Repeat className={`w-4 h-4 ${smartList === 'rotinas' ? 'text-white' : 'text-blue-500'}`} /><span>Rotinas do Setor</span></div>
                 <span className="text-[11px] font-extrabold">{visibleTasks.filter(t => t.isRoutine && t.status !== 'concluida').length}</span>
               </button>
-              <button onClick={() => setSmartList('concluidas')} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${smartList === 'concluidas' ? 'bg-brand-panel text-white shadow-xs' : 'hover:bg-black/5 opacity-75'}`}>
-                <div className="flex items-center space-x-2.5"><CheckCircle2 className={`w-4 h-4 ${smartList === 'concluidas' ? 'text-white' : 'text-emerald-500'}`} /><span>Concluídas</span></div>
+              <button onClick={() => setSmartList('concluidas')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${smartList === 'concluidas' ? 'bg-brand-panel text-white shadow-md' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
+                <div className="flex items-center space-x-3"><CheckCircle2 className={`w-4 h-4 ${smartList === 'concluidas' ? 'text-white' : 'text-emerald-500'}`} /><span>Concluídas</span></div>
                 <span className="text-[11px] font-extrabold">{visibleTasks.filter(t => t.status === 'concluida').length}</span>
               </button>
             </div>
           </div>
-
-          <div className="pt-3 border-t text-center text-[10px] opacity-40 font-bold uppercase tracking-wider" style={{ borderColor: 'var(--border-input)' }}>
-            {viewMode === 'minha' ? 'Exibindo Fila Pessoal' : 'Exibindo Tarefas Delegadas'}
-          </div>
         </div>
 
-        {/* COLUNA 2: LISTA DE TAREFAS */}
-        <div className={`${selectedTask ? 'lg:col-span-5 border-r' : 'lg:col-span-9'} flex flex-col h-full overflow-hidden`} style={{ borderColor: 'var(--border-input)' }}>
-          <div className="p-4 border-b flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}>
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40" />
-              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Pesquisar tarefas..." className="w-full pl-9 pr-4 py-2 rounded-xl border text-xs font-medium outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
+        {/* ==========================================================
+            COLUNA 2: LISTA DE TAREFAS 
+            ========================================================== */}
+        <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${selectedTaskId ? 'hidden lg:flex lg:w-[350px] xl:w-[400px] lg:flex-none lg:border-r' : 'flex-1 w-full'}`} style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
+          
+          <div className="p-4 md:p-6 border-b flex flex-col sm:flex-row items-center justify-between gap-3 flex-shrink-0" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)', backgroundColor: 'color-mix(in srgb, var(--bg-card) 60%, transparent)' }}>
+            <div className="relative w-full sm:flex-1">
+              <Search className="w-4 h-4 md:w-5 md:h-5 absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40" />
+              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Pesquisar tarefas..." className="w-full pl-10 pr-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none focus:border-brand-panel transition-colors" style={solidInputStyle} />
             </div>
 
-            {/* 🚀 FILTRO INDIVIDUAL POR PESSOA NA ABA DELEGADAS */}
             {viewMode === 'delegadas' && delegatedPeopleList.length > 0 && (
-              <select 
-                value={delegatedFilterPerson} 
-                onChange={(e) => setDelegatedFilterPerson(e.target.value)} 
-                className="px-3 py-2 rounded-xl border text-xs font-bold outline-none cursor-pointer focus:border-blue-500" 
-                style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
-              >
-                <option value="todos">Todas as Pessoas</option>
+              <select value={delegatedFilterPerson} onChange={(e) => setDelegatedFilterPerson(e.target.value)} className="w-full sm:w-auto px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none cursor-pointer focus:border-brand-panel" style={solidInputStyle}>
+                <option value="todos">Toda a Equipe</option>
                 {delegatedPeopleList.map(name => <option key={name} value={name}>{name}</option>)}
               </select>
             )}
 
-            <button onClick={openCreateModal} className="px-4 py-2 rounded-xl bg-brand-panel text-white text-xs font-extrabold shadow-sm hover:opacity-95 flex items-center space-x-1.5 flex-shrink-0 cursor-pointer">
-              <Plus className="w-4 h-4" /><span>Nova Tarefa</span>
+            <button onClick={openCreateModal} className="w-full sm:w-auto p-3.5 px-5 rounded-2xl bg-brand-panel text-white shadow-md hover:opacity-95 transition-all flex items-center justify-center space-x-2 cursor-pointer flex-shrink-0 active:scale-95">
+              <Plus className="w-5 h-5" />
+              <span className={`${selectedTaskId ? 'hidden' : 'inline'} font-extrabold text-[13px]`}>Nova Tarefa</span>
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-2.5 custom-scrollbar" style={{ backgroundColor: 'var(--bg-input)' }}>
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
             {filteredTasks.map(task => {
               const isSelected = selectedTask?.id === task.id;
               const isDone = task.status === 'concluida';
@@ -614,262 +716,353 @@ export default function TarefasPage() {
               const catColor = taskCategories.find(c => c.nome === task.category)?.cor || '#3B82F6';
 
               return (
-                <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected ? 'shadow-sm' : 'hover:opacity-95'}`} style={{ backgroundColor: isSelected ? 'var(--bg-input)' : 'var(--bg-card)', borderColor: overdue ? 'rgba(239, 68, 68, 0.4)' : isBlocked ? 'rgba(245, 158, 11, 0.4)' : 'var(--border-input)', boxShadow: isSelected ? `0 0 0 2px ${catColor}` : undefined }}>
-                  <div className="flex items-start space-x-3 overflow-hidden w-full">
-                    <button type="button" onClick={(e) => changeTaskStatus(task.id, isDone ? 'pendente' : 'concluida', e)} className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isDone ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-400 hover:border-blue-500'}`}>{isDone && <CheckCircle2 className="w-3.5 h-3.5" />}</button>
+                <div key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`p-5 rounded-[1.5rem] border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected ? 'shadow-md scale-[1.01]' : 'hover:brightness-95 shadow-sm'}`} style={{ backgroundColor: isSelected ? 'var(--bg-input)' : 'color-mix(in srgb, var(--bg-card) 70%, transparent)', borderColor: overdue ? 'rgba(239, 68, 68, 0.5)' : isBlocked ? 'rgba(245, 158, 11, 0.4)' : isSelected ? 'var(--tab-active)' : 'var(--border-input)' }}>
+                  <div className="flex items-start space-x-4 overflow-hidden w-full">
+                    <button type="button" onClick={(e) => changeTaskStatus(task.id, isDone ? 'pendente' : 'concluida', e)} className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isDone ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'border-gray-400 hover:border-brand-panel bg-white/50'}`}>{isDone && <CheckCircle2 className="w-4 h-4" />}</button>
                     <div className="overflow-hidden flex-1">
-                      <div className="flex items-center space-x-2">
-                        {task.priority === 'Urgente' && !isDone && <span className="px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-500 text-[9px] font-extrabold uppercase flex items-center space-x-0.5 flex-shrink-0"><Flame className="w-2.5 h-2.5 mr-0.5" /> Urgente</span>}
-                        {isBlocked && !isDone && <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 text-[9px] font-extrabold uppercase flex items-center space-x-0.5 flex-shrink-0"><AlertTriangle className="w-2.5 h-2.5 mr-0.5" /> Bloqueada</span>}
-                        {overdue && <span className="px-1.5 py-0.5 rounded-md bg-red-500 text-white text-[9px] font-extrabold uppercase flex-shrink-0">Atrasada</span>}
-                        <p className={`text-xs font-extrabold leading-snug truncate ${isDone ? 'line-through opacity-45' : ''}`}>{task.title}</p>
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        {task.priority === 'Urgente' && !isDone && <span className="px-2 py-0.5 rounded-lg bg-red-500/10 text-red-500 text-[9px] md:text-[10px] font-extrabold uppercase flex items-center flex-shrink-0 shadow-sm"><Flame className="w-3 h-3 mr-1" /> Urgente</span>}
+                        {isBlocked && !isDone && <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-500 text-[9px] md:text-[10px] font-extrabold uppercase flex items-center flex-shrink-0 shadow-sm"><AlertTriangle className="w-3 h-3 mr-1" /> Bloqueada</span>}
+                        {overdue && <span className="px-2 py-0.5 rounded-lg bg-red-500 text-white text-[9px] md:text-[10px] font-extrabold uppercase flex-shrink-0 shadow-sm">Atrasada</span>}
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] opacity-60 font-medium">
-                        <span className="font-extrabold text-blue-500">{viewMode === 'delegadas' ? `Para: ${task.assignee}` : `Criado por: ${task.assignedBy}`}</span>
+                      
+                      <p className={`text-[14px] md:text-[15px] font-extrabold leading-snug break-words whitespace-normal ${isDone ? 'line-through opacity-45' : ''}`}>{task.title}</p>
+                      
+                      <div className="flex flex-wrap items-center gap-2 mt-2 text-[10px] md:text-[11px] opacity-60 font-bold">
+                        <span className="text-brand-panel">{viewMode === 'delegadas' ? `Para: ${task.assignee}` : `De: ${task.assignedBy}`}</span>
                         <span>•</span>
-                        <span className="px-1.5 flex items-center" style={{ color: catColor }}><div className="w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: catColor }}></div>{task.category}</span>
+                        <span className="flex items-center" style={{ color: catColor }}><div className="w-1.5 h-1.5 rounded-full mr-1.5" style={{ backgroundColor: catColor }}></div>{task.category}</span>
                         <span>•</span>
-                        <span className={overdue ? 'text-red-500 font-bold' : ''}>📅 {task.dueDate}</span>
+                        <span className={overdue ? 'text-red-500' : ''}>📅 {task.dueDate}</span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 flex-shrink-0">
-                    {task.status === 'andamento' && <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Em andamento</span>}
-                    <button type="button" onClick={(e) => toggleTaskFlag(task.id, 'important', e)} className="p-1.5 rounded-lg hover:bg-black/5 cursor-pointer"><Star className={`w-4 h-4 ${task.important ? 'fill-amber-400 text-amber-400' : 'opacity-30'}`} /></button>
+                    {task.status === 'andamento' && <span className="hidden sm:inline text-[10px] font-extrabold px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Em andamento</span>}
+                    <button type="button" onClick={(e) => toggleTaskFlag(task.id, 'important', e)} className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors"><Star className={`w-5 h-5 ${task.important ? 'fill-amber-400 text-amber-400 drop-shadow-sm' : 'opacity-30'}`} /></button>
                   </div>
                 </div>
               );
             })}
-            {filteredTasks.length === 0 && <div className="h-60 flex flex-col items-center justify-center text-center opacity-40"><CheckCircle2 className="w-8 h-8 stroke-1" /><p className="text-xs mt-2 font-semibold">Tudo limpo nesta lista.</p></div>}
+            {filteredTasks.length === 0 && (
+              <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center opacity-40 space-y-4"><CheckCircle2 className="w-12 h-12 stroke-1" /><p className="text-sm font-bold">Tudo limpo nesta lista.</p></div>
+            )}
           </div>
         </div>
 
-        {/* COLUNA 3: DETALHES E EDIÇÃO DA TAREFA */}
-        {selectedTask && (
-          <div className="lg:col-span-4 flex flex-col h-full overflow-hidden animate-in slide-in-from-right duration-200" style={{ backgroundColor: 'var(--bg-card)' }}>
-            
-            <div className="p-5 border-b flex items-start justify-between gap-3" style={{ borderColor: 'var(--border-input)' }}>
-              <div className="overflow-hidden w-full">
-                <div className="flex items-center space-x-2 mb-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-45">Criado por: {selectedTask.assignedBy}</span>
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 flex items-center space-x-1"><Tag className="w-3 h-3" /><span>{selectedTask.category}</span></span>
+        {/* ==========================================================
+            COLUNA 3: EDITOR DETALHES 
+            ========================================================== */}
+        <div className={`${selectedTaskId ? 'flex' : 'hidden'} flex-col flex-1 h-full overflow-hidden`} style={{ backgroundColor: 'var(--bg-card)' }}>
+          {selectedTask && (
+            <>
+              <div className="p-5 md:p-8 border-b flex flex-col gap-3 flex-shrink-0" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
+                
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="flex items-center space-x-3">
+                    <button onClick={() => setSelectedTaskId(null)} className="lg:hidden p-2 -ml-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center text-brand-panel font-extrabold text-[13px] transition-colors">
+                      <ArrowLeft className="w-4 h-4 mr-1.5" /> Voltar
+                    </button>
+                    <div className="flex flex-col">
+                      <span className="hidden lg:inline text-[10px] font-bold uppercase tracking-wider opacity-45">De: {selectedTask.assignedBy}</span>
+                      <span className="flex items-center text-[9px] md:text-[10px] font-bold uppercase tracking-wider opacity-45 lg:mt-0.5">
+                        <Calendar className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" />
+                        Criado em: {formatCreatedAt(selectedTask.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[10px] font-extrabold px-3 py-1.5 rounded-lg bg-brand-panel/10 text-brand-panel flex items-center space-x-1.5 shadow-sm border border-brand-panel/20"><Tag className="w-3.5 h-3.5" /><span>{selectedTask.category}</span></span>
+                    {!isEditingTask && (
+                      <button onClick={() => setSelectedTaskId(null)} className="hidden lg:flex p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 opacity-50 hover:opacity-100 cursor-pointer flex-shrink-0 transition-colors"><X className="w-5 h-5" /></button>
+                    )}
+                  </div>
                 </div>
 
                 {isEditingTask ? (
-                  <div className="space-y-2 mt-2 pr-4">
-                    <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full p-2.5 rounded-xl border text-sm font-extrabold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
+                  <div className="space-y-3 mt-1">
+                    <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full p-3 rounded-2xl border text-base font-extrabold outline-none focus:border-brand-panel transition-colors shadow-sm" style={solidInputStyle} />
                   </div>
                 ) : (
-                  <h3 className="text-sm font-extrabold leading-snug break-words flex items-start">
-                    <span className="flex-1">{selectedTask.title}</span>
+                  <h3 className="text-xl md:text-2xl font-extrabold leading-tight break-words whitespace-normal flex items-start mt-2">
+                    <span className="flex-1 min-w-0">{selectedTask.title}</span>
                     {canEditTask && (
-                      <button onClick={() => { setIsEditingTask(true); setEditTitle(selectedTask.title); setEditDesc(selectedTask.description); }} className="ml-2 p-1.5 rounded-lg text-blue-500 hover:bg-blue-500/10 transition-colors cursor-pointer">
-                        <Edit2 className="w-4 h-4" />
+                      <button onClick={() => { setIsEditingTask(true); setEditTitle(selectedTask.title); setEditDesc(selectedTask.description); }} className="ml-3 p-2 rounded-xl text-brand-panel hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer flex-shrink-0">
+                        <Edit2 className="w-5 h-5" />
                       </button>
                     )}
                   </h3>
                 )}
               </div>
-              
-              {!isEditingTask && (
-                <button onClick={() => setSelectedTaskId(null)} className="p-1.5 rounded-xl hover:bg-black/5 opacity-50 hover:opacity-100 cursor-pointer flex-shrink-0"><X className="w-4 h-4" /></button>
-              )}
-            </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar">
-              
-              <div className="grid grid-cols-3 gap-2">
-                <button type="button" onClick={() => toggleTaskFlag(selectedTask.id, 'myDay')} className={`py-2 px-2 rounded-xl border text-[11px] font-bold flex items-center justify-center space-x-1.5 cursor-pointer ${selectedTask.myDay ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' : 'opacity-60'}`} style={!selectedTask.myDay ? { backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' } : undefined}><Sun className="w-3.5 h-3.5" /><span>Meu Dia</span></button>
-                <button type="button" onClick={() => toggleTaskFlag(selectedTask.id, 'important')} className={`py-2 px-2 rounded-xl border text-[11px] font-bold flex items-center justify-center space-x-1.5 cursor-pointer ${selectedTask.important ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' : 'opacity-60'}`} style={!selectedTask.important ? { backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' } : undefined}><Star className={`w-3.5 h-3.5 ${selectedTask.important ? 'fill-amber-400' : ''}`} /><span>Destacar</span></button>
-                <button type="button" onClick={() => toggleTaskFlag(selectedTask.id, 'isRoutine')} className={`py-2 px-2 rounded-xl border text-[11px] font-bold flex items-center justify-center space-x-1.5 cursor-pointer ${selectedTask.isRoutine ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 'opacity-60'}`} style={!selectedTask.isRoutine ? { backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' } : undefined}><Repeat className="w-3.5 h-3.5" /><span>Rotina</span></button>
+              <div className="flex-1 overflow-y-auto p-5 md:p-8 space-y-6 md:space-y-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                
+                <div className="grid grid-cols-3 gap-3">
+                  <button type="button" onClick={() => toggleTaskFlag(selectedTask.id, 'myDay')} className={`py-3 px-2 rounded-2xl border text-[11px] font-bold flex items-center justify-center space-x-2 cursor-pointer transition-colors ${selectedTask.myDay ? 'bg-amber-500/10 text-amber-500 border-amber-500/30 shadow-sm' : 'opacity-60 hover:bg-black/5 dark:hover:bg-white/5'}`} style={!selectedTask.myDay ? solidInputStyle : undefined}><Sun className="w-4 h-4" /><span>Meu Dia</span></button>
+                  <button type="button" onClick={() => toggleTaskFlag(selectedTask.id, 'important')} className={`py-3 px-2 rounded-2xl border text-[11px] font-bold flex items-center justify-center space-x-2 cursor-pointer transition-colors ${selectedTask.important ? 'bg-amber-500/10 text-amber-500 border-amber-500/30 shadow-sm' : 'opacity-60 hover:bg-black/5 dark:hover:bg-white/5'}`} style={!selectedTask.important ? solidInputStyle : undefined}><Star className={`w-4 h-4 ${selectedTask.important ? 'fill-amber-400 drop-shadow-sm' : ''}`} /><span>Destacar</span></button>
+                  <button type="button" onClick={() => toggleTaskFlag(selectedTask.id, 'isRoutine')} className={`py-3 px-2 rounded-2xl border text-[11px] font-bold flex items-center justify-center space-x-2 cursor-pointer transition-colors ${selectedTask.isRoutine ? 'bg-brand-panel/10 text-brand-panel border-brand-panel/30 shadow-sm' : 'opacity-60 hover:bg-black/5 dark:hover:bg-white/5'}`} style={!selectedTask.isRoutine ? solidInputStyle : undefined}><Repeat className={`w-4 h-4 ${selectedTask.isRoutine ? 'animate-spin-slow' : ''}`} /><span>Rotina</span></button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-3xl border" style={solidInputStyle}>
+                  <div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest opacity-50 block mb-2">Status da Tarefa</span>
+                    <select value={selectedTask.status} onChange={(e) => changeTaskStatus(selectedTask.id, e.target.value as TaskItem['status'])} className="w-full p-3.5 rounded-xl border text-[13px] font-bold outline-none cursor-pointer focus:border-brand-panel transition-colors shadow-sm" style={solidCardStyle}>
+                      <option value="pendente">⏳ Pendente</option><option value="andamento">▶️ Em andamento</option><option value="bloqueado">⚠️ Bloqueada</option><option value="concluida">✅ Concluída</option>
+                    </select>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest opacity-50 block mb-2">Nível de Prioridade</span>
+                    <select value={selectedTask.priority} onChange={(e) => updateTaskMetadata(selectedTask.id, 'priority', e.target.value)} className="w-full p-3.5 rounded-xl border text-[13px] font-bold outline-none cursor-pointer focus:border-brand-panel transition-colors shadow-sm" style={solidCardStyle}>
+                      <option value="Normal">Normal</option><option value="Urgente">🔥 Urgente</option>
+                    </select>
+                  </div>
+                  <div className="col-span-1 sm:col-span-2 pt-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest opacity-50 block mb-2">Responsável pela Execução</span>
+                    {canEditTask ? (
+                      <select value={selectedTask.assignee} onChange={(e) => updateTaskMetadata(selectedTask.id, 'assignee', e.target.value)} className="w-full p-3.5 rounded-xl border text-[13px] font-bold text-brand-panel outline-none cursor-pointer focus:border-brand-panel transition-colors shadow-sm" style={solidCardStyle}>
+                        {teamMembers.map(m => ( <option key={m.user_id} value={m.nome}>{m.nome} ({m.cargo})</option> ))}
+                      </select>
+                    ) : ( <div className="p-3.5 rounded-xl border text-[13px] font-bold text-brand-panel shadow-sm" style={solidCardStyle}>{selectedTask.assignee}</div> )}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest opacity-50 block mb-3">Instruções e Observações</span>
+                  {isEditingTask ? (
+                    <div className="space-y-3">
+                      <textarea rows={4} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="w-full p-4 rounded-2xl border text-[13px] leading-relaxed outline-none focus:border-brand-panel resize-none font-medium shadow-sm transition-colors" style={solidCardStyle} />
+                      <div className="flex justify-end space-x-3">
+                        <button onClick={() => setIsEditingTask(false)} className="px-5 py-2.5 rounded-xl border text-[13px] font-bold hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
+                        <button onClick={handleSaveTaskInfo} className="px-6 py-2.5 rounded-xl bg-brand-panel text-white text-[13px] font-extrabold shadow-md cursor-pointer hover:opacity-90 active:scale-95 transition-transform">Salvar Alterações</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-[13px] opacity-80 leading-relaxed whitespace-pre-wrap p-5 rounded-3xl border font-medium" style={solidInputStyle}>{formatLinks(selectedTask.description)}</div>
+                  )}
+                </div>
+
+                {selectedTask.assignee !== currentUser.nome && selectedTask.status !== 'concluida' && (
+                  <button onClick={() => handleSendReminder(selectedTask)} className="w-full py-4 px-4 rounded-2xl border border-amber-500/40 text-amber-500 bg-amber-500/5 text-[13px] font-extrabold flex items-center justify-center space-x-2 hover:bg-amber-500/10 cursor-pointer transition-colors shadow-sm">
+                    <Bell className="w-4 h-4" /><span>Cobrar Atualização de Status</span>
+                  </button>
+                )}
+
+                <div className="space-y-4 pt-4 border-t" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
+                  <div className="flex items-center justify-between text-[13px] font-extrabold"><span className="opacity-70 uppercase tracking-widest text-[10px]">Checklist ({selectedTask.steps.filter(s => s.done).length}/{selectedTask.steps.length})</span></div>
+                  {selectedTask.steps.length > 0 && (
+                    <div className="w-full h-2 rounded-full overflow-hidden shadow-inner" style={{ backgroundColor: 'color-mix(in srgb, var(--border-input) 50%, transparent)' }}>
+                      <div className="h-full bg-emerald-500 transition-all duration-500 ease-out" style={{ width: `${Math.round((selectedTask.steps.filter(s => s.done).length / selectedTask.steps.length) * 100)}%` }} />
+                    </div>
+                  )}
+                  
+                  <div className="space-y-3">
+                    {selectedTask.steps.map(step => (
+                      <div key={step.id}>
+                        {editingStepId === step.id ? (
+                          <div className="p-4 rounded-2xl border space-y-3 shadow-md" style={solidCardStyle}>
+                            <input type="text" value={editStepText} onChange={e => setEditStepText(e.target.value)} placeholder="Título da etapa" className="w-full p-3 rounded-xl border text-[13px] font-bold outline-none focus:border-brand-panel transition-colors" style={solidInputStyle} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveStepEdit(selectedTask.id, step.id); } }} />
+                            <textarea rows={2} value={editStepNote} onChange={e => setEditStepNote(e.target.value)} placeholder="Detalhes, links ou o que foi feito..." className="w-full p-3 rounded-xl border text-[12px] outline-none focus:border-brand-panel resize-none font-medium transition-colors" style={solidInputStyle} />
+                            <div className="flex justify-end space-x-3 pt-1">
+                              <button onClick={() => setEditingStepId(null)} className="px-4 py-2 rounded-xl border text-[12px] font-bold hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
+                              <button onClick={() => handleSaveStepEdit(selectedTask.id, step.id)} className="px-5 py-2 rounded-xl bg-brand-panel text-white text-[12px] font-bold cursor-pointer shadow-sm">Salvar Etapa</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="group flex items-start justify-between p-3.5 md:p-4 rounded-2xl border transition-colors hover:bg-black/5 dark:hover:bg-white/5" style={solidInputStyle}>
+                            <label className="flex items-start space-x-3.5 cursor-pointer flex-1 overflow-hidden mt-0.5">
+                              <input type="checkbox" checked={step.done} onChange={() => toggleSubStep(selectedTask.id, step.id)} className="w-5 h-5 rounded border-gray-300 accent-brand-panel cursor-pointer flex-shrink-0 shadow-sm" />
+                              <div className="flex flex-col">
+                                <span className={`break-words text-[13px] md:text-sm ${step.done ? 'line-through opacity-45' : 'font-extrabold'}`}>{step.text}</span>
+                                {step.note && <span className="text-[11px] opacity-60 mt-1 leading-relaxed whitespace-pre-wrap font-medium">{formatLinks(step.note)}</span>}
+                              </div>
+                            </label>
+                            <div className="flex items-center space-x-1.5 ml-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => { setEditingStepId(step.id); setEditStepText(step.text); setEditStepNote(step.note || ''); }} className="p-2 text-brand-panel hover:bg-black/5 dark:hover:bg-white/5 rounded-xl cursor-pointer transition-colors"><Edit2 className="w-4 h-4" /></button>
+                              <button onClick={() => handleDeleteStep(selectedTask.id, step.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl cursor-pointer transition-colors"><X className="w-4 h-4" /></button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="p-4 rounded-2xl border space-y-3" style={solidInputStyle}>
+                    <input type="text" value={stepInput} onChange={(e) => setStepInput(e.target.value)} placeholder="Nova etapa (título)..." className="w-full px-4 py-3 rounded-xl border text-[13px] font-bold outline-none focus:border-brand-panel transition-colors shadow-sm" style={solidCardStyle} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddStep(selectedTask.id); } }} />
+                    <textarea rows={1} value={stepNoteInput} onChange={(e) => setStepNoteInput(e.target.value)} placeholder="Observações da etapa (opcional)" className="w-full px-4 py-3 rounded-xl border text-[12px] outline-none resize-none focus:border-brand-panel font-medium transition-colors shadow-sm" style={solidCardStyle} />
+                    <button type="button" onClick={() => handleAddStep(selectedTask.id)} className="w-full py-3 rounded-xl bg-brand-panel text-white text-[13px] font-extrabold shadow-md cursor-pointer hover:opacity-90 active:scale-95 transition-transform">+ Adicionar Etapa</button>
+                  </div>
+                </div>
+
+                {/* 🚀 CHAT DA TAREFA APRIMORADO */}
+                <div className="space-y-4 pt-4 border-t" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest opacity-50 block">Diário & Atualizações</span>
+                    <label className="flex items-center space-x-2 text-[11px] font-extrabold cursor-pointer text-amber-500 hover:opacity-80 transition-opacity">
+                      <input type="checkbox" checked={isDifficultyAlert} onChange={(e) => setIsDifficultyAlert(e.target.checked)} className="w-4 h-4 rounded accent-amber-500 cursor-pointer shadow-sm" /><span>Sinalizar Dificuldade</span>
+                    </label>
+                  </div>
+                  
+                  <div className="space-y-3 pr-2">
+                    {selectedTask.chat.map(c => (
+                      <div key={c.id} className={`p-4 rounded-2xl border space-y-2 shadow-sm ${c.isAlert ? 'border-amber-500/40 bg-amber-500/5' : ''}`} style={!c.isAlert ? solidInputStyle : undefined}>
+                        <div className="flex justify-between text-[10px] opacity-65 font-bold uppercase tracking-wider">
+                          <span className={c.isAlert ? 'text-amber-500' : ''}>{c.author} {c.isAlert ? '• ⚠️ Alerta' : ''}</span>
+                          <span className="flex items-center"><Clock className="w-3 h-3 mr-1"/>{c.time}</span>
+                        </div>
+                        <div className="leading-relaxed break-words text-[13px] font-medium whitespace-pre-wrap">{formatLinks(c.text)}</div>
+                      </div>
+                    ))}
+                    {selectedTask.chat.length === 0 && <p className="text-[12px] opacity-40 py-4 text-center font-bold">Nenhuma atualização registrada nesta tarefa.</p>}
+                    <div ref={taskChatEndRef} />
+                  </div>
+
+                  {/* INPUT ELÁSTICO COMO NO CHAT CORPORATIVO */}
+                  <form className="flex items-end space-x-3" onSubmit={(e) => { e.preventDefault(); handleSendChat(selectedTask.id); }}>
+                    <textarea 
+                      ref={inputFieldRef}
+                      value={chatInput} 
+                      onChange={handleInputResize}
+                      onKeyDown={handleKeyDown}
+                      rows={1}
+                      placeholder={isDifficultyAlert ? 'Descreva o que o impede de avançar...' : 'Registar andamento da demanda...'} 
+                      className="flex-1 px-5 py-3.5 rounded-3xl border text-[14px] font-bold outline-none focus:border-brand-panel transition-colors shadow-sm resize-none overflow-y-auto custom-scrollbar leading-tight" 
+                      style={{ minHeight: '52px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-input)', color: 'var(--text-main)' }}
+                    />
+                    <button type="submit" className="p-4 rounded-full bg-brand-panel text-white cursor-pointer shadow-md hover:opacity-90 active:scale-95 transition-transform flex items-center justify-center flex-shrink-0 mb-0.5">
+                      <Send className="w-5 h-5 ml-0.5" />
+                    </button>
+                  </form>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5 p-3.5 rounded-2xl border" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
+              <div className="p-5 md:p-6 pb-6 border-t flex flex-col sm:flex-row items-center justify-between text-xs gap-3 sm:gap-0 flex-shrink-0" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
+                <span className="opacity-60 text-[11px] font-extrabold uppercase tracking-widest text-center sm:text-left w-full sm:w-auto">Prazo: {selectedTask.dueDate} às {selectedTask.dueTime}</span>
+                {canEditTask && (
+                  <button onClick={() => confirmDeleteTask(selectedTask.id, selectedTask.title)} className="w-full sm:w-auto px-5 py-3 rounded-xl text-red-500 hover:text-red-600 hover:bg-red-500/10 font-bold flex items-center justify-center space-x-1.5 cursor-pointer transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                    <span>Excluir tarefa permanentemente</span>
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* MODAL CRIAR TAREFA Z-[999] */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="w-full max-w-lg rounded-[2.5rem] border shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" style={solidCardStyle}>
+            <div className="px-6 md:px-8 py-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-panel">Novo Registro</span>
+                <h3 className="font-extrabold text-lg md:text-xl mt-1">Nova Demanda ({currentUser?.setor})</h3>
+              </div>
+              <button onClick={() => setIsCreateModalOpen(false)} className="p-2.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreateTask} className="p-6 md:p-8 overflow-y-auto custom-scrollbar space-y-6">
+              <div>
+                <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Título da Demanda *</label>
+                <input type="text" required value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Ex: Verificar servidor X..." className="w-full px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none focus:border-brand-panel transition-colors" style={solidInputStyle} />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <span className="text-[10px] font-semibold opacity-50 block mb-1">Status</span>
-                  <select value={selectedTask.status} onChange={(e) => changeTaskStatus(selectedTask.id, e.target.value as TaskItem['status'])} className="w-full p-2 rounded-xl border text-xs font-bold outline-none cursor-pointer" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}>
-                    <option value="pendente">⏳ Pendente</option><option value="andamento">▶️ Em andamento</option><option value="bloqueado">⚠️ Bloqueado</option><option value="concluida">✅ Concluída</option>
+                  <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Categoria</label>
+                  <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none cursor-pointer focus:border-brand-panel transition-colors" style={solidInputStyle}>
+                    {taskCategories.map(cat => <option key={cat.id} value={cat.nome}>{cat.nome}</option>)}
                   </select>
                 </div>
                 <div>
-                  <span className="text-[10px] font-semibold opacity-50 block mb-1">Prioridade</span>
-                  <select value={selectedTask.priority} onChange={(e) => updateTaskMetadata(selectedTask.id, 'priority', e.target.value)} className="w-full p-2 rounded-xl border text-xs font-bold outline-none cursor-pointer" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}>
+                  <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Prioridade</label>
+                  <select value={newPriority} onChange={(e: any) => setNewPriority(e.target.value)} className="w-full px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none cursor-pointer focus:border-brand-panel transition-colors" style={solidInputStyle}>
                     <option value="Normal">Normal</option><option value="Urgente">🔥 Urgente</option>
                   </select>
-                </div>
-                <div className="col-span-2 pt-1">
-                  <span className="text-[10px] font-semibold opacity-50 block mb-1">Responsável pela Execução</span>
-                  {canEditTask ? (
-                    <select value={selectedTask.assignee} onChange={(e) => updateTaskMetadata(selectedTask.id, 'assignee', e.target.value)} className="w-full p-2 rounded-xl border text-xs font-bold text-blue-500 outline-none cursor-pointer" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-                      {teamMembers.map(m => ( <option key={m.user_id} value={m.nome}>{m.nome} ({m.cargo})</option> ))}
-                    </select>
-                  ) : ( <div className="p-2 rounded-xl border text-xs font-bold text-blue-500" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>{selectedTask.assignee}</div> )}
                 </div>
               </div>
 
               <div>
-                <span className="text-[11px] font-bold opacity-50 block mb-1">Instruções / Observações</span>
-                {isEditingTask ? (
-                  <div className="space-y-2">
-                    <textarea rows={4} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="w-full p-3 rounded-2xl border text-xs leading-relaxed outline-none focus:border-blue-500 resize-none" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
-                    <div className="flex justify-end space-x-2">
-                      <button onClick={() => setIsEditingTask(false)} className="px-3 py-1.5 rounded-lg border text-xs font-bold hover:opacity-80 cursor-pointer" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
-                      <button onClick={handleSaveTaskInfo} className="px-4 py-1.5 rounded-lg bg-brand-panel text-white text-xs font-bold shadow-sm cursor-pointer">Salvar Alterações</button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs opacity-80 leading-relaxed whitespace-pre-wrap p-3 rounded-2xl border" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>{selectedTask.description}</p>
-                )}
+                <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Observações (opcional)</label>
+                <textarea rows={3} value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Contexto técnico ou orientações..." className="w-full px-4 py-3.5 rounded-2xl border text-[13px] outline-none resize-none font-medium focus:border-brand-panel transition-colors" style={solidInputStyle} />
               </div>
 
-              {selectedTask.assignee !== currentUser.nome && selectedTask.status !== 'concluida' && (
-                <button onClick={() => handleSendReminder(selectedTask)} className="w-full py-2.5 px-3 rounded-xl border border-amber-500/30 text-amber-500 bg-amber-500/5 text-xs font-extrabold flex items-center justify-center space-x-2 hover:bg-amber-500/10 cursor-pointer">
-                  <Bell className="w-3.5 h-3.5" /><span>Cobrar Posicionamento / Status</span>
-                </button>
-              )}
-
-              <div className="space-y-3 pt-3 border-t" style={{ borderColor: 'var(--border-input)' }}>
-                <div className="flex items-center justify-between text-xs font-bold"><span className="opacity-70">Checklist ({selectedTask.steps.filter(s => s.done).length}/{selectedTask.steps.length})</span></div>
-                {selectedTask.steps.length > 0 && (
-                  <div className="w-full h-1.5 rounded-full overflow-hidden bg-black/10 dark:bg-white/10">
-                    <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${Math.round((selectedTask.steps.filter(s => s.done).length / selectedTask.steps.length) * 100)}%` }} />
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  {selectedTask.steps.map(step => (
-                    <div key={step.id}>
-                      {editingStepId === step.id ? (
-                        <div className="p-3 rounded-xl border space-y-2 shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-                          <input type="text" value={editStepText} onChange={e => setEditStepText(e.target.value)} placeholder="Título da etapa" className="w-full p-2 rounded-lg border text-xs font-bold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
-                          <textarea rows={2} value={editStepNote} onChange={e => setEditStepNote(e.target.value)} placeholder="Detalhes, links ou o que foi feito..." className="w-full p-2 rounded-lg border text-xs outline-none focus:border-blue-500 resize-none" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
-                          <div className="flex justify-end space-x-2 pt-1">
-                            <button onClick={() => setEditingStepId(null)} className="px-3 py-1.5 rounded-lg border text-[11px] font-bold hover:opacity-80 cursor-pointer" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
-                            <button onClick={() => handleSaveStepEdit(selectedTask.id, step.id)} className="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-bold cursor-pointer">Salvar</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="group flex items-start justify-between p-2.5 rounded-xl border text-xs transition-colors hover:bg-black/5 dark:hover:bg-white/5" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-                          <label className="flex items-start space-x-2.5 cursor-pointer flex-1 overflow-hidden mt-0.5">
-                            <input type="checkbox" checked={step.done} onChange={() => toggleSubStep(selectedTask.id, step.id)} className="w-4 h-4 rounded accent-blue-600 cursor-pointer flex-shrink-0" />
-                            <div className="flex flex-col">
-                              <span className={`break-words ${step.done ? 'line-through opacity-45' : 'font-bold'}`}>{step.text}</span>
-                              {step.note && <span className="text-[10px] opacity-60 mt-0.5 leading-relaxed whitespace-pre-wrap">{step.note}</span>}
-                            </div>
-                          </label>
-                          <div className="flex items-center space-x-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => { setEditingStepId(step.id); setEditStepText(step.text); setEditStepNote(step.note || ''); }} className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-md cursor-pointer"><Edit2 className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => handleDeleteStep(selectedTask.id, step.id)} className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-md cursor-pointer"><X className="w-3.5 h-3.5" /></button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="p-3 rounded-xl border space-y-2" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-                  <input type="text" value={stepInput} onChange={(e) => setStepInput(e.target.value)} placeholder="Nova etapa (título)..." className="w-full px-3 py-2 rounded-lg border text-xs font-bold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddStep(selectedTask.id); } }} />
-                  <textarea rows={1} value={stepNoteInput} onChange={(e) => setStepNoteInput(e.target.value)} placeholder="Observações da etapa (opcional)" className="w-full px-3 py-2 rounded-lg border text-[11px] outline-none resize-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
-                  <button type="button" onClick={() => handleAddStep(selectedTask.id)} className="w-full py-2 rounded-lg bg-brand-panel text-white text-xs font-extrabold shadow-sm cursor-pointer">+ Adicionar Etapa</button>
-                </div>
-              </div>
-
-              <div className="space-y-2.5 pt-3 border-t" style={{ borderColor: 'var(--border-input)' }}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold opacity-70">Diário & Impeditivos</span>
-                  <label className="flex items-center space-x-1.5 text-[11px] font-bold cursor-pointer text-amber-500">
-                    <input type="checkbox" checked={isDifficultyAlert} onChange={(e) => setIsDifficultyAlert(e.target.checked)} className="rounded accent-amber-500 cursor-pointer" /><span>Sinalizar Dificuldade</span>
-                  </label>
-                </div>
-                <div className="space-y-2 max-h-44 overflow-y-auto custom-scrollbar pr-1">
-                  {selectedTask.chat.map(c => (
-                    <div key={c.id} className={`p-2.5 rounded-xl border text-xs space-y-0.5 ${c.isAlert ? 'border-amber-500/40 bg-amber-500/5' : ''}`} style={!c.isAlert ? { backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' } : undefined}>
-                      <div className="flex justify-between text-[10px] opacity-65 font-bold"><span className={c.isAlert ? 'text-amber-500' : ''}>{c.author} {c.isAlert ? '• ⚠️ Alerta' : ''}</span><span>{c.time}</span></div>
-                      <p className="leading-relaxed break-words">{c.text}</p>
-                    </div>
-                  ))}
-                  {selectedTask.chat.length === 0 && <p className="text-[11px] opacity-40 py-2 text-center">Nenhuma atualização registrada.</p>}
-                  <div ref={taskChatEndRef} />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder={isDifficultyAlert ? 'Descreva a dificuldade...' : 'Registrar andamento...'} className="flex-1 px-3 py-2 rounded-xl border text-xs outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSendChat(selectedTask.id); } }} />
-                  <button type="button" onClick={() => handleSendChat(selectedTask.id)} className="p-2.5 rounded-xl bg-brand-panel text-white cursor-pointer"><Send className="w-3.5 h-3.5" /></button>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 border-t flex items-center justify-between text-xs" style={{ borderColor: 'var(--border-input)' }}>
-              <span className="opacity-55 text-[11px] font-semibold">Prazo Final: {selectedTask.dueDate} às {selectedTask.dueTime}</span>
-              {canEditTask && (
-                <button onClick={() => confirmDeleteTask(selectedTask.id, selectedTask.title)} className="text-red-500 hover:underline font-bold flex items-center space-x-1 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /><span>Excluir</span></button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-lg rounded-3xl border shadow-xl overflow-hidden max-h-[90vh] flex flex-col" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-            <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)' }}><h3 className="font-extrabold text-base">Nova Demanda ({currentUser?.setor})</h3><button onClick={() => setIsCreateModalOpen(false)} className="p-1.5 rounded-lg hover:bg-black/5 cursor-pointer"><X className="w-4 h-4" /></button></div>
-            <form onSubmit={handleCreateTask} className="p-6 space-y-4 overflow-y-auto custom-scrollbar">
-              <div><label className="text-xs font-bold opacity-60 block mb-1">Título da Demanda *</label><input type="text" required value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Ex: Verificar link dedicado..." className="w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} /></div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-xs font-bold opacity-60 block mb-1">Categoria</label>
-                  <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none cursor-pointer focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}>
-                    {taskCategories.map(cat => <option key={cat.id} value={cat.nome}>{cat.nome}</option>)}
+                  <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Responsável</label>
+                  <select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)} className="w-full px-3 py-3 rounded-2xl border text-[12px] font-bold text-brand-panel outline-none cursor-pointer focus:border-brand-panel transition-colors" style={solidInputStyle}>
+                    {allowedAssignees.map(a => ( <option key={a.value} value={a.value}>{a.label}</option> ))}
                   </select>
                 </div>
-                <div><label className="text-xs font-bold opacity-60 block mb-1">Prioridade</label><select value={newPriority} onChange={(e: any) => setNewPriority(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border text-xs font-bold outline-none cursor-pointer focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}><option value="Normal">Normal</option><option value="Urgente">🔥 Urgente</option></select></div>
+                <div>
+                  <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Data Limite</label>
+                  <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-full px-3 py-3 rounded-2xl border text-[12px] font-bold outline-none cursor-pointer focus:border-brand-panel transition-colors" style={solidInputStyle} />
+                </div>
+                <div>
+                  <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Horário</label>
+                  <input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} className="w-full px-3 py-3 rounded-2xl border text-[12px] font-bold outline-none focus:border-brand-panel transition-colors" style={solidInputStyle} />
+                </div>
               </div>
-              <div><label className="text-xs font-bold opacity-60 block mb-1">Observações (opcional)</label><textarea rows={2} value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Contexto técnico..." className="w-full px-3.5 py-2.5 rounded-xl border text-xs outline-none resize-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} /></div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div><label className="text-xs font-bold opacity-60 block mb-1">Responsável</label><select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border text-xs font-semibold outline-none cursor-pointer focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}>{allowedAssignees.map(a => ( <option key={a.value} value={a.value}>{a.label}</option> ))}</select></div>
-                <div><label className="text-xs font-bold opacity-60 block mb-1">Data Limite</label><input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-full px-3 py-2 rounded-xl border text-xs font-semibold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} /></div>
-                <div><label className="text-xs font-bold opacity-60 block mb-1">Horário</label><input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} className="w-full px-3 py-2 rounded-xl border text-xs font-semibold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} /></div>
-              </div>
-              <label className="flex items-center justify-between p-3 rounded-xl border cursor-pointer" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-                <div className="flex items-center space-x-2"><Repeat className="w-4 h-4 text-blue-500" /><div><span className="text-xs font-bold block">Classificar como Rotina</span><span className="text-[10px] opacity-60">Ficará na lista inteligente de Rotinas.</span></div></div>
-                <input type="checkbox" checked={newIsRoutine} onChange={(e) => setNewIsRoutine(e.target.checked)} className="w-4 h-4 rounded accent-blue-600 cursor-pointer" />
+
+              <label className="flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-colors hover:bg-black/5 dark:hover:bg-white/5" style={solidInputStyle}>
+                <div className="flex items-center space-x-3"><Repeat className="w-5 h-5 text-brand-panel" /><div><span className="text-[13px] font-bold block">Classificar como Rotina</span><span className="text-[10px] opacity-60 font-semibold mt-0.5">Visível no filtro inteligente de Rotinas.</span></div></div>
+                <input type="checkbox" checked={newIsRoutine} onChange={(e) => setNewIsRoutine(e.target.checked)} className="w-5 h-5 rounded border-gray-300 accent-brand-panel cursor-pointer shadow-sm" />
               </label>
               
-              <div className="space-y-2 pt-2 border-t" style={{ borderColor: 'var(--border-input)' }}>
-                <label className="text-xs font-bold opacity-60 block">Checklist Inicial ({newSteps.length})</label>
+              <div className="space-y-4 pt-4 border-t" style={{ borderColor: 'var(--border-input)' }}>
+                <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block">Checklist Inicial ({newSteps.length})</label>
                 {newSteps.length > 0 && (
-                  <div className="space-y-1 max-h-28 overflow-y-auto custom-scrollbar">
+                  <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
                     {newSteps.map((st, i) => ( 
-                      <div key={i} className="px-3 py-2 rounded-lg border flex justify-between items-start" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
+                      <div key={i} className="px-4 py-3 rounded-2xl border flex justify-between items-start shadow-sm" style={solidInputStyle}>
                         <div className="flex flex-col">
-                          <span className="text-[11px] font-bold">{i + 1}. {st.text}</span>
-                          {st.note && <span className="text-[9px] opacity-60 truncate max-w-[200px] mt-0.5">{st.note}</span>}
+                          <span className="text-[12px] font-bold">{i + 1}. {st.text}</span>
+                          {st.note && <span className="text-[10px] opacity-60 truncate max-w-[220px] mt-1 font-medium">{st.note}</span>}
                         </div>
-                        <button type="button" onClick={() => setNewSteps(prev => prev.filter((_, idx) => idx !== i))} className="opacity-50 hover:opacity-100 text-red-500 cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+                        <button type="button" onClick={() => setNewSteps(prev => prev.filter((_, idx) => idx !== i))} className="p-1 rounded-lg opacity-50 hover:opacity-100 hover:bg-red-500/10 text-red-500 cursor-pointer transition-colors"><X className="w-4 h-4" /></button>
                       </div> 
                     ))}
                   </div>
                 )}
-                <div className="p-3 border rounded-xl space-y-2" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-                  <input type="text" value={newStepText} onChange={(e) => setNewStepText(e.target.value)} placeholder="Título da etapa..." className="w-full px-3 py-2 rounded-lg border text-xs font-bold outline-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTempStep(); } }} />
-                  <textarea rows={1} value={newStepNote} onChange={(e) => setNewStepNote(e.target.value)} placeholder="Descrição (opcional)..." className="w-full px-3 py-2 rounded-lg border text-[11px] outline-none resize-none focus:border-blue-500" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }} />
-                  <button type="button" onClick={handleAddTempStep} className="w-full py-2 rounded-lg bg-brand-panel text-white text-xs font-extrabold cursor-pointer shadow-sm">+ Adicionar ao Checklist</button>
+                <div className="p-4 border rounded-2xl space-y-3" style={solidInputStyle}>
+                  <input type="text" value={newStepText} onChange={(e) => setNewStepText(e.target.value)} placeholder="Título da etapa..." className="w-full px-4 py-3 rounded-xl border text-[13px] font-bold outline-none focus:border-brand-panel transition-colors" style={solidCardStyle} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTempStep(); } }} />
+                  <textarea rows={1} value={newStepNote} onChange={(e) => setNewStepNote(e.target.value)} placeholder="Descrição (opcional)..." className="w-full px-4 py-3 rounded-xl border text-[12px] font-medium outline-none resize-none focus:border-brand-panel transition-colors" style={solidCardStyle} />
+                  <button type="button" onClick={handleAddTempStep} className="w-full py-3 rounded-xl bg-brand-panel text-white text-[13px] font-extrabold cursor-pointer shadow-md hover:opacity-90 active:scale-95 transition-transform">+ Adicionar ao Checklist</button>
                 </div>
               </div>
-              <div className="flex justify-end space-x-2 pt-4 border-t" style={{ borderColor: 'var(--border-input)' }}><button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer">Cancelar</button><button type="submit" className="px-5 py-2 rounded-xl bg-brand-panel text-white text-xs font-bold cursor-pointer hover:opacity-90">Salvar Tarefa</button></div>
+
+              <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 pt-6 border-t" style={{ borderColor: 'var(--border-input)' }}>
+                <button type="button" onClick={() => setIsCreateModalOpen(false)} className="w-full sm:w-auto px-6 py-3.5 rounded-xl border text-[13px] font-extrabold cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
+                <button type="submit" disabled={isSaving} className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-brand-panel text-white text-[13px] font-extrabold cursor-pointer hover:opacity-90 active:scale-95 transition-transform shadow-lg flex items-center justify-center space-x-2">
+                  {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>{isSaving ? 'Agendando...' : 'Salvar Tarefa'}</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* MODAL 3: CONFIRMAÇÃO DE EXCLUSÃO Z-[999] */}
       {confirmModal.isOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-sm rounded-3xl border shadow-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-            <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)' }}><div className="flex items-center space-x-2 text-red-500"><AlertTriangle className="w-5 h-5" /><h3 className="font-extrabold text-sm">{confirmModal.title}</h3></div><button onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} className="p-1.5 rounded-lg hover:bg-black/5 cursor-pointer"><X className="w-4 h-4" /></button></div>
-            <div className="p-6"><p className="text-xs font-semibold opacity-80 leading-relaxed">{confirmModal.message}</p></div>
-            <div className="flex justify-end space-x-2 px-6 py-4 border-t" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}><button onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} className="px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer">Cancelar</button><button onClick={confirmModal.onConfirm} className="px-5 py-2 rounded-xl bg-red-500 text-white text-xs font-bold cursor-pointer">Sim, Excluir</button></div>
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-sm rounded-[2.5rem] border shadow-2xl overflow-hidden" style={solidCardStyle}>
+            <div className="px-6 md:px-8 py-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
+              <div className="flex items-center space-x-2 text-red-500"><AlertTriangle className="w-6 h-6" /><h3 className="font-extrabold text-base md:text-lg">{confirmModal.title}</h3></div>
+              <button onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} className="p-2.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 md:p-8"><p className="text-[13px] font-semibold opacity-80 leading-relaxed text-center">{confirmModal.message}</p></div>
+            <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 px-6 md:px-8 py-5 border-t" style={{ borderColor: 'var(--border-input)' }}>
+              <button onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} className="w-full sm:w-auto px-6 py-3.5 rounded-xl border text-[13px] font-extrabold cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
+              <button onClick={confirmModal.onConfirm} className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13px] font-extrabold cursor-pointer transition-colors shadow-md active:scale-95">Sim, Excluir</button>
+            </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -1,9 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+/* 1. Claro (Padrão Apple) */
 :root, [data-theme='light'] {
-  --bg-page: #f5f5f7; 
-  --bg-card: #ffffff; 
+  --bg-page: #f5f5f7;
+  --bg-card: #ffffff;
   --bg-brand: linear-gradient(135deg, #0071e3 0%, #4facfe 100%);
   --text-main: #1d1d1f;
   --text-muted: #86868b;
@@ -17,6 +18,7 @@
   --tab-active: #0071e3;
 }
 
+/* 2. Escuro (Modo Dark Apple) */
 [data-theme='dark'] {
   --bg-page: #000000;
   --bg-card: #151517;
@@ -33,52 +35,140 @@
   --tab-active: #0a84ff;
 }
 
+/* 3. Oceano (Azul Profundo) */
 [data-theme='ocean'] {
-  --bg-page: #cce0ff;
+  --bg-page: #e0f2fe;
   --bg-card: #ffffff;
-  --bg-brand: linear-gradient(135deg, #003a7a 0%, #005bb5 100%);
-  --text-main: #002b5e;
-  --text-muted: #4a6fa5;
-  --border-input: #b3d4fc;
-  --bg-input: #f0f8ff;
-  --btn-primary: #005bb5;
+  --bg-brand: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  --text-main: #0c4a6e;
+  --text-muted: #0284c7;
+  --border-input: #bae6fd;
+  --bg-input: #f0f9ff;
+  --btn-primary: #0284c7;
   --btn-text: #ffffff;
   --error-bg: #fee2e2;
   --error-text: #dc2626;
   --error-border: #fca5a5;
-  --tab-active: #005bb5;
+  --tab-active: #0284c7;
 }
 
+/* 4. Natureza (Verde Esmeralda) */
 [data-theme='nature'] {
-  --bg-page: #d4ebd4;
+  --bg-page: #dcfce7;
   --bg-card: #ffffff;
-  --bg-brand: linear-gradient(135deg, #1a3b1a 0%, #2e8b57 100%);
-  --text-main: #1a3b1a;
-  --text-muted: #5c8a5c;
-  --border-input: #cce8cc;
-  --bg-input: #f4fbf4;
-  --btn-primary: #2e8b57;
+  --bg-brand: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  --text-main: #14532d;
+  --text-muted: #16a34a;
+  --border-input: #bbf7d0;
+  --bg-input: #f0fdf4;
+  --btn-primary: #16a34a;
   --btn-text: #ffffff;
   --error-bg: #fee2e2;
   --error-text: #dc2626;
   --error-border: #fca5a5;
-  --tab-active: #2e8b57;
+  --tab-active: #16a34a;
 }
 
+/* 5. Pôr do Sol (Vermelho Quente) */
 [data-theme='sunset'] {
-  --bg-page: #fce8d7;
+  --bg-page: #fee2e2;
   --bg-card: #ffffff;
-  --bg-brand: linear-gradient(135deg, #8a3532 0%, #d9534f 100%);
-  --text-main: #5c2c16;
-  --text-muted: #9e644a;
-  --border-input: #fcd5b5;
-  --bg-input: #fff8f0;
-  --btn-primary: #d9534f;
+  --bg-brand: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  --text-main: #7f1d1d;
+  --text-muted: #dc2626;
+  --border-input: #fecaca;
+  --bg-input: #fef2f2;
+  --btn-primary: #dc2626;
+  --btn-text: #ffffff;
+  --error-bg: #fef2f2;
+  --error-text: #991b1b;
+  --error-border: #fca5a5;
+  --tab-active: #dc2626;
+}
+
+/* 6. Ametista (Roxo Vibrante) */
+[data-theme='amethyst'] {
+  --bg-page: #f3e8ff;
+  --bg-card: #ffffff;
+  --bg-brand: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+  --text-main: #3b0764;
+  --text-muted: #9333ea;
+  --border-input: #e9d5ff;
+  --bg-input: #faf5ff;
+  --btn-primary: #9333ea;
   --btn-text: #ffffff;
   --error-bg: #fee2e2;
   --error-text: #dc2626;
   --error-border: #fca5a5;
-  --tab-active: #d9534f;
+  --tab-active: #9333ea;
+}
+
+/* 7. Aurora (Teal / Verde-Água) */
+[data-theme='aurora'] {
+  --bg-page: #ccfbf1;
+  --bg-card: #ffffff;
+  --bg-brand: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  --text-main: #134e4a;
+  --text-muted: #0d9488;
+  --border-input: #99f6e4;
+  --bg-input: #f0fdfa;
+  --btn-primary: #0d9488;
+  --btn-text: #ffffff;
+  --error-bg: #fee2e2;
+  --error-text: #dc2626;
+  --error-border: #fca5a5;
+  --tab-active: #0d9488;
+}
+
+/* 8. Solar (Amarelo / Âmbar) */
+[data-theme='solar'] {
+  --bg-page: #fef3c7;
+  --bg-card: #ffffff;
+  --bg-brand: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --text-main: #78350f;
+  --text-muted: #d97706;
+  --border-input: #fde68a;
+  --bg-input: #fffbeb;
+  --btn-primary: #d97706;
+  --btn-text: #ffffff;
+  --error-bg: #fee2e2;
+  --error-text: #dc2626;
+  --error-border: #fca5a5;
+  --tab-active: #d97706;
+}
+
+/* 9. Coral (Rosa / Pêssego) */
+[data-theme='coral'] {
+  --bg-page: #ffe4e6;
+  --bg-card: #ffffff;
+  --bg-brand: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  --text-main: #881337;
+  --text-muted: #e11d48;
+  --border-input: #fecdd3;
+  --bg-input: #fff1f2;
+  --btn-primary: #e11d48;
+  --btn-text: #ffffff;
+  --error-bg: #fee2e2;
+  --error-text: #dc2626;
+  --error-border: #fca5a5;
+  --tab-active: #e11d48;
+}
+
+/* 10. Grafite (Cinza Executivo / Monocromático) */
+[data-theme='graphite'] {
+  --bg-page: #f4f4f5;
+  --bg-card: #ffffff;
+  --bg-brand: linear-gradient(135deg, #52525b 0%, #3f3f46 100%);
+  --text-main: #18181b;
+  --text-muted: #52525b;
+  --border-input: #e4e4e7;
+  --bg-input: #fafafa;
+  --btn-primary: #3f3f46;
+  --btn-text: #ffffff;
+  --error-bg: #fee2e2;
+  --error-text: #dc2626;
+  --error-border: #fca5a5;
+  --tab-active: #52525b;
 }
 
 body {

@@ -3,87 +3,42 @@
 import { useState, useMemo, useEffect } from 'react';
 import { 
   Calendar as CalendarIcon, Plus, Clock, Users, Shield, 
-  X, Check, ChevronLeft, ChevronRight, Palette, MapPin, AlertCircle, Trash2, Send, Loader2, AlertTriangle, LogOut
+  X, Check, AlertCircle, Trash2, Send, Loader2, AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-// 🚀 1. LIGADO AO CÉREBRO GLOBAL DO TEMA
-import { useTheme } from '../../contexts/ThemeContext';
 
 type RoleType = 'administrador' | 'gestor' | 'coordenador' | 'supervisor' | 'analista' | 'colaborador';
-
-interface DBProfile {
-  id: string;
-  user_id: string;
-  nome: string;
-  email: string;
-  cargo: RoleType;
-  setor: string;
-  avatar_url?: string;
-  status?: string;
-}
-
-interface EventItem {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  location?: string;
-  visibility: 'pessoal' | 'setor' | 'geral';
-  organizer: string;
-  organizer_id: string;
-  sector: string;
-  acceptedBy: string[];
-}
+interface DBProfile { id: string; user_id: string; nome: string; email: string; cargo: RoleType; setor: string; avatar_url?: string; status?: string; }
+interface EventItem { id: string; title: string; description: string; date: string; startTime: string; endTime: string; location?: string; visibility: 'pessoal' | 'setor' | 'geral'; organizer: string; organizer_id: string; sector: string; acceptedBy: string[]; }
 
 const mapDbToEvent = (dbEvent: any): EventItem => ({
-  id: dbEvent.id,
-  title: dbEvent.titulo,
-  description: dbEvent.descricao || '',
-  date: dbEvent.data,
-  startTime: dbEvent.hora_inicio,
-  endTime: dbEvent.hora_fim,
-  location: dbEvent.local || '',
-  visibility: dbEvent.visibilidade,
-  organizer: dbEvent.organizador_nome,
-  organizer_id: dbEvent.organizador_id,
-  sector: dbEvent.setor,
-  acceptedBy: dbEvent.aceitos_por || []
+  id: dbEvent.id, title: dbEvent.titulo, description: dbEvent.descricao || '', date: dbEvent.data, startTime: dbEvent.hora_inicio, endTime: dbEvent.hora_fim,
+  location: dbEvent.local || '', visibility: dbEvent.visibilidade, organizer: dbEvent.organizador_nome, organizer_id: dbEvent.organizador_id, sector: dbEvent.setor, acceptedBy: dbEvent.aceitos_por || []
 });
 
 export default function AgendaPage() {
-  const { theme, changeTheme } = useTheme(); // 🚀 Consome o Tema Global
-
   const [isMounted, setIsMounted] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // 🚀 Proteção contra duplo clique
-
-  const themes = [
-    { id: 'light', name: 'Claro', color: '#f5f5f7', border: '#d2d2d7' },
-    { id: 'dark', name: 'Escuro', color: '#0f172a', border: '#475569' },
-    { id: 'ocean', name: 'Oceano', color: '#005bb5', border: '#005bb5' },
-    { id: 'nature', name: 'Natureza', color: '#2e8b57', border: '#2e8b57' },
-    { id: 'sunset', name: 'Pôr do Sol', color: '#d9534f', border: '#d9534f' },
-  ];
+  const [isSaving, setIsSaving] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<DBProfile | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [authError, setAuthError] = useState(false);
   
   const [viewMode, setViewMode] = useState<'dia' | 'semana'>('semana');
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
 
-  // Data estática de referência fixa para passar pelo prerender estático da Vercel
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date('2026-01-01T00:00:00'));
+  const glassContainerStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-card) 50%, transparent)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid color-mix(in srgb, var(--border-input) 40%, transparent)', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)' };
+  const glassSidebarStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-input) 30%, transparent)', borderRight: '1px solid color-mix(in srgb, var(--border-input) 40%, transparent)' };
+  const glassItemStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-card) 70%, transparent)', border: '1px solid color-mix(in srgb, var(--border-input) 50%, transparent)' };
+  const solidCardStyle = { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-input)', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)' };
+  const solidInputStyle = { backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-input)', color: 'var(--text-main)' };
 
-  useEffect(() => {
-    setIsMounted(true);
-    setCurrentDate(new Date());
-  }, []);
-  
+  useEffect(() => { setIsMounted(true); setCurrentDate(new Date()); }, []);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
-
+  
+  // States do Formulário
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newStartTime, setNewStartTime] = useState('09:00');
@@ -97,125 +52,79 @@ export default function AgendaPage() {
       try {
         setIsLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
-        let perfilAtual = null;
-
-        if (session?.user) {
-          const { data } = await supabase.from('doodoo_perfis').select('*').eq('user_id', session.user.id).maybeSingle();
-          perfilAtual = data;
-        }
-
-        if (!perfilAtual) {
-          const { data: fallbackUser } = await supabase.from('doodoo_perfis').select('*').ilike('nome', '%Pedro%').limit(1).maybeSingle();
-          perfilAtual = fallbackUser || await supabase.from('doodoo_perfis').select('*').limit(1).maybeSingle();
-        }
-
+        if (!session?.user) { setIsLoading(false); return; }
+        
+        const { data: perfilAtual } = await supabase.from('doodoo_perfis').select('*').eq('user_id', session.user.id).single();
         if (perfilAtual) {
           setCurrentUser(perfilAtual as DBProfile);
-          
           const { data: agendaDb } = await supabase.from('doodoo_agenda').select('*').order('data', { ascending: true });
-          
-          if (agendaDb) {
-            setEvents(agendaDb.map(mapDbToEvent));
-          }
-        } else {
-          setAuthError(true);
+          if (agendaDb) setEvents(agendaDb.map(mapDbToEvent));
         }
-      } catch (error) {
-        console.error("Erro crítico na Agenda:", error);
-        setAuthError(true);
-      } finally {
-        setIsLoading(false);
-      }
+      } catch (error) { console.error(error); } finally { setIsLoading(false); }
     };
-
     fetchAgendaData();
   }, []);
 
-  // 🚀 Extrai a data local corretamente, sem pular dias por fuso horário
   const formatDateString = (d: Date) => {
-    const offset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - offset).toISOString().split('T')[0];
+    const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const currentDateStr = useMemo(() => formatDateString(currentDate), [currentDate]);
 
   const weekDays = useMemo(() => {
-    const result = [];
-    const startOfWeek = new Date(currentDate);
-    const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Ajusta para começar na segunda-feira ou domingo
+    const result = []; 
+    const startOfWeek = new Date(currentDate); 
+    startOfWeek.setHours(0, 0, 0, 0); 
+    const day = startOfWeek.getDay(); 
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
     startOfWeek.setDate(diff);
-
+    
     for (let i = 0; i < 7; i++) {
-      const d = new Date(startOfWeek);
-      d.setDate(startOfWeek.getDate() + i);
-      const names = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-      result.push({
-        dateObj: d,
-        dateStr: formatDateString(d),
-        dayNum: d.getDate(),
-        dayName: names[d.getDay()]
-      });
+      const d = new Date(startOfWeek); d.setDate(startOfWeek.getDate() + i);
+      const names = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      result.push({ dateObj: d, dateStr: formatDateString(d), dayNum: d.getDate(), dayName: names[d.getDay()] });
     }
     return result;
   }, [currentDate]);
 
-  const notifyBell = (title: string, desc: string) => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title, desc } }));
-    }
+  const changeWeek = (direction: 'next' | 'prev') => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));
+    setCurrentDate(newDate);
   };
 
-  const handleForceLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/';
-  };
+  const notifyBell = (title: string, desc: string) => { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title, desc } })); };
 
   const isManagerOrHR = currentUser ? ['administrador', 'gestor', 'coordenador'].includes(currentUser.cargo) || currentUser.setor === 'RH' : false;
 
   const visibleEvents = useMemo(() => {
     if (!currentUser) return [];
-
     return events.filter(ev => {
       const isMine = ev.organizer_id === currentUser.user_id;
       const isMySector = ev.visibility === 'setor' && ev.sector === currentUser.setor;
       const isGeneral = ev.visibility === 'geral';
       const amIInvited = ev.acceptedBy.includes(currentUser.nome);
-
       const canSee = isMine || isMySector || isGeneral || amIInvited;
       if (!canSee) return false;
-
-      if (viewMode === 'dia') {
-        return ev.date === currentDateStr;
-      } else {
-        return weekDays.some(wd => wd.dateStr === ev.date);
-      }
+      
+      if (viewMode === 'dia') return ev.date === currentDateStr;
+      return weekDays.some(wd => wd.dateStr === ev.date);
     });
   }, [events, currentUser, viewMode, currentDateStr, weekDays]);
 
-  const openCreateModal = () => {
-    setNewTitle('');
-    setNewDesc('');
-    setNewStartTime('09:00');
-    setNewEndTime('10:00');
-    setNewLocation('');
-    setNewVisibility('pessoal');
-    setShareToChat(false);
-    setIsModalOpen(true);
-  };
+  const openCreateModal = () => { setNewTitle(''); setNewDesc(''); setNewStartTime('09:00'); setNewEndTime('10:00'); setNewLocation(''); setNewVisibility('pessoal'); setShareToChat(false); setIsModalOpen(true); };
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !currentUser || isSaving) return;
+    setIsSaving(true);
     
-    setIsSaving(true); // Bloqueia o botão
-
     const finalVisibility = (!isManagerOrHR && newVisibility === 'geral') ? 'pessoal' : newVisibility;
-
     const insertData = {
       titulo: newTitle.trim(),
       descricao: newDesc.trim() || 'Sem pauta informada.',
-      data: currentDateStr,
+      data: currentDateStr, // Grava na data que está selecionada no momento
       hora_inicio: newStartTime,
       hora_fim: newEndTime,
       local: newLocation.trim(),
@@ -227,47 +136,62 @@ export default function AgendaPage() {
     };
 
     const { data, error } = await supabase.from('doodoo_agenda').insert([insertData]).select().single();
-
+    
     if (data && !error) {
       const newEv = mapDbToEvent(data);
       setEvents(prev => [...prev, newEv]);
       setIsModalOpen(false);
+      
+      if (shareToChat && finalVisibility !== 'pessoal') {
+         const isGeral = finalVisibility === 'geral';
+         
+         let channelQuery = supabase.from('doodoo_canais').select('id').eq('is_group', true);
+         if (isGeral) channelQuery = channelQuery.eq('nome', 'Geral');
+         else channelQuery = channelQuery.eq('setor', currentUser.setor);
 
-      if (shareToChat) {
-        notifyBell('📤 Convite Enviado no Chat', `Convite para "${newEv.title}" compartilhado no chat corporativo com sucesso.`);
-      } else if (finalVisibility === 'geral') {
-        notifyBell('📢 Aviso Geral Publicado', `Novo evento geral criado por ${currentUser.nome}: "${newEv.title}".`);
-      } else if (finalVisibility === 'setor') {
-        notifyBell('📅 Novo Compromisso do Setor', `${currentUser.nome} agendou para a equipe de ${currentUser.setor}.`);
+         const { data: channelData } = await channelQuery.maybeSingle();
+
+         if (channelData) {
+            await supabase.from('doodoo_mensagens').insert([{
+               canal_id: channelData.id,
+               sender_id: currentUser.user_id,
+               sender_nome: currentUser.nome,
+               texto: `Reunião Agendada: ${newEv.title}`,
+               tipo: 'event',
+               metadata: {
+                  eventDetails: { title: newEv.title, date: newEv.date.split('-').reverse().join('/'), time: newEv.startTime, location: newEv.location },
+                  acceptedBy: [currentUser.nome],
+                  lidoPor: [currentUser.nome]
+               }
+            }]);
+            notifyBell('🎯 Convite Enviado', `Convite postado no canal ${isGeral ? 'Geral' : currentUser.setor}.`);
+         } else {
+            notifyBell('Aviso', 'Compromisso salvo, mas não conseguimos encontrar o canal de Chat para publicar.');
+         }
       } else {
-        notifyBell('Compromisso Adicionado', `"${newEv.title}" salvo na sua agenda pessoal.`);
+         notifyBell('Compromisso Adicionado', `"${newEv.title}" salvo com sucesso.`);
       }
     } else {
-      console.error(error);
       notifyBell('Erro', 'Não foi possível salvar o compromisso.');
     }
-    
-    setIsSaving(false); // Desbloqueia
+    setIsSaving(false);
   };
 
   const handleAcceptEvent = async (ev: EventItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!currentUser || ev.acceptedBy.includes(currentUser.nome)) return;
-
-    // Atualização Otimista
     const novaLista = [...ev.acceptedBy, currentUser.nome];
     setEvents(prev => prev.map(item => item.id === ev.id ? { ...item, acceptedBy: novaLista } : item));
     if (selectedEvent?.id === ev.id) setSelectedEvent(prev => prev ? { ...prev, acceptedBy: novaLista } : null);
-
+    
     const { error } = await supabase.from('doodoo_agenda').update({ aceitos_por: novaLista }).eq('id', ev.id);
     
     if (error) {
-      // Rollback se falhar
       const listaAntiga = ev.acceptedBy;
       setEvents(prev => prev.map(item => item.id === ev.id ? { ...item, acceptedBy: listaAntiga } : item));
-      notifyBell('Erro', 'Não foi possível confirmar a sua presença.');
+      notifyBell('Erro', 'Não foi possível confirmar presença.');
     } else {
-      notifyBell('✅ Presença Confirmada', `Você confirmou presença no compromisso "${ev.title}".`);
+      notifyBell('Presença Confirmada', `Você confirmou presença em "${ev.title}".`);
     }
   };
 
@@ -276,304 +200,271 @@ export default function AgendaPage() {
       await supabase.from('doodoo_agenda').delete().eq('id', eventId);
       setEvents(prev => prev.filter(e => e.id !== eventId));
       setSelectedEvent(null);
-      notifyBell('Compromisso Cancelado', 'O evento foi excluído da agenda corporativa.');
+      notifyBell('Cancelado', 'O compromisso foi removido da agenda.');
     }
   };
 
   if (isLoading || !isMounted) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin opacity-50 text-blue-500" />
-        <span className="text-xs font-bold opacity-50 mt-2">Carregando Agenda...</span>
-      </div>
-    );
-  }
-
-  if (authError || !currentUser) {
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center space-y-5 animate-in fade-in zoom-in-95 duration-300">
-        <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center">
-          <AlertTriangle className="w-10 h-10 text-red-500 opacity-80" />
-        </div>
-        <div className="text-center space-y-1.5">
-          <h3 className="text-xl font-extrabold tracking-tight">Sessão Expirada</h3>
-          <p className="text-xs font-medium opacity-60 max-w-sm mx-auto leading-relaxed">Não foi possível validar as suas permissões de Agenda. Reconecte-se.</p>
-        </div>
-        <button onClick={handleForceLogout} className="mt-2 px-6 py-3 rounded-2xl bg-brand-panel text-white text-xs font-extrabold cursor-pointer flex items-center space-x-2 shadow-lg">
-          <LogOut className="w-4 h-4" /><span>Sair e Entrar Novamente</span>
-        </button>
+        <Loader2 className="w-10 h-10 animate-spin opacity-50 text-blue-500" />
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full flex flex-col animate-in fade-in duration-300">
+    <div className="w-full h-full flex-1 flex flex-col animate-in fade-in duration-500 pb-0 relative z-0">
       
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 rounded-[2.5rem] border overflow-hidden shadow-2xl backdrop-blur-xl" 
-           style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
+      <div className="flex-1 flex flex-col lg:flex-row rounded-t-[2rem] rounded-bl-none rounded-br-none md:rounded-[2.5rem] border-t border-l-0 border-r-0 border-b-0 md:border overflow-hidden relative z-10" style={glassContainerStyle}>
         
-        {/* COLUNA 1: MENU LATERAL */}
-        <div className="lg:col-span-3 border-r p-5 flex flex-col justify-between" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-          
-          <div className="space-y-4">
+        {/* ==========================================================
+            COLUNA 1: MENU LATERAL (Apenas Desktop - App Like)
+            ========================================================== */}
+        <div className="hidden lg:flex flex-col w-[320px] flex-shrink-0" style={glassSidebarStyle}>
+          <div className="p-6 md:p-8 space-y-8 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
             
-            <div className="space-y-3 pb-4 border-b" style={{ borderColor: 'var(--border-input)' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-extrabold text-sm tracking-tight">Agenda Corporativa</h3>
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">{currentUser.setor}</p>
-                </div>
+            <div className="pb-5 border-b" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
+              <h3 className="font-extrabold text-base tracking-tight">Agenda Corporativa</h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-panel mt-1">Setor {currentUser?.setor}</p>
+            </div>
 
-                <div className="flex items-center px-2 py-1 rounded-xl border shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-                  <Palette className="w-3.5 h-3.5 mr-1.5 opacity-40 flex-shrink-0" />
-                  <div className="flex items-center space-x-1">
-                    {themes.map((t) => {
-                      const isSelected = theme === t.id;
-                      return (
-                        <button
-                          key={t.id}
-                          onClick={() => changeTheme(t.id)}
-                          style={{ width: '10px', height: '10px', backgroundColor: t.color, borderColor: t.border, boxShadow: isSelected ? `0 0 0 2px var(--bg-card), 0 0 0 2.5px ${t.border}` : 'none' }}
-                          className={`rounded-full border transition-all duration-300 flex-shrink-0 cursor-pointer ${isSelected ? 'scale-110' : 'opacity-70 hover:opacity-100'}`}
-                          title={t.name}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-2xl bg-brand-panel flex items-center justify-center text-white shadow-md flex-shrink-0">
+                <Shield className="w-6 h-6" />
               </div>
-
-              <div className="flex items-center space-x-2.5 px-3 py-2 rounded-xl border text-xs font-bold" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-                <Shield className="w-3.5 h-3.5 opacity-50 text-blue-500" />
-                <div className="flex flex-col truncate">
-                   <span className="truncate">{currentUser.nome}</span>
-                   <span className="text-[10px] uppercase opacity-50">{currentUser.cargo}</span>
-                </div>
+              <div className="overflow-hidden">
+                <h3 className="font-extrabold text-[15px] tracking-tight truncate">{currentUser?.nome}</h3>
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 truncate mt-0.5">{currentUser?.cargo}</p>
               </div>
             </div>
 
-            <div className="space-y-3 p-4 rounded-2xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-              <div className="flex items-center space-x-2 text-xs font-extrabold">
-                <CalendarIcon className="w-4 h-4 text-blue-500" />
+            <div className="space-y-4 p-5 rounded-3xl" style={glassItemStyle}>
+              <div className="flex items-center space-x-2.5 text-xs font-extrabold">
+                <CalendarIcon className="w-5 h-5 text-brand-panel" />
                 <span>Planejamento Ativo</span>
               </div>
-              <p className="text-[11px] opacity-60 leading-relaxed">
-                A sua agenda mostra compromissos privados, compartilhados pelo seu gestor de {currentUser.setor}, e eventos da empresa.
+              <p className="text-[11px] opacity-70 leading-relaxed font-medium">
+                A sua agenda mostra compromissos privados, compartilhados pelo gestor de {currentUser?.setor}, e os eventos gerais da empresa.
+              </p>
+            </div>
+            
+            <div className="space-y-4 p-5 rounded-3xl" style={glassItemStyle}>
+              <div className="flex items-center space-x-2.5 text-xs font-extrabold">
+                <Clock className="w-5 h-5 text-amber-500" />
+                <span>Horário Comercial</span>
+              </div>
+              <p className="text-[11px] opacity-70 leading-relaxed font-medium">
+                O seu expediente decorre das <strong>08:00 às 18:00</strong>. Certifique-se de manter os compromissos neste intervalo.
               </p>
             </div>
           </div>
-
-          <div className="pt-4 border-t text-center text-[10px] opacity-40 font-bold uppercase tracking-wider" style={{ borderColor: 'var(--border-input)' }}>
-            Doo Doo Workspace • Sincronizado
-          </div>
-
         </div>
 
-        {/* COLUNA 2 & 3: ÁREA PRINCIPAL */}
-        <div className="lg:col-span-9 flex flex-col h-full overflow-y-auto p-6 space-y-6 custom-scrollbar" style={{ backgroundColor: 'var(--bg-card)' }}>
+        {/* ==========================================================
+            COLUNA 2: ÁREA DO CALENDÁRIO E EVENTOS
+            ========================================================== */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
           
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b" style={{ borderColor: 'var(--border-input)' }}>
+          <div className="p-5 md:p-8 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-0 flex-shrink-0" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--tab-active)' }}>Planejamento Pessoal & Setorial</p>
-              <h2 className="text-2xl font-extrabold tracking-tight mt-0.5">Sua agenda</h2>
-              <p className="text-xs opacity-60">Reuniões, compromissos e janelas de disponibilidade sem conflitos.</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-brand-panel mb-1">Doo Doo Workspace</p>
+              <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">A sua Agenda</h2>
             </div>
-
+            
             <div className="flex flex-wrap items-center gap-3">
               <input 
                 type="date"
                 value={currentDateStr}
                 onChange={(e) => {
                   if (e.target.value) {
-                    // Previne o offset
                     const [year, month, day] = e.target.value.split('-').map(Number);
                     setCurrentDate(new Date(year, month - 1, day));
+                    setViewMode('dia'); // Se escolher a data fixa, salta para o modo Dia
                   }
                 }}
-                className="px-3.5 py-2.5 rounded-2xl border text-xs font-bold outline-none cursor-pointer focus:border-blue-500 transition-colors"
-                style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
+                className="flex-1 sm:flex-none px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none cursor-pointer focus:border-brand-panel transition-colors"
+                style={solidInputStyle}
               />
-
-              <div className="flex p-1 rounded-2xl border" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
+              <div className="flex p-1.5 rounded-2xl border" style={solidInputStyle}>
                 <button 
                   onClick={() => setViewMode('dia')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${viewMode === 'dia' ? 'bg-brand-panel text-white shadow-xs' : 'opacity-65 hover:opacity-100'}`}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${viewMode === 'dia' ? 'bg-brand-panel text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}
                 >
                   Dia
                 </button>
                 <button 
                   onClick={() => setViewMode('semana')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${viewMode === 'semana' ? 'bg-brand-panel text-white shadow-xs' : 'opacity-65 hover:opacity-100'}`}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${viewMode === 'semana' ? 'bg-brand-panel text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}
                 >
                   Semana
                 </button>
               </div>
-
               <button 
                 onClick={openCreateModal}
-                className="px-5 py-2.5 rounded-2xl bg-brand-panel text-white text-xs font-extrabold shadow-md hover:opacity-95 transition-all flex items-center space-x-1.5 cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-brand-panel text-white text-[13px] font-extrabold shadow-lg hover:opacity-90 active:scale-95 transition-all flex items-center justify-center space-x-2 cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
-                <span>Novo compromisso</span>
+                <Plus className="w-5 h-5" />
+                <span>Novo Evento</span>
               </button>
             </div>
           </div>
 
-          {viewMode === 'semana' && (
-            <div className="grid grid-cols-7 gap-2">
-              {weekDays.map((wd) => {
-                const isSelected = wd.dateStr === currentDateStr;
-                return (
-                  <button 
-                    key={wd.dateStr}
-                    onClick={() => setCurrentDate(wd.dateObj)}
-                    className={`p-3 rounded-2xl border text-center transition-all cursor-pointer ${
-                      isSelected ? 'bg-brand-panel text-white shadow-md border-transparent scale-105 ring-2 ring-blue-500/30' : 'opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
-                    }`}
-                    style={!isSelected ? { backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' } : undefined}
-                  >
-                    <p className="text-[10px] font-bold uppercase tracking-wider">{wd.dayName}</p>
-                    <p className="text-lg font-extrabold mt-0.5">{wd.dayNum}</p>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="flex-1 overflow-y-auto p-5 md:p-8 space-y-6 md:space-y-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
             
-            <div className="lg:col-span-8 p-6 rounded-[2.25rem] border space-y-4" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-              <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border-input)' }}>
+            {/* 🚀 BARRA DE DIAS DA SEMANA (Navegável e Clickável) */}
+            <div className="flex items-center space-x-3 mb-6">
+               <button onClick={() => changeWeek('prev')} className="p-3 rounded-2xl border transition-colors cursor-pointer hover:bg-black/5 dark:hover:bg-white/5" style={solidInputStyle}>
+                  <ChevronLeft className="w-5 h-5" />
+               </button>
+               
+               <div className="flex-1 grid grid-cols-7 gap-1.5 md:gap-3">
+                  {weekDays.map((wd) => {
+                     const isSelected = wd.dateStr === currentDateStr && viewMode === 'dia';
+                     const isToday = wd.dateStr === formatDateString(new Date());
+
+                     return (
+                     <button 
+                        key={wd.dateStr}
+                        onClick={() => { setCurrentDate(wd.dateObj); setViewMode('dia'); }}
+                        className={`py-3 md:py-4 rounded-xl md:rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
+                           isSelected ? 'bg-brand-panel text-white shadow-lg border-transparent scale-105' : 'hover:scale-[1.02]'
+                        }`}
+                        style={!isSelected ? glassItemStyle : undefined}
+                     >
+                        <span className={`text-[9px] md:text-[11px] font-extrabold uppercase tracking-widest ${isToday && !isSelected ? 'text-brand-panel' : ''}`}>{wd.dayName}</span>
+                        <span className={`text-base md:text-xl font-extrabold mt-0.5 ${isToday && !isSelected ? 'text-brand-panel' : ''}`}>{wd.dayNum}</span>
+                        {/* Pontinho Azul se houver eventos neste dia */}
+                        {events.some(e => e.date === wd.dateStr) && (
+                           <span className={`w-1.5 h-1.5 rounded-full mt-1.5 ${isSelected ? 'bg-white' : 'bg-brand-panel'}`}></span>
+                        )}
+                     </button>
+                     );
+                  })}
+               </div>
+
+               <button onClick={() => changeWeek('next')} className="p-3 rounded-2xl border transition-colors cursor-pointer hover:bg-black/5 dark:hover:bg-white/5" style={solidInputStyle}>
+                  <ChevronRight className="w-5 h-5" />
+               </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
                 <div>
-                  <h3 className="font-extrabold text-sm">{viewMode === 'dia' ? `Compromissos do dia (${currentDateStr.split('-').reverse().join('/')})` : 'Compromissos da semana'}</h3>
-                  <p className="text-[11px] opacity-50">
-                    {viewMode === 'dia' ? 'Exibindo eventos agendados para esta data.' : `Semana de ${weekDays[0].dateStr.split('-').reverse().join('/')} a ${weekDays[6].dateStr.split('-').reverse().join('/')}`}
+                  <h3 className="font-extrabold text-sm md:text-base">{viewMode === 'dia' ? `Agenda de ${currentDateStr.split('-').reverse().join('/')}` : 'Eventos da Semana'}</h3>
+                  <p className="text-[11px] font-semibold opacity-50 mt-1">
+                    {viewMode === 'dia' ? 'Exibindo 1 dia' : `De ${weekDays[0].dateStr.split('-').reverse().join('/')} a ${weekDays[6].dateStr.split('-').reverse().join('/')}`}
                   </p>
                 </div>
-                <span className="text-xs font-extrabold px-3 py-1 rounded-xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-                  {visibleEvents.length} evento(s)
+                <span className="text-[11px] font-extrabold px-3.5 py-1.5 rounded-xl border shadow-sm" style={glassItemStyle}>
+                  {visibleEvents.length} eventos
                 </span>
               </div>
 
               <div className="space-y-3">
                 {visibleEvents.map(ev => {
-                  const hasAccepted = ev.acceptedBy.includes(currentUser.nome);
-
+                  const hasAccepted = ev.acceptedBy.includes(currentUser?.nome || '');
                   return (
                     <div 
                       key={ev.id}
                       onClick={() => setSelectedEvent(ev)}
-                      className="p-4 rounded-2xl border space-y-2.5 transition-all hover:shadow-md cursor-pointer group"
-                      style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}
+                      className="p-5 md:p-6 rounded-3xl border transition-all hover:shadow-lg cursor-pointer group"
+                      style={glassItemStyle}
                     >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md ${ev.visibility === 'geral' ? 'bg-blue-500/10 text-blue-500' : ev.visibility === 'setor' ? 'bg-amber-500/10 text-amber-500' : 'bg-purple-500/10 text-purple-500'}`}>
-                              {ev.visibility === 'geral' ? '📢 Aviso Geral' : ev.visibility === 'setor' ? `👥 Setor ${ev.sector}` : '🔒 Pessoal'}
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2.5">
+                            <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg shadow-sm ${ev.visibility === 'geral' ? 'bg-blue-500/10 text-blue-500' : ev.visibility === 'setor' ? 'bg-amber-500/10 text-amber-500' : 'bg-purple-500/10 text-purple-500'}`}>
+                              {ev.visibility === 'geral' ? '🚀 Geral' : ev.visibility === 'setor' ? `👥 ${ev.sector}` : '👤 Pessoal'}
                             </span>
-                            <span className="text-xs font-bold opacity-60">
-                              📅 {ev.date.split('-').reverse().join('/')} • 🕒 {ev.startTime} - {ev.endTime}
+                            <span className="text-[11px] md:text-xs font-bold opacity-60 flex items-center">
+                              <CalendarIcon className="w-3.5 h-3.5 mr-1.5" /> {ev.date.split('-').reverse().join('/')}
+                            </span>
+                            <span className="text-[11px] md:text-xs font-bold opacity-60 flex items-center">
+                              <Clock className="w-3.5 h-3.5 mr-1.5" /> {ev.startTime} - {ev.endTime}
                             </span>
                           </div>
-                          <h4 className="text-sm font-extrabold mt-1 group-hover:text-blue-500 transition-colors">{ev.title}</h4>
+                          
+                          <h4 className="text-[15px] md:text-lg font-extrabold leading-snug group-hover:text-brand-panel transition-colors break-words whitespace-normal">{ev.title}</h4>
+                          <p className="text-[13px] opacity-70 leading-relaxed mt-2 line-clamp-2 font-medium">{ev.description}</p>
                         </div>
-
+                        
                         {ev.visibility !== 'pessoal' && (
                           <button 
                             onClick={(e) => handleAcceptEvent(ev, e)}
                             disabled={hasAccepted}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center space-x-1 cursor-pointer ${
-                              hasAccepted 
-                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 cursor-default' 
-                                : 'hover:bg-black/5 dark:hover:bg-white/5'
-                            }`}
-                            style={!hasAccepted ? { backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' } : undefined}
+                            className={`px-4 py-2.5 rounded-xl text-[11px] font-extrabold border transition-all flex items-center justify-center space-x-1.5 cursor-pointer flex-shrink-0 ${hasAccepted ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 shadow-sm cursor-default' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                            style={!hasAccepted ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' } : undefined}
                           >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>{hasAccepted ? 'Confirmado na agenda' : 'Confirmar presença'}</span>
+                            <Check className="w-4 h-4" />
+                            <span>{hasAccepted ? 'Presença Confirmada' : 'Aceitar Convite'}</span>
                           </button>
                         )}
                       </div>
 
-                      <p className="text-xs opacity-75 leading-relaxed line-clamp-2">{ev.description}</p>
-
-                      <div className="flex flex-wrap items-center justify-between pt-2 border-t text-[11px] opacity-60 font-medium" style={{ borderColor: 'var(--border-input)' }}>
-                        <span>Organizador: <strong>{ev.organizer}</strong></span>
-                        <span>Confirmados: {ev.acceptedBy.length} pessoa(s)</span>
+                      <div className="flex flex-wrap items-center justify-between pt-4 mt-4 border-t text-[11px] opacity-60 font-bold" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
+                        <span className="flex items-center"><Shield className="w-3.5 h-3.5 mr-1.5" /> Org: {ev.organizer}</span>
+                        <span className="flex items-center mt-2 sm:mt-0"><Users className="w-3.5 h-3.5 mr-1.5" /> {ev.acceptedBy.length} Confirmado(s)</span>
                       </div>
                     </div>
                   );
                 })}
 
                 {visibleEvents.length === 0 && (
-                  <div className="py-16 text-center opacity-40 text-xs font-bold border-2 border-dashed rounded-2xl" style={{ borderColor: 'var(--border-input)' }}>
-                    Agenda livre neste período. Nenhum compromisso registrado para esta data.
+                  <div className="py-20 text-center opacity-40 space-y-4">
+                    <CalendarIcon className="w-12 h-12 mx-auto stroke-1" />
+                    <p className="text-sm font-bold">Nenhum compromisso agendado.</p>
                   </div>
                 )}
               </div>
             </div>
-
-            <div className="lg:col-span-4 p-6 rounded-[2.25rem] border space-y-4" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-              <div className="flex items-center space-x-2.5 border-b pb-3" style={{ borderColor: 'var(--border-input)' }}>
-                <Clock className="w-4 h-4 text-amber-500" />
-                <h3 className="font-extrabold text-sm">Horário Comercial</h3>
-              </div>
-              <p className="text-[11px] opacity-60 leading-relaxed">
-                Entre 08h e 18h, considerando compromissos que você participará ativamente.
-              </p>
-              <div className="p-4 rounded-2xl border space-y-2 text-center" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">08:00 – 18:00</p>
-                <p className="text-[11px] font-semibold opacity-60">{visibleEvents.length === 0 ? 'Totalmente Livre (Nenhum conflito)' : 'Com restrições na agenda'}</p>
-              </div>
-            </div>
           </div>
         </div>
+
       </div>
 
-      {/* Modal Detalhes */}
+      {/* MODAL DETALHES Z-[999] */}
       {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-lg rounded-[2.25rem] border shadow-2xl overflow-hidden flex flex-col" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="w-full max-w-lg rounded-[2.5rem] border shadow-2xl overflow-hidden flex flex-col" style={solidCardStyle}>
             
-            <div className="px-7 py-5 border-b flex items-start justify-between gap-3" style={{ borderColor: 'var(--border-input)' }}>
-              <div>
-                <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md ${selectedEvent.visibility === 'geral' ? 'bg-blue-500/10 text-blue-500' : selectedEvent.visibility === 'setor' ? 'bg-amber-500/10 text-amber-500' : 'bg-purple-500/10 text-purple-500'}`}>
-                  {selectedEvent.visibility === 'geral' ? '📢 Aviso Geral' : selectedEvent.visibility === 'setor' ? `👥 Setor ${selectedEvent.sector}` : '🔒 Pessoal'}
+            <div className="px-6 md:px-8 py-6 border-b flex items-start justify-between gap-3" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
+              <div className="flex-1 min-w-0">
+                <span className={`text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-lg ${selectedEvent.visibility === 'geral' ? 'bg-blue-500/10 text-blue-500' : selectedEvent.visibility === 'setor' ? 'bg-amber-500/10 text-amber-500' : 'bg-purple-500/10 text-purple-500'}`}>
+                  {selectedEvent.visibility === 'geral' ? '🚀 Empresa' : selectedEvent.visibility === 'setor' ? `👥 Setor ${selectedEvent.sector}` : '👤 Pessoal'}
                 </span>
-                <h3 className="text-base font-extrabold mt-2 leading-snug">{selectedEvent.title}</h3>
+                <h3 className="text-lg md:text-xl font-extrabold mt-3 leading-tight break-words whitespace-normal">{selectedEvent.title}</h3>
               </div>
-              <button onClick={() => setSelectedEvent(null)} className="p-2 rounded-xl hover:bg-black/5 cursor-pointer">
-                <X className="w-5 h-5" />
+              <button onClick={() => setSelectedEvent(null)} className="p-2.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors flex-shrink-0">
+                <X className="w-5 h-5 md:w-6 md:h-6" />
               </button>
             </div>
 
-            <div className="p-7 space-y-5">
-              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl border text-xs" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
+            <div className="p-6 md:p-8 space-y-6 overflow-y-auto max-h-[60vh] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+              <div className="grid grid-cols-2 gap-4 p-5 rounded-3xl border text-xs" style={solidInputStyle}>
                 <div>
-                  <span className="opacity-50 font-semibold block mb-0.5">Data e Horário</span>
-                  <strong className="font-extrabold">📅 {selectedEvent.date.split('-').reverse().join('/')}</strong>
-                  <p className="opacity-75">🕒 {selectedEvent.startTime} às {selectedEvent.endTime}</p>
+                  <span className="opacity-50 font-extrabold uppercase tracking-widest block mb-2 text-[10px]">Horário</span>
+                  <strong className="font-extrabold text-[13px] block mb-1">{selectedEvent.date.split('-').reverse().join('/')}</strong>
+                  <p className="opacity-75 font-semibold text-[11px]">{selectedEvent.startTime} - {selectedEvent.endTime}</p>
                 </div>
                 <div>
-                  <span className="opacity-50 font-semibold block mb-0.5">Local / Sala</span>
-                  <strong className="font-extrabold">{selectedEvent.location || 'Não informado'}</strong>
+                  <span className="opacity-50 font-extrabold uppercase tracking-widest block mb-2 text-[10px]">Local</span>
+                  <strong className="font-extrabold text-[13px]">{selectedEvent.location || 'Não definido'}</strong>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider opacity-50 block">Pauta / Descrição</span>
-                <p className="text-xs opacity-80 leading-relaxed p-3.5 rounded-2xl border whitespace-pre-wrap" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
+              <div className="space-y-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest opacity-50 block">Descrição da Pauta</span>
+                <p className="text-[13px] opacity-80 leading-relaxed p-5 rounded-3xl border whitespace-pre-wrap font-medium" style={solidInputStyle}>
                   {selectedEvent.description}
                 </p>
               </div>
 
-              <div className="space-y-2 pt-2 border-t" style={{ borderColor: 'var(--border-input)' }}>
-                <span className="text-[11px] font-extrabold uppercase tracking-wider opacity-50 block">Participantes Confirmados ({selectedEvent.acceptedBy.length})</span>
-                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+              <div className="space-y-3 pt-4 border-t" style={{ borderColor: 'var(--border-input)' }}>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest opacity-50 block">Presenças ({selectedEvent.acceptedBy.length})</span>
+                <div className="flex flex-wrap gap-2">
                   {selectedEvent.acceptedBy.map((name, idx) => (
-                    <span key={idx} className="text-[11px] font-bold px-2.5 py-1 rounded-xl border flex items-center space-x-1" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-                      <Users className="w-3 h-3 opacity-60 mr-1" />
+                    <span key={idx} className="text-[11px] font-bold px-3 py-1.5 rounded-xl border flex items-center space-x-1.5" style={solidInputStyle}>
+                      <Users className="w-3.5 h-3.5 opacity-60" />
                       <span>{name}</span>
                     </span>
                   ))}
@@ -581,24 +472,24 @@ export default function AgendaPage() {
               </div>
             </div>
 
-            <div className="px-7 py-4 border-t flex items-center justify-between text-xs" style={{ borderColor: 'var(--border-input)' }}>
-              <span className="opacity-50 font-medium">Organizador: <strong>{selectedEvent.organizer}</strong></span>
+            <div className="px-6 md:px-8 py-5 border-t flex flex-col sm:flex-row items-center justify-between text-xs gap-4 sm:gap-0" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
+              <span className="opacity-60 font-bold w-full sm:w-auto text-center sm:text-left text-[11px]">Agendado por <strong className="opacity-100">{selectedEvent.organizer}</strong></span>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3 w-full sm:w-auto">
                 {selectedEvent.organizer_id === currentUser?.user_id && (
                   <button 
                     onClick={() => handleDeleteEvent(selectedEvent.id)}
-                    className="px-4 py-2 rounded-xl text-red-500 hover:bg-red-500/10 font-bold flex items-center space-x-1 cursor-pointer transition-colors"
+                    className="flex-1 sm:flex-none justify-center px-5 py-3.5 rounded-xl text-red-500 hover:bg-red-500/10 font-bold flex items-center space-x-1.5 cursor-pointer transition-colors"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Cancelar evento</span>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Excluir</span>
                   </button>
                 )}
                 <button 
                   onClick={() => setSelectedEvent(null)}
-                  className="px-5 py-2 rounded-xl bg-brand-panel text-white font-extrabold shadow-md cursor-pointer hover:opacity-90"
+                  className="flex-1 sm:flex-none justify-center px-6 py-3.5 rounded-xl bg-brand-panel text-white font-extrabold shadow-md cursor-pointer hover:opacity-90 active:scale-95 transition-transform"
                 >
-                  Fechar
+                  Fechar Menu
                 </button>
               </div>
             </div>
@@ -607,146 +498,141 @@ export default function AgendaPage() {
         </div>
       )}
 
-      {/* Modal Novo Compromisso */}
+      {/* MODAL CRIAR NOVO COMPROMISSO Z-[999] */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-lg rounded-[2.25rem] border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="w-full max-w-lg rounded-[2.5rem] border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" style={solidCardStyle}>
             
-            <div className="px-7 py-5 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)' }}>
+            <div className="px-6 md:px-8 py-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-500">Novo Evento</span>
-                <h3 className="font-extrabold text-lg leading-tight mt-0.5">Criar Compromisso</h3>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-panel">Formulário</span>
+                <h3 className="font-extrabold text-lg md:text-xl leading-tight mt-1">Novo Compromisso</h3>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 rounded-xl hover:bg-black/5 cursor-pointer">
+              <button onClick={() => setIsModalOpen(false)} className="p-2.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateEvent} className="p-7 overflow-y-auto custom-scrollbar space-y-4">
+            <form onSubmit={handleCreateEvent} className="p-6 md:p-8 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] space-y-5">
               
               <div>
-                <label className="text-[11px] font-extrabold uppercase tracking-wider opacity-60 block mb-1.5">Título do Compromisso *</label>
+                <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Título do Evento *</label>
                 <input 
                   type="text" 
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Ex: Reunião de alinhamento..."
-                  className="w-full px-4 py-3 rounded-2xl border text-xs font-bold outline-none focus:border-blue-500 transition-colors"
-                  style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
+                  placeholder="Ex: Alinhamento Semanal..."
+                  className="w-full px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none focus:border-brand-panel transition-colors"
+                  style={solidInputStyle}
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-extrabold uppercase tracking-wider opacity-60 block mb-1.5">Descrição / Pauta</label>
+                <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Pauta (Opcional)</label>
                 <textarea 
                   rows={2}
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
-                  placeholder="Contexto ou pauta (opcional)..."
-                  className="w-full px-4 py-3 rounded-2xl border text-xs outline-none resize-none focus:border-blue-500 transition-colors"
-                  style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
+                  placeholder="Escreva sobre o que será tratado..."
+                  className="w-full px-4 py-3.5 rounded-2xl border text-[13px] outline-none resize-none focus:border-brand-panel transition-colors font-medium"
+                  style={solidInputStyle}
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-[11px] font-extrabold uppercase tracking-wider opacity-60 block mb-1.5">Data</label>
+                  <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Data</label>
                   <input 
                     type="date" 
                     value={currentDateStr}
                     onChange={(e) => {
                       if (e.target.value) {
-                         const [year, month, day] = e.target.value.split('-').map(Number);
-                         setCurrentDate(new Date(year, month - 1, day));
+                        const [year, month, day] = e.target.value.split('-').map(Number);
+                        setCurrentDate(new Date(year, month - 1, day));
                       }
                     }}
-                    className="w-full px-3.5 py-2.5 rounded-2xl border text-xs font-bold outline-none cursor-pointer focus:border-blue-500 transition-colors"
-                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
+                    className="w-full px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none cursor-pointer focus:border-brand-panel transition-colors"
+                    style={solidInputStyle}
                   />
                 </div>
-
                 <div>
-                  <label className="text-[11px] font-extrabold uppercase tracking-wider opacity-60 block mb-1.5">Início</label>
+                  <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Início</label>
                   <input 
                     type="time" 
                     value={newStartTime}
                     onChange={(e) => setNewStartTime(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-2xl border text-xs font-bold outline-none focus:border-blue-500 transition-colors"
-                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
+                    className="w-full px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none focus:border-brand-panel transition-colors"
+                    style={solidInputStyle}
                   />
                 </div>
-
                 <div>
-                  <label className="text-[11px] font-extrabold uppercase tracking-wider opacity-60 block mb-1.5">Término</label>
+                  <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Fim</label>
                   <input 
                     type="time" 
                     value={newEndTime}
                     onChange={(e) => setNewEndTime(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-2xl border text-xs font-bold outline-none focus:border-blue-500 transition-colors"
-                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
+                    className="w-full px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none focus:border-brand-panel transition-colors"
+                    style={solidInputStyle}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] font-extrabold uppercase tracking-wider opacity-60 block mb-1.5">Local ou Sala</label>
+                <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Local / Sala</label>
                 <input 
                   type="text" 
                   value={newLocation}
                   onChange={(e) => setNewLocation(e.target.value)}
-                  placeholder="Ex: Sala de Reuniões / Link de Vídeo"
-                  className="w-full px-4 py-2.5 rounded-2xl border text-xs outline-none focus:border-blue-500 transition-colors"
-                  style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
+                  placeholder="Ex: Auditório ou Google Meet"
+                  className="w-full px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none focus:border-brand-panel transition-colors"
+                  style={solidInputStyle}
                 />
               </div>
 
-              <div className="space-y-2 pt-2 border-t" style={{ borderColor: 'var(--border-input)' }}>
-                <label className="text-[11px] font-extrabold uppercase tracking-wider opacity-60 block">Quem pode ver este compromisso?</label>
+              <div className="space-y-3 pt-3 border-t" style={{ borderColor: 'var(--border-input)' }}>
+                <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block">Visibilidade</label>
                 <select 
                   value={newVisibility}
                   onChange={(e: any) => setNewVisibility(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border text-xs font-bold outline-none cursor-pointer focus:border-blue-500 transition-colors"
-                  style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}
+                  className="w-full px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none cursor-pointer focus:border-brand-panel transition-colors"
+                  style={solidInputStyle}
                 >
-                  <option value="pessoal">🔒 Pessoal — só eu e convidados</option>
-                  <option value="setor">👥 Meu setor ({currentUser?.setor})</option>
-                  
-                  {isManagerOrHR && (
-                    <option value="geral">📢 Publicar também em Avisos Gerais (Empresa)</option>
-                  )}
+                  <option value="pessoal">👤 Pessoal – eu e confirmados</option>
+                  <option value="setor">👥 Setor – Visível para {currentUser?.setor}</option>
+                  {isManagerOrHR && <option value="geral">🚀 Empresa – Todos podem ver</option>}
                 </select>
-
+                
                 {!isManagerOrHR && (
-                  <p className="text-[10px] text-amber-500 font-bold flex items-center mt-1">
-                    <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0" />
-                    Apenas Gestores, Coordenação e RH podem publicar Avisos Gerais para todo o hospital.
+                  <p className="text-[10px] text-amber-500 font-bold flex items-center">
+                    <AlertCircle className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
+                    Permissões gerais limitadas a Coordenação e RH.
                   </p>
                 )}
               </div>
 
-              {/* 🚀 Ajuste textual na checkbox de Chat (Equipe em vez de equipa) */}
-              <div className="p-3.5 rounded-2xl border flex items-center justify-between" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}>
-                <div className="flex items-center space-x-2.5">
-                  <Send className="w-4 h-4 text-blue-500" />
+              <div className="p-4 rounded-2xl border flex items-center justify-between" style={solidInputStyle}>
+                <div className="flex items-center space-x-3">
+                  <Send className="w-5 h-5 text-brand-panel" />
                   <div>
-                    <p className="text-xs font-bold">Enviar convite no Chat</p>
-                    <p className="text-[10px] opacity-60">Avisa a equipe automaticamente no chat corporativo.</p>
+                    <p className="text-[13px] font-bold">Notificar Equipe no Chat</p>
+                    <p className="text-[10px] opacity-60 font-semibold mt-0.5">Envia convite automático ao criar o evento.</p>
                   </div>
                 </div>
                 <input 
                   type="checkbox"
                   checked={shareToChat}
                   onChange={(e) => setShareToChat(e.target.checked)}
-                  className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                  disabled={newVisibility === 'pessoal'}
+                  className="w-5 h-5 rounded border-gray-300 accent-blue-600 cursor-pointer disabled:opacity-30"
                 />
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-4 border-t" style={{ borderColor: 'var(--border-input)' }}>
+              <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 pt-5 border-t" style={{ borderColor: 'var(--border-input)' }}>
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl border text-xs font-bold cursor-pointer hover:opacity-80 transition-colors"
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl border text-[13px] font-extrabold cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                   style={{ borderColor: 'var(--border-input)' }}
                 >
                   Cancelar
@@ -754,19 +640,17 @@ export default function AgendaPage() {
                 <button 
                   type="submit"
                   disabled={isSaving}
-                  className="px-6 py-2.5 rounded-xl bg-brand-panel text-white text-xs font-extrabold shadow-lg cursor-pointer hover:opacity-90 transition-all disabled:opacity-70 flex items-center space-x-2"
+                  className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-brand-panel text-white text-[13px] font-extrabold shadow-lg cursor-pointer hover:opacity-90 active:scale-95 transition-transform disabled:opacity-70 flex justify-center items-center space-x-2"
                 >
                   {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>{isSaving ? 'Salvando...' : 'Salvar compromisso'}</span>
+                  <span>{isSaving ? 'Agendando...' : 'Agendar Reunião'}</span>
                 </button>
               </div>
-
             </form>
 
           </div>
         </div>
       )}
-
     </div>
   );
 }
