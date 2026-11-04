@@ -25,7 +25,12 @@ export default function AgendaPage() {
   const [isLoading, setIsLoading] = useState(true);
   
   const [viewMode, setViewMode] = useState<'dia' | 'semana'>('semana');
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+  // 🚀 Inicializa a data como null ou define via useEffect para evitar erro de prerender do Next.js
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date(2026, 0, 1)); // Data segura de fallback
+
+  useEffect(() => {
+    setCurrentDate(new Date()); // Define a data real assim que monta no cliente
+  }, []);
 
   const glassContainerStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-card) 50%, transparent)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid color-mix(in srgb, var(--border-input) 40%, transparent)', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)' };
   const glassSidebarStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-input) 30%, transparent)', borderRight: '1px solid color-mix(in srgb, var(--border-input) 40%, transparent)' };
