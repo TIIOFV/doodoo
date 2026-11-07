@@ -171,13 +171,33 @@
   --tab-active: #52525b;
 }
 
-body {
+/* =======================================================
+   REGRAS NATIVAS PWA / MOBILE UI
+   ======================================================= */
+html, body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg-page);
   color: var(--text-main);
   transition: background-color 0.5s ease, color 0.5s ease;
   letter-spacing: -0.015em;
   -webkit-font-smoothing: antialiased;
+  
+  /* Bloqueia o "bounce" feio do Safari/Chrome no telemóvel */
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Garante padding extra em iPhones com a barra Home em baixo (Bottom Nav) */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+
+/* Impede o zoom ridículo do iOS Safari ao clicar num input */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
 @layer utilities {

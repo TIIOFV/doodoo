@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutGrid, MessageSquare, CheckSquare, Calendar, StickyNote, 
-  Settings, LogOut, Bell, Palette, ChevronLeft, ChevronRight, X, Sun, Moon, CloudSun, Sparkles, ExternalLink, CheckCheck, Menu, ShieldAlert
+  Settings, LogOut, Bell, Palette, ChevronLeft, ChevronRight, X, Sun, Moon, CloudSun, Sparkles, ExternalLink, CheckCheck, ShieldAlert
 } from 'lucide-react';
 import { supabase } from './../lib/supabase';
 import { useTheme } from '../contexts/ThemeContext';
@@ -30,7 +30,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { theme, changeTheme } = useTheme();
   
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [greeting, setGreeting] = useState('');
   const [GreetingIcon, setGreetingIcon] = useState<any>(Sun);
@@ -45,17 +44,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   
+  const [hideBottomNavOnMobile, setHideBottomNavOnMobile] = useState(false);
+  
   const meusCanaisRef = useRef<string[]>([]);
 
   const glassPanel = { backgroundColor: 'color-mix(in srgb, var(--bg-card) 75%, transparent)', backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)', border: '1px solid color-mix(in srgb, var(--text-main) 6%, transparent)', boxShadow: '0 8px 30px rgba(0, 0, 0, 0.05)' };
   const solidDropdown = { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-input)', boxShadow: '0 20px 60px rgba(0, 0, 0, 0.2)' };
-  const solidMobileDrawer = { backgroundColor: 'color-mix(in srgb, var(--bg-card) 98%, transparent)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', borderRight: '1px solid var(--border-input)', boxShadow: '20px 0 50px rgba(0, 0, 0, 0.15)' };
-  const glassHeader = { backgroundColor: 'color-mix(in srgb, var(--bg-page) 60%, transparent)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderBottom: '1px solid color-mix(in srgb, var(--text-main) 3%, transparent)', };
+  const glassHeader = { backgroundColor: 'color-mix(in srgb, var(--bg-page) 60%, transparent)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderBottom: '1px solid color-mix(in srgb, var(--text-main) 3%, transparent)' };
+  const glassBottomNav = { backgroundColor: 'color-mix(in srgb, var(--bg-card) 90%, transparent)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', borderTop: '1px solid var(--border-input)' };
 
   useEffect(() => {
     const savedNotifs = localStorage.getItem('doodoo_notificacoes');
     if (savedNotifs) {
-      // 🚀 Limita a 30 notificações ao carregar
       const parsed = JSON.parse(savedNotifs);
       setNotifications(parsed.slice(0, 30));
     }
@@ -77,8 +77,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const handleUpdateChatBadge = (e: any) => setUnreadChatCount(e.detail);
     window.addEventListener('doodoo:update_unread_chat', handleUpdateChatBadge);
-    return () => window.removeEventListener('doodoo:update_unread_chat', handleUpdateChatBadge);
+    
+    const handleChatState = (e: any) => setHideBottomNavOnMobile(e.detail.isInsideChat);
+    window.addEventListener('doodoo:mobile_chat_state', handleChatState);
+    
+    return () => {
+      window.removeEventListener('doodoo:update_unread_chat', handleUpdateChatBadge);
+      window.removeEventListener('doodoo:mobile_chat_state', handleChatState);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!pathname.startsWith('/dashboard/conversas')) {
+      setHideBottomNavOnMobile(false);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     const fetchProfileAndPermissions = async () => {
@@ -144,7 +157,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const handleNewNotif = (e: any) => {
       const { title, desc, link } = e.detail;
       const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      // 🚀 DESCARTA AS ANTIGAS E MANTÉM APENAS AS 30 MAIS RECENTES PARA POUPAR MEMÓRIA
       setNotifications(prev => [{ id: Date.now(), title: title || 'Alerta', desc: desc || '', time: timeStr, unread: true, link: link || '' }, ...prev].slice(0, 30));
     };
     window.addEventListener('doodoo:notify', handleNewNotif);
@@ -175,8 +187,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   };
 
-const themes = [
-    { id: 'light', name: 'Claro', color: '#ffffff', border: '#9ca3af' }, // <-- Branco puro com borda mais escura
+  const themes = [
+    { id: 'light', name: 'Claro', color: '#ffffff', border: '#9ca3af' },
     { id: 'dark', name: 'Escuro', color: '#0f172a', border: '#475569' },
     { id: 'ocean', name: 'Oceano', color: '#0284c7', border: '#0369a1' },
     { id: 'nature', name: 'Natureza', color: '#16a34a', border: '#15803d' },
@@ -190,7 +202,7 @@ const themes = [
 
   const rawNav = [
     { name: 'Visão Geral', icon: LayoutGrid, path: '/dashboard', badge: null, key: 'visao_geral' },
-    { name: 'Chat Corporativo', icon: MessageSquare, path: '/dashboard/conversas', badge: unreadChatCount > 0 ? unreadChatCount : null, key: 'chat' },
+    { name: 'Chat', icon: MessageSquare, path: '/dashboard/conversas', badge: unreadChatCount > 0 ? unreadChatCount : null, key: 'chat' },
     { name: 'Tarefas', icon: CheckSquare, path: '/dashboard/tarefas', badge: null, key: 'tarefas' },
     { name: 'Agenda', icon: Calendar, path: '/dashboard/agenda', badge: null, key: 'agenda' },
     { name: 'Anotações', icon: StickyNote, path: '/dashboard/notas', badge: null, key: 'anotacoes' },
@@ -198,6 +210,7 @@ const themes = [
   
   const mainNav = rawNav.filter(item => allowedTabs.includes(item.key));
   const currentPageTitle = mainNav.find((item) => item.path === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(item.path))?.name || 'Configurações';
+  
   const isImmersivePage = pathname.startsWith('/dashboard/conversas') || pathname.startsWith('/dashboard/tarefas') || pathname.startsWith('/dashboard/agenda') || pathname.startsWith('/dashboard/notas') || pathname.startsWith('/dashboard/configuracoes');
   const unreadNotifCount = notifications.filter(n => n.unread).length;
   
@@ -209,7 +222,7 @@ const themes = [
         {isLoading ? (
           <div className="animate-pulse flex flex-col items-center"><LogoDooDoo className="w-14 h-14 mb-4" style={{ color: 'var(--tab-active)' }} /></div>
         ) : (
-          <div className="max-w-md w-full p-10 text-center space-y-6 rounded-[2.5rem] border" style={glassPanel}>
+          <div className="max-w-md w-full p-10 text-center space-y-6 rounded-[2.5rem] border mx-4" style={glassPanel}>
             <div className="w-24 h-24 mx-auto rounded-full flex items-center justify-center border-4 border-red-500/20 bg-red-500/10"><ShieldAlert className="w-12 h-12 text-red-500" /></div>
             <div className="space-y-2"><h1 className="text-3xl font-extrabold tracking-tight">Sessão Expirada</h1><p className="text-sm font-medium opacity-70">Inicie sessão novamente.</p></div>
             <button onClick={handleLogout} className="w-full py-4 rounded-2xl bg-brand-panel text-white font-extrabold shadow-lg hover:scale-[1.02] transition-transform">Fazer Login</button>
@@ -221,14 +234,14 @@ const themes = [
   }
 
   return (
-    <div className="flex h-screen overflow-hidden transition-colors duration-700 relative z-0" style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-main)' }}>
+    <div className="flex h-[100dvh] overflow-hidden transition-colors duration-700 relative z-0" style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-main)' }}>
       
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[10%] -left-[5%] w-[45vw] h-[45vw] rounded-full bg-brand-panel opacity-10 blur-[140px]"></div>
         <div className="absolute top-[60%] -right-[10%] w-[35vw] h-[35vw] rounded-full bg-brand-panel opacity-10 blur-[140px]"></div>
       </div>
 
-      <aside className={`${isCollapsed ? 'w-[96px]' : 'w-[280px]'} hidden md:flex flex-col transition-all duration-300 relative z-40 m-4 rounded-[2.25rem] flex-shrink-0`} style={glassPanel}>
+      <aside className={`${isCollapsed ? 'w-[96px]' : 'w-[280px]'} hidden lg:flex flex-col transition-all duration-300 relative z-40 m-4 rounded-[2.25rem] flex-shrink-0`} style={glassPanel}>
          <button onClick={() => setIsCollapsed(!isCollapsed)} className="absolute -right-3.5 top-12 flex items-center justify-center w-7 h-7 rounded-full shadow-md transition-transform hover:scale-110 z-50 cursor-pointer text-white" style={{ backgroundColor: 'var(--tab-active)', border: '2px solid var(--bg-page)' }}>
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -279,7 +292,6 @@ const themes = [
             
             <div className={`flex items-center pt-3 border-t ${isCollapsed ? 'flex-col space-y-3 border-none pt-0' : 'justify-between'}`} style={{ borderColor: 'color-mix(in srgb, var(--text-main) 10%, transparent)' }}>
               
-              {/* 🚀 BOTAO DE NOTIFICAÇÃO DO DESKTOP COM CONTADOR */}
               <button onClick={toggleNotifPanel} className="relative p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors" title="Notificações">
                 <Bell className="w-5 h-5 opacity-80" />
                 {unreadNotifCount > 0 && (
@@ -316,15 +328,16 @@ const themes = [
       </aside>
 
       <div className="flex-1 flex flex-col h-full relative overflow-hidden z-10">
-        <header className={`absolute top-0 left-0 right-0 h-20 md:h-28 flex items-center justify-between px-5 md:px-10 transition-all duration-500 z-40 ${isImmersivePage ? 'md:hidden' : ''}`} style={glassHeader}>
+        
+        {/* 🚀 HEADER DESAPARECE NO MOBILE SE ESTIVERMOS NUM CHAT IMERSIVO */}
+        <header className={`absolute top-0 left-0 right-0 h-20 md:h-28 flex items-center justify-between px-5 md:px-10 transition-all duration-500 z-40 lg:flex ${isImmersivePage ? 'md:hidden' : 'flex'} ${hideBottomNavOnMobile ? 'hidden' : 'flex'}`} style={glassHeader}>
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-3 rounded-2xl shadow-sm cursor-pointer border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}><Menu className="w-6 h-6" /></button>
             <div className="flex flex-col justify-center">
               <div className="hidden md:flex items-center space-x-2 opacity-60 mb-1">
                 <GreetingIcon className="w-4 h-4" style={{ color: 'var(--tab-active)' }} />
                 <span className="text-[11px] font-extrabold uppercase tracking-widest">{greeting}{currentUser ? `, ${currentUser.nome?.split(' ')[0]}` : ''}</span>
               </div>
-              <h2 className="text-xl md:text-3xl font-extrabold tracking-tight truncate">{currentPageTitle}</h2>
+              <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight truncate">{currentPageTitle}</h2>
             </div>
           </div>
           
@@ -338,8 +351,7 @@ const themes = [
               </div>
             </div>
             
-            <div className="md:hidden relative">
-              {/* 🚀 BOTAO DE NOTIFICAÇÃO DO MOBILE (HEADER) COM CONTADOR */}
+            <div className="lg:hidden relative">
               <button onClick={toggleNotifPanel} className="p-3 rounded-2xl shadow-sm cursor-pointer border relative" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
                 <Bell className="w-6 h-6 opacity-80" />
                 {unreadNotifCount > 0 && (
@@ -371,54 +383,34 @@ const themes = [
           </div>
         </header>
 
-        <main className={`flex-1 overflow-y-auto h-full w-full flex flex-col ${isImmersivePage ? 'p-0 md:p-5 pt-24 md:pt-5' : 'px-5 md:px-10 pt-24 md:pt-32 pb-4 md:pb-12'} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']`}>
+        {/* 🚀 O PADDING FOI AJUSTADO PARA O DESKTOP (lg:pt-28) E MOBILE (pt-0 no chat / pt-24 normal) */}
+        <main className={`flex-1 overflow-y-auto h-full w-full flex flex-col ${isImmersivePage ? (hideBottomNavOnMobile ? 'p-0' : 'p-0 md:p-5 md:pt-5 lg:pt-28') : 'px-5 md:px-10 pt-24 md:pt-32'} pb-24 lg:pb-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']`}>
           {children}
         </main>
-      </div>
 
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[90] flex md:hidden animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
-          <aside className="relative w-[85%] max-w-sm h-full flex flex-col shadow-2xl animate-in slide-in-from-left duration-300" style={solidMobileDrawer}>
-            
-            <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)' }}>
-              <div className="flex items-center space-x-4 overflow-hidden flex-1 min-w-0">
-                <div className="relative flex-shrink-0">{currentUser?.avatar_url ? <img src={currentUser.avatar_url} alt="Avatar" className="w-12 h-12 rounded-2xl object-cover shadow-md" /> : <div className="w-12 h-12 rounded-2xl bg-brand-panel flex items-center justify-center text-white font-bold shadow-md text-base">{getInitials(currentUser?.nome || '')}</div>}</div>
-                <div className="overflow-hidden flex-1 min-w-0">
-                  <p className="text-[15px] font-extrabold leading-tight truncate">{currentUser?.nome}</p>
-                  <p className="text-[10px] font-bold opacity-50 uppercase mt-1 truncate">{currentUser?.cargo}</p>
-                </div>
-              </div>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="p-2.5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer flex-shrink-0 ml-2"><X className="w-5 h-5"/></button>
-            </div>
-            
-            <nav className="flex-1 overflow-y-auto p-5 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-              <Link href="/dashboard/configuracoes" onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center px-4 py-4 rounded-2xl border font-bold mb-6 text-[14px] transition-transform active:scale-95" style={{ backgroundColor: 'color-mix(in srgb, var(--text-main) 3%, transparent)', borderColor: 'color-mix(in srgb, var(--border-input) 50%, transparent)' }}>
-                 <Settings className="w-5 h-5 mr-3.5 opacity-60" /> Meu Perfil e Ajustes
+        {/* BOTTOM NAVIGATION (MOBILE PWA STYLE) - ESCONDE QUANDO NO CHAT INDIVIDUAL */}
+        <nav className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around pb-safe pt-2 px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transition-transform duration-300 ${hideBottomNavOnMobile ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`} style={glassBottomNav}>
+          {mainNav.slice(0, 4).map((item) => {
+            const isActive = item.path === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(item.path);
+            return (
+              <Link key={item.name} href={item.path} className="relative flex flex-col items-center justify-center p-2 w-16 h-14 cursor-pointer transition-transform active:scale-90">
+                <item.icon className={`w-[22px] h-[22px] mb-1 transition-all ${isActive ? 'scale-110' : 'opacity-50'}`} style={{ color: isActive ? 'var(--tab-active)' : 'var(--text-main)' }} />
+                <span className={`text-[9px] font-bold tracking-wide transition-all ${isActive ? 'opacity-100' : 'opacity-50'}`} style={{ color: isActive ? 'var(--tab-active)' : 'var(--text-main)' }}>{item.name.split(' ')[0]}</span>
+                {item.badge && <span className="absolute top-1 right-2.5 min-w-[14px] h-3.5 px-1 rounded-full bg-red-500 text-white text-[8px] font-extrabold flex items-center justify-center border-2 shadow-sm" style={{ borderColor: 'var(--bg-card)' }}>{item.badge}</span>}
               </Link>
-              {mainNav.map((item) => (
-                  <Link key={item.name} href={item.path} onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center px-4 py-4 rounded-2xl relative transition-colors ${pathname.startsWith(item.path) ? 'bg-brand-panel text-white font-bold shadow-md' : 'hover:bg-black/5 dark:hover:bg-white/5 font-semibold opacity-75 text-[14px]'}`}>
-                    <item.icon className="w-5 h-5 mr-3.5" />{item.name}
-                  </Link>
-              ))}
-            </nav>
-            
-            <div className="p-6 border-t space-y-6 pb-12" style={{ borderColor: 'var(--border-input)' }}>
-               <div>
-                 <span className="text-[10px] font-bold opacity-50 block uppercase tracking-wider mb-3 text-center">Mudar Tema</span>
-                 <div className="flex space-x-3 justify-center">
-                  {themes.map((t) => (
-                    <button key={t.id} onClick={() => changeTheme(t.id)} style={{ width: '28px', height: '28px', backgroundColor: t.color, borderColor: t.border, boxShadow: theme === t.id ? `0 0 0 2px var(--bg-card), 0 0 0 4px ${t.border}` : 'none' }} className={`rounded-full border transition-all cursor-pointer ${theme === t.id ? 'scale-110' : 'opacity-60'}`} />
-                  ))}
-                 </div>
-               </div>
-               <button onClick={handleLogout} className="w-full py-4 rounded-2xl border border-red-500/30 bg-red-500/10 text-red-500 text-[14px] font-bold flex items-center justify-center space-x-2 cursor-pointer transition-transform active:scale-95">
-                 <LogOut className="w-5 h-5" /><span>Encerrar Sessão</span>
-               </button>
-            </div>
-          </aside>
-        </div>
-      )}
+            );
+          })}
+          
+          <Link href="/dashboard/configuracoes" className="relative flex flex-col items-center justify-center p-2 w-16 h-14 cursor-pointer transition-transform active:scale-90">
+             {currentUser?.avatar_url ? (
+               <img src={currentUser.avatar_url} alt="Perfil" className={`w-[22px] h-[22px] rounded-full object-cover mb-1 border-2 transition-all ${pathname.startsWith('/dashboard/configuracoes') ? 'scale-110' : 'opacity-60 border-transparent'}`} style={{ borderColor: pathname.startsWith('/dashboard/configuracoes') ? 'var(--tab-active)' : 'var(--text-main)' }} />
+             ) : (
+               <Settings className={`w-[22px] h-[22px] mb-1 transition-all ${pathname.startsWith('/dashboard/configuracoes') ? 'scale-110' : 'opacity-50'}`} style={{ color: pathname.startsWith('/dashboard/configuracoes') ? 'var(--tab-active)' : 'var(--text-main)' }} />
+             )}
+             <span className={`text-[9px] font-bold tracking-wide transition-all ${pathname.startsWith('/dashboard/configuracoes') ? 'opacity-100' : 'opacity-50'}`} style={{ color: pathname.startsWith('/dashboard/configuracoes') ? 'var(--tab-active)' : 'var(--text-main)' }}>Perfil</span>
+          </Link>
+        </nav>
+      </div>
     </div>
   );
 }

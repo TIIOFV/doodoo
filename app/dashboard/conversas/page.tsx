@@ -94,24 +94,12 @@ const formatLinks = (text: string) => {
   );
 };
 
+// 🚀 MATRIZ DE EMOJIS RÁPIDOS
 const QUICK_EMOJIS = ['👍', '✅', '🚀', '❤️', '😂', '🙏', '🔥', '👀', '⚠️', '🎉'];
 
 export default function ConversasPage() {
   const { theme, changeTheme } = useTheme();
-
-  const themes = [
-    { id: 'light', name: 'Claro', color: '#ffffff', border: '#9ca3af' },
-    { id: 'dark', name: 'Escuro', color: '#0f172a', border: '#475569' },
-    { id: 'ocean', name: 'Oceano', color: '#0284c7', border: '#0369a1' },
-    { id: 'nature', name: 'Natureza', color: '#16a34a', border: '#15803d' },
-    { id: 'sunset', name: 'Pôr do Sol', color: '#dc2626', border: '#b91c1c' },
-    { id: 'amethyst', name: 'Ametista', color: '#9333ea', border: '#7e22ce' },
-    { id: 'aurora', name: 'Aurora', color: '#0d9488', border: '#0f766e' },
-    { id: 'solar', name: 'Solar', color: '#f59e0b', border: '#d97706' },
-    { id: 'coral', name: 'Coral', color: '#e11d48', border: '#be123c' },
-    { id: 'graphite', name: 'Grafite', color: '#52525b', border: '#3f3f46' },
-  ];
-
+  
   const [currentUser, setCurrentUser] = useState<DBProfile | null>(null);
   const [userStatus, setUserStatus] = useState<UserStatusType>('online');
   const [teamMembers, setTeamMembers] = useState<DBProfile[]>([]);
@@ -162,10 +150,10 @@ export default function ConversasPage() {
   const [eventLocation, setEventLocation] = useState('');
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; isDestructive?: boolean }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, isDestructive: false });
 
-  const glassContainerStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-card) 50%, transparent)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid color-mix(in srgb, var(--border-input) 40%, transparent)', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)' };
-  const glassSidebarStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-input) 30%, transparent)', borderRight: '1px solid color-mix(in srgb, var(--border-input) 40%, transparent)', borderLeft: '1px solid color-mix(in srgb, var(--border-input) 40%, transparent)' };
-  const solidCardStyle = { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-input)', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)' };
-  const solidInputStyle = { backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-input)', color: 'var(--text-main)' };
+  // 🚀 DECLARAÇÃO DA FUNÇÃO DE NOTIFICAÇÃO
+  const notifyBell = useCallback((title: string, desc: string) => {
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title, desc } }));
+  }, []);
 
   const handleForceLogout = async () => { await supabase.auth.signOut(); window.location.href = '/'; };
 
@@ -350,12 +338,22 @@ export default function ConversasPage() {
 
           setChannels(canaisValidos);
 
+          // 🚀 SELECIONAR CHAT CORRETAMENTE (WhatsApp Style no Mobile)
           setActiveChatId(prev => {
-            if (prev && canaisValidos.some(c => c.id === prev)) return prev; 
-            if (targetId && canaisValidos.some(c => c.id === targetId)) return targetId; 
-            if (chatToFocusFirst) return chatToFocusFirst; 
-            const geral = canaisValidos.find(c => c.name === 'Geral');
-            return geral ? geral.id : (canaisValidos.length > 0 ? canaisValidos[0].id : null); 
+             // Se estamos no telemóvel E não fomos forçados por notificação, mostra a lista.
+             if (typeof window !== 'undefined' && window.innerWidth < 1024 && !targetId && !window.location.search.includes('chatId')) {
+                 return null;
+             }
+
+             // Se há um alvo (notificação), vai para ele
+             if (targetId && canaisValidos.some(c => c.id === targetId)) return targetId; 
+             
+             // Se há chats não lidos, vai para o primeiro não lido
+             if (chatToFocusFirst) return chatToFocusFirst; 
+             
+             // Caso contrário, vai para o "Geral" (como padrão no desktop)
+             const geral = canaisValidos.find(c => c.name === 'Geral');
+             return geral ? geral.id : (canaisValidos.length > 0 ? canaisValidos[0].id : null); 
           });
 
         } else {
@@ -370,6 +368,14 @@ export default function ConversasPage() {
     };
     fetchInitialData();
   }, []);
+
+  // 🚀 Dispara evento global para que o layout.tsx esconda a Bottom Nav se estivermos num chat no mobile
+  useEffect(() => {
+     if (typeof window !== 'undefined') {
+        const isMobileChatActive = window.innerWidth < 1024 && activeChatId !== null;
+        window.dispatchEvent(new CustomEvent('doodoo:mobile_chat_state', { detail: { isInsideChat: isMobileChatActive } }));
+     }
+  }, [activeChatId]);
 
   useEffect(() => {
     const handleSwitchChat = async (e: any) => {
@@ -587,10 +593,6 @@ export default function ConversasPage() {
     return () => { supabase.removeChannel(globalSub); };
   }, [currentUser, scrollToBottom]);
 
-  const notifyBell = (title: string, desc: string) => {
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title, desc } }));
-  };
-
   const sendToDatabase = async (tipo: 'text' | 'image' | 'file' | 'event', texto: string, metadata: any = {}) => {
     if (!currentUser || !activeChatId) return;
 
@@ -658,16 +660,10 @@ export default function ConversasPage() {
     if (!inputText.trim() || !activeChatId) return;
     const textToSend = inputText.trim();
     setInputText('');
-    
-    // Reseta o tamanho da textarea
-    if (inputFieldRef.current) {
-       inputFieldRef.current.style.height = 'auto';
-    }
-    
+    if (inputFieldRef.current) inputFieldRef.current.style.height = 'auto';
     await sendToDatabase('text', textToSend);
   };
 
-  // 🚀 LÓGICA DE TEXTAREA AUTO-EXPANSÍVEL E SUBMIT NO ENTER
   const handleInputResize = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputText(e.target.value);
     e.target.style.height = 'auto';
@@ -676,10 +672,16 @@ export default function ConversasPage() {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault(); // Previne a quebra de linha normal
-      if (inputText.trim()) {
-        handleSendMessage();
-      }
+      e.preventDefault(); 
+      if (inputText.trim()) handleSendMessage();
+    }
+  };
+
+  // 🚀 ADICIONAR EMOJI AO TEXTO E FOCAR NO INPUT
+  const handleEmojiSelect = (emoji: string) => {
+    setInputText(prev => prev + emoji);
+    if (inputFieldRef.current) {
+      inputFieldRef.current.focus();
     }
   };
 
@@ -1042,7 +1044,8 @@ export default function ConversasPage() {
             {/* CABEÇALHO DO CHAT */}
             <div onClick={() => setIsInfoDrawerOpen(!isInfoDrawerOpen)} className="p-4 md:p-6 border-b flex items-center justify-between cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors shadow-sm z-10 flex-shrink-0" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
               <div className="flex items-center space-x-3.5 overflow-hidden">
-                <button onClick={(e) => { e.stopPropagation(); setActiveChatId(null); }} className="lg:hidden p-2 -ml-2 mr-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-brand-panel font-extrabold text-[13px] transition-colors flex items-center">
+                {/* 🚀 BOTÃO VOLTAR (LIMPA O CHAT ATIVO - MOBILE ONLY) */}
+                <button onClick={(e) => { e.stopPropagation(); setActiveChatId(null); if (typeof window !== 'undefined') window.history.replaceState(null, '', '/dashboard/conversas'); }} className="lg:hidden p-2 -ml-2 mr-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-brand-panel font-extrabold text-[13px] transition-colors flex items-center">
                   <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div className="relative flex-shrink-0">
@@ -1095,13 +1098,11 @@ export default function ConversasPage() {
                             {!isMe && !activeChat.isDirect && showTail && <span className="text-[11px] font-extrabold text-brand-panel block mb-1 uppercase tracking-wider">{msg.sender}</span>}
                             {msg.replyTo && <div className={`mb-2 p-3 rounded-xl border-l-4 text-[13px] shadow-sm ${isMe ? 'bg-black/20 border-white/60 text-white' : 'bg-black/5 border-brand-panel opacity-90'}`}><p className="font-extrabold text-[11px] mb-0.5">{msg.replyTo.sender}</p><p className="truncate opacity-80">{msg.replyTo.text}</p></div>}
                             
-                            {/* 🚀 LÓGICA DE FORMATAÇÃO DE LINKS NA MENSAGEM */}
                             {msg.type === 'image' && msg.mediaUrl ? (
                                <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="space-y-1 mb-1.5 block cursor-zoom-in">
                                  <img src={msg.mediaUrl} alt="Mídia" className="max-w-full sm:max-w-xs max-h-64 object-cover rounded-xl shadow-sm border border-black/10 hover:opacity-90 transition-opacity" />
                                </a>
                             ) : msg.type === 'file' ? (
-                               // 🚀 DESIGN APRIMORADO DE ARQUIVO
                                <div className="flex items-center space-x-3 pr-4 pb-1">
                                   <div className={`p-3 rounded-2xl shadow-sm ${isMe ? 'bg-white/20 text-white' : 'bg-brand-panel/10 text-brand-panel'}`}><FileText className="w-5 h-5" /></div>
                                   <div className="overflow-hidden flex-1 min-w-[150px]">
@@ -1142,24 +1143,35 @@ export default function ConversasPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* 🚀 REPLY BALLOON APRIMORADO */}
-            {replyingTo && (
-              <div className="mx-4 md:mx-6 mt-2 mb-2 p-3 rounded-2xl flex items-center justify-between shadow-lg border-l-4 border-brand-panel animate-in slide-in-from-bottom-2" style={{ backgroundColor: 'var(--bg-card)' }}>
-                 <div className="truncate flex-1 min-w-0 pr-4">
-                    <span className="font-extrabold text-brand-panel text-[11px] block uppercase tracking-wider">{replyingTo.sender}</span>
-                    <span className="opacity-80 text-[13px] truncate block font-medium mt-0.5">{replyingTo.text}</span>
+            {/* CAIXAS FLUTUANTES (RESPONDER E EMOJIS) */}
+            <div className="relative">
+              
+              {/* 🚀 PAINEL DE EMOJIS FLUTUANTE */}
+              {showEmojiPicker && (
+                 <div className="absolute bottom-full left-4 md:left-6 mb-2 p-3 rounded-2xl shadow-xl flex gap-2 animate-in slide-in-from-bottom-2 border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
+                    {QUICK_EMOJIS.map(emoji => (
+                       <button key={emoji} type="button" onClick={() => handleEmojiSelect(emoji)} className="w-8 h-8 flex items-center justify-center text-xl hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors cursor-pointer">{emoji}</button>
+                    ))}
                  </div>
-                 <button onClick={() => setReplyingTo(null)} className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer flex-shrink-0"><X className="w-4 h-4 opacity-60" /></button>
-              </div>
-            )}
+              )}
+
+              {replyingTo && (
+                <div className="mx-4 md:mx-6 mb-2 p-3 rounded-2xl flex items-center justify-between shadow-lg border-l-4 border-brand-panel animate-in slide-in-from-bottom-2" style={{ backgroundColor: 'var(--bg-card)' }}>
+                   <div className="truncate flex-1 min-w-0 pr-4">
+                      <span className="font-extrabold text-brand-panel text-[11px] block uppercase tracking-wider">{replyingTo.sender}</span>
+                      <span className="opacity-80 text-[13px] truncate block font-medium mt-0.5">{replyingTo.text}</span>
+                   </div>
+                   <button onClick={() => setReplyingTo(null)} className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer flex-shrink-0"><X className="w-4 h-4 opacity-60" /></button>
+                </div>
+              )}
+            </div>
 
             {activeChat.name === 'Geral' && !isCurrentAdmin ? (
-              <div className="p-4 border-t flex items-center justify-center bg-black/5 dark:bg-white/5 flex-shrink-0" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
+              <div className="p-4 border-t flex items-center justify-center bg-black/5 dark:bg-white/5 flex-shrink-0 pb-safe" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)' }}>
                  <span className="text-[12px] font-bold opacity-50 text-center uppercase tracking-widest">Apenas Administradores podem enviar avisos neste grupo.</span>
               </div>
             ) : (
-              <div className="p-4 md:p-6 border-t flex flex-col flex-shrink-0" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)', backgroundColor: 'var(--bg-card)' }}>
-                {/* 🚀 ITEMS-END PREVINE OS CLIPS DE FICAREM NO MEIO QUANDO O TEXTAREA CRESCE */}
+              <div className="p-4 md:p-6 border-t flex flex-col flex-shrink-0 pb-safe" style={{ borderColor: 'color-mix(in srgb, var(--border-input) 40%, transparent)', backgroundColor: 'var(--bg-card)' }}>
                 <form onSubmit={handleSendMessage} className="flex items-end space-x-3">
                   <div className="flex items-center bg-black/5 dark:bg-white/5 rounded-full p-1 shadow-sm mb-0.5">
                      <button type="button" onClick={(e) => { e.preventDefault(); setShowEmojiPicker(!showEmojiPicker); }} className="p-2.5 rounded-full hover:bg-white dark:hover:bg-black/50 opacity-70 hover:opacity-100 transition-colors cursor-pointer" title="Emojis"><Smile className="w-5 h-5" /></button>
@@ -1167,7 +1179,6 @@ export default function ConversasPage() {
                      <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-full hover:bg-white dark:hover:bg-black/50 opacity-70 hover:opacity-100 transition-colors cursor-pointer" title="Anexar Ficheiro"><Paperclip className="w-5 h-5" /></button>
                   </div>
                   
-                  {/* 🚀 O NOVO INPUT ELÁSTICO (TEXTAREA) */}
                   <textarea 
                      ref={inputFieldRef}
                      value={inputText}
@@ -1314,7 +1325,6 @@ export default function ConversasPage() {
             </div>
             
             <div className="p-4 border-t" style={{ borderColor: 'var(--border-input)' }}>
-               {/* 🚀 MODIFICADO DE "Sair da Conversa" PARA "Excluir Conversa" */}
                <button onClick={() => handleCloseChat(activeChat.id)} className="w-full py-3.5 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500/20 font-extrabold text-[13px] flex items-center justify-center space-x-2 transition-colors cursor-pointer shadow-sm">
                   <Trash2 className="w-4 h-4" /><span>Excluir Conversa</span>
                </button>

@@ -1,6 +1,4 @@
-// Importe o seu CSS global (mantenha como estiver no seu projeto)
 import './globals.css'; 
-// 🚀 Importe o nosso ThemeProvider
 import { ThemeProvider } from './contexts/ThemeContext'; 
 
 export const metadata = {
@@ -15,8 +13,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
+      {/* Meta tags exigidas para comportamento PWA e ecrã inteiro no iPhone/Android */}
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="theme-color" content="#0284c7" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+      </head>
       <body>
-        {/* 🚀 O ThemeProvider DEVE envolver o children aqui na raiz! */}
         <ThemeProvider>
           {children}
         </ThemeProvider>

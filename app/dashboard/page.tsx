@@ -44,7 +44,7 @@ export default function DashboardOverviewPage() {
   const [recentNotes, setRecentNotes] = useState<NoteItem[]>([]);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
-  // 🚀 ESTILOS LIQUID GLASS PRO (Design Unificado)
+  // 🚀 ESTILOS LIQUID GLASS PRO (Design Unificado e Premium)
   const glassCardStyle = { 
     backgroundColor: 'color-mix(in srgb, var(--bg-card) 60%, transparent)', 
     backdropFilter: 'blur(20px)', 
@@ -133,16 +133,16 @@ export default function DashboardOverviewPage() {
   return (
     <div className="w-full flex flex-col space-y-4 md:space-y-6 animate-in fade-in duration-500 relative z-0">
       
-      {/* BANNER DINÂMICO LIQUID GLASS */}
-      <div className="w-full p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] relative overflow-hidden flex flex-col justify-center min-h-[140px] md:min-h-[180px]" style={glassCardStyle}>
+      {/* BANNER DINÂMICO LIQUID GLASS (Ajustado para Mobile App Feel) */}
+      <div className="w-full p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] relative overflow-hidden flex flex-col justify-center min-h-[140px] md:min-h-[160px]" style={glassCardStyle}>
         <div className="absolute top-0 right-0 w-64 md:w-96 h-64 md:h-96 bg-brand-panel opacity-10 rounded-full blur-[80px] pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-48 md:w-72 h-48 md:h-72 bg-brand-panel opacity-10 rounded-full blur-[80px] pointer-events-none"></div>
         
-        <div className="relative z-10 flex items-center space-x-2 mb-2 md:mb-3">
-          <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
+        <div className="relative z-10 flex items-center space-x-2 mb-1.5 md:mb-3">
+          <Sparkles className="w-3.5 h-3.5 md:w-5 md:h-5 text-blue-500" />
           <span className="text-[10px] md:text-sm font-extrabold uppercase tracking-widest opacity-60 truncate">Setor {currentUser?.setor || 'Geral'}</span>
         </div>
-        <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight relative z-10 truncate">
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight relative z-10 truncate">
           Olá, {currentUser?.nome?.split(' ')[0] || 'Usuário'}
         </h1>
       </div>
@@ -151,19 +151,19 @@ export default function DashboardOverviewPage() {
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
         
         {allowedTabs.includes('chat') && (
-          <Link href="/dashboard/conversas" className="w-full p-5 md:p-6 rounded-3xl transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm" style={glassCardStyle}>
+          <Link href="/dashboard/conversas" className="w-full p-5 md:p-6 rounded-[1.75rem] md:rounded-[2rem] transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm active:scale-95 md:active:scale-100" style={glassCardStyle}>
             <div className="p-3 md:p-4 rounded-2xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform flex-shrink-0 mr-4 md:mr-0 border border-blue-500/20">
               <MessageSquare className="w-6 h-6 md:w-7 md:h-7" />
             </div>
             <div className="flex-1 min-w-0 md:mt-6 text-left">
-              <h3 className="text-sm md:text-lg font-extrabold truncate">Chat Corporativo</h3>
-              <p className="text-[11px] md:text-[13px] opacity-60 mt-1 truncate font-medium">Comunicações rápidas.</p>
+              <h3 className="text-[15px] md:text-lg font-extrabold truncate">Chat Corporativo</h3>
+              <p className="text-[11px] md:text-[13px] opacity-60 mt-0.5 md:mt-1 truncate font-medium">Comunicações rápidas.</p>
             </div>
           </Link>
         )}
 
         {hasTasksPermission && (
-          <button onClick={() => setIsTaskModalOpen(true)} className="w-full text-left p-5 md:p-6 rounded-3xl transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm" style={glassCardStyle}>
+          <button onClick={() => setIsTaskModalOpen(true)} className="w-full text-left p-5 md:p-6 rounded-[1.75rem] md:rounded-[2rem] transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm active:scale-95 md:active:scale-100" style={glassCardStyle}>
             {overdueTasks.length > 0 && <div className="absolute top-0 right-0 w-24 md:w-28 h-24 md:h-28 bg-red-500/10 rounded-bl-[100%] pointer-events-none transition-all group-hover:scale-110"></div>}
             
             <div className="p-3 md:p-4 rounded-2xl bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform flex-shrink-0 mr-4 md:mr-0 relative z-10 border border-emerald-500/20">
@@ -171,8 +171,8 @@ export default function DashboardOverviewPage() {
             </div>
             
             <div className="flex-1 min-w-0 md:mt-6 text-left flex flex-col justify-center">
-              <h3 className="text-sm md:text-lg font-extrabold truncate">Minha Fila</h3>
-              <p className="text-[11px] md:text-[13px] opacity-60 mt-1 truncate font-medium">{overdueTasks.length > 0 ? <span className="text-red-500 font-bold">Atenção: {overdueTasks.length} atrasos</span> : 'Fila de tarefas ativas.'}</p>
+              <h3 className="text-[15px] md:text-lg font-extrabold truncate">Minha Fila</h3>
+              <p className="text-[11px] md:text-[13px] opacity-60 mt-0.5 md:mt-1 truncate font-medium">{overdueTasks.length > 0 ? <span className="text-red-500 font-bold">Atenção: {overdueTasks.length} atrasos</span> : 'Fila de tarefas ativas.'}</p>
             </div>
 
             {(pendingTasks.length > 0 || overdueTasks.length > 0) && (
@@ -186,13 +186,13 @@ export default function DashboardOverviewPage() {
         )}
 
         {allowedTabs.includes('agenda') && (
-          <Link href="/dashboard/agenda" className="w-full p-5 md:p-6 rounded-3xl transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm" style={glassCardStyle}>
+          <Link href="/dashboard/agenda" className="w-full p-5 md:p-6 rounded-[1.75rem] md:rounded-[2rem] transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm active:scale-95 md:active:scale-100" style={glassCardStyle}>
             <div className="p-3 md:p-4 rounded-2xl bg-amber-500/10 text-amber-500 group-hover:scale-110 transition-transform flex-shrink-0 mr-4 md:mr-0 border border-amber-500/20">
               <Calendar className="w-6 h-6 md:w-7 md:h-7" />
             </div>
             <div className="flex-1 min-w-0 md:mt-6 text-left">
-              <h3 className="text-sm md:text-lg font-extrabold truncate">Agenda Central</h3>
-              <p className="text-[11px] md:text-[13px] opacity-60 mt-1 truncate font-medium">Alinhamentos da equipe.</p>
+              <h3 className="text-[15px] md:text-lg font-extrabold truncate">Agenda Central</h3>
+              <p className="text-[11px] md:text-[13px] opacity-60 mt-0.5 md:mt-1 truncate font-medium">Alinhamentos da equipe.</p>
             </div>
             <div className="flex-shrink-0 ml-3 md:absolute md:top-6 md:right-6">
               <span className="text-[10px] md:text-[11px] font-extrabold px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 border-transparent">Hoje</span>
@@ -201,13 +201,13 @@ export default function DashboardOverviewPage() {
         )}
 
         {hasNotesPermission && (
-          <Link href="/dashboard/notas" className="w-full p-5 md:p-6 rounded-3xl transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm" style={glassCardStyle}>
+          <Link href="/dashboard/notas" className="w-full p-5 md:p-6 rounded-[1.75rem] md:rounded-[2rem] transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm active:scale-95 md:active:scale-100" style={glassCardStyle}>
             <div className="p-3 md:p-4 rounded-2xl bg-purple-500/10 text-purple-500 group-hover:scale-110 transition-transform flex-shrink-0 mr-4 md:mr-0 border border-purple-500/20">
               <StickyNote className="w-6 h-6 md:w-7 md:h-7" />
             </div>
             <div className="flex-1 min-w-0 md:mt-6 text-left">
-              <h3 className="text-sm md:text-lg font-extrabold truncate">Anotações</h3>
-              <p className="text-[11px] md:text-[13px] opacity-60 mt-1 truncate font-medium">Bloco de rascunhos pessoal.</p>
+              <h3 className="text-[15px] md:text-lg font-extrabold truncate">Anotações</h3>
+              <p className="text-[11px] md:text-[13px] opacity-60 mt-0.5 md:mt-1 truncate font-medium">Bloco de rascunhos pessoal.</p>
             </div>
           </Link>
         )}
@@ -261,12 +261,12 @@ export default function DashboardOverviewPage() {
         </div>
       )}
 
-      {/* 🚀 ESPAÇADOR VITAL PARA O MOBILE */}
-      <div className="h-28 md:h-10 w-full flex-shrink-0 pointer-events-none"></div>
+      {/* 🚀 ESPAÇADOR VITAL PARA O MOBILE PWA - PREVINE COLISÕES COM A BOTTOM NAV */}
+      <div className="h-32 md:h-10 w-full flex-shrink-0 pointer-events-none"></div>
 
       {/* MODAL DE RESUMO DE TAREFAS */}
       {isTaskModalOpen && hasTasksPermission && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-input)' }}>
             
             <div className="px-5 py-4 md:px-6 md:py-5 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
