@@ -673,7 +673,7 @@ export default function ConversasPage() {
         metadata: { ...metadata, lidoPor: [currentUser.nome], replyTo: replyData },created_at:nowIso
     };
     const recoverable=retainOutgoing(currentUser.user_id,outgoing);
-    let { data, error } = await supabase.from('doodoo_mensagens').insert([{...outgoing,created_at:undefined}]).select().single();
+    let { data, error } = await supabase.from('doodoo_mensagens').insert([outgoing]).select().single();
 
     if(error?.code==='23505'){const existing=await supabase.from('doodoo_mensagens').select('*').eq('id',tempId).single();if(existing.data?.sender_id===currentUser.user_id&&existing.data?.canal_id===targetChannelId&&existing.data?.texto===texto){data=existing.data;error=null;}}
     if (data && !error) {
@@ -846,7 +846,19 @@ export default function ConversasPage() {
       setActiveChatId(data.id);
       if (typeof window !== 'undefined') window.history.replaceState(null, '', `/dashboard/conversas?chatId=${data.id}`);
       setIsGroupModalOpen(false);
-      await supabase.from('doodoo_mensagens').insert([{ canal_id: data.id, sender_id: currentUser.user_id, sender_nome: currentUser.nome, texto: `O grupo "${newGroupName}" foi criado.`, tipo: 'text' }]);
+      const { error: groupMessageError } = await supabase.from('doodoo_mensagens').insert([{
+        id: crypto.randomUUID(),
+        canal_id: data.id,
+        sender_id: currentUser.user_id,
+        sender_nome: currentUser.nome,
+        texto: `O grupo "${newGroupName}" foi criado.`,
+        tipo: 'text',
+        metadata: { lidoPor: [currentUser.nome] },
+        created_at: new Date().toISOString()
+      }]);
+      if (groupMessageError) {
+        notifyBell('Grupo criado, aviso não enviado', 'O grupo foi salvo, mas a mensagem automática não pôde ser registrada.');
+      }
       setNewGroupName(''); setSelectedMembersToAdd([]);
     }
   };
