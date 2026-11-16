@@ -57,6 +57,62 @@ const safeFetch = async <T,>(query: PromiseLike<{data:T|null;error:{message:stri
  return result.data;
 };
 
+
+// Mensagens visíveis para a sessão atual podem não ter permissão de DELETE (RLS).
+// Uma operação com zero linhas afetadas não é uma confirmação de sucesso.
+type ChatMessageFilter = { channelId?: string; before?: string };
+
+type DatabaseFailure = { code?: string; message?: string; details?: string; hint?: string };
+
+const describeDatabaseFailure = (failure: unknown) => {
+  const error = failure && typeof failure === 'object' ? failure as DatabaseFailure : null;
+  const code = error?.code;
+  if (code === '42501') return 'O Supabase negou a operação (42501). Verifique as políticas RLS, sem alterá-las no projeto compartilhado.';
+  if (code === '23503') return 'Existem registros relacionados impedindo a exclusão (23503). Nenhuma remoção adicional será tentada.';
+  if (code === 'PGRST116') return 'Nenhum registro autorizado foi retornado para esta operação (PGRST116).';
+  return `${error?.message || (failure instanceof Error ? failure.message : 'Falha de comunicação com o banco.')}${code ? ` (código ${code})` : ''}`;
+};
+
+// Exporta em páginas; a configuração de max_rows do PostgREST pode truncar .select('*').
+const fetchChatHistory = async (channelId?: string): Promise<MessageRow[]> => {
+  const pageSize = 500;
+  const maxRows = 20000;
+  const messages: MessageRow[] = [];
+  for (let offset = 0; offset < maxRows; offset += pageSize) {
+    let query = supabase.from('doodoo_mensagens').select('*')
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (channelId) query = query.eq('canal_id', channelId);
+    const { data, error } = await query;
+    if (error) throw error;
+    const batch = (data || []) as MessageRow[];
+    messages.push(...batch);
+    if (batch.length < pageSize) return messages;
+  }
+  // Verifica se há mais registros além do limite antes de declarar o backup completo.
+  let probe = supabase.from('doodoo_mensagens').select('id')
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
+    .range(maxRows, maxRows);
+  if (channelId) probe = probe.eq('canal_id', channelId);
+  const { data: excess, error: probeError } = await probe;
+  if (probeError) throw probeError;
+  if (!excess?.length) return messages;
+  throw new Error('O histórico ultrapassa 20.000 mensagens. Exporte em lotes menores ou por um serviço de servidor antes de considerar este backup completo.');
+};
+
+const saveTextOrZip = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 3000);
+};
+
 export default function ConfiguracoesPage() {
   const dialogAction = useDialogAction();
   const permissionActions=useRecordActions();
@@ -139,12 +195,43 @@ export default function ConfiguracoesPage() {
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title, desc } }));
   }, []);
 
+
+  // Só opera em filtros explícitos e confirma o efeito com contagens visíveis à sessão.
+  // Não ignora falhas RLS nem troca policies por operações com service_role.
+  const countVisibleMessages = async (filter: ChatMessageFilter): Promise<number> => {
+    if (!filter.channelId && !filter.before) throw new Error('Filtro de exclusão obrigatório.');
+    let query = supabase.from('doodoo_mensagens').select('id', { count: 'exact', head: true });
+    if (filter.channelId) query = query.eq('canal_id', filter.channelId);
+    if (filter.before) query = query.lt('created_at', filter.before);
+    const { count, error } = await query;
+    if (error) throw error;
+    return count ?? 0;
+  };
+
+  const deleteVisibleMessages = async (filter: ChatMessageFilter) => {
+    if (!filter.channelId && !filter.before) throw new Error('Exclusão sem filtro foi bloqueada.');
+    const visibleBefore = await countVisibleMessages(filter);
+    if (visibleBefore === 0) return { visibleBefore, removed: 0, remaining: 0 };
+
+    let query = supabase.from('doodoo_mensagens').delete({ count: 'exact' });
+    if (filter.channelId) query = query.eq('canal_id', filter.channelId);
+    if (filter.before) query = query.lt('created_at', filter.before);
+    const { data, error, count } = await query.select('id');
+    if (error) throw error;
+    const removed = count ?? data?.length ?? 0;
+    const remaining = await countVisibleMessages(filter);
+    if (removed === 0 && remaining > 0) {
+      throw new Error(`Existem ${remaining} mensagem(ns) visíveis, mas o banco não excluiu nenhuma. Uma política RLS DELETE pode estar bloqueando a operação; verifique as policies e a resposta da requisição.`);
+    }
+    return { visibleBefore, removed, remaining };
+  };
+
   const registerLog = async (acao: string, detalhes: string) => {
     if (!currentUser) return;
     const newLog = { autor_nome: currentUser.nome, acao, detalhes };
     try {
-      requireResult(await supabase.from('doodoo_logs').insert([newLog]).select('*').single());
-      setSystemLogs(prev => [{ ...newLog, id: Date.now().toString(), created_at: new Date().toISOString() }, ...prev]);
+      const saved = requireResult<SystemLog>(await supabase.from('doodoo_logs').insert([newLog]).select('*').single());
+      setSystemLogs(prev => [saved, ...prev]);
     } catch { notifyBell('Auditoria não registrada', 'A operação principal foi concluída, mas não foi possível gravar o histórico.'); }
   };
 
@@ -243,16 +330,18 @@ export default function ConfiguracoesPage() {
     e.preventDefault();
     if (!currentUser || isSaving) return;
     setIsSaving(true);
-    const { error } = await supabase.from('doodoo_perfis').update({ avatar_url: currentUser.avatar_url }).eq('user_id', currentUser.user_id).select('*').single();
-    if (!error) {
-      notifyBell('⚙️ Perfil Atualizado', 'As suas informações foram salvas com sucesso.');
-      registerLog('Perfil Atualizado', 'Atualizou as informações pessoais de perfil e avatar.');
-
-      setCompanyUsers(prev => prev.map(u => u.user_id === currentUser.user_id ? currentUser : u));
-    } else {
-      notifyBell('Erro', 'Não foi possível salvar o perfil.');
+    try {
+      const { data, error } = await supabase.from('doodoo_perfis').update({ avatar_url: currentUser.avatar_url }).eq('user_id', currentUser.user_id).select('*').single();
+      if (error) throw error;
+      if (!data) throw new Error('O banco não confirmou a atualização do perfil.');
+      notifyBell('Perfil atualizado', 'A foto do perfil foi salva.');
+      void registerLog('Perfil Atualizado', 'Atualizou a foto de perfil.');
+      setCompanyUsers(prev => prev.map(u => u.user_id === currentUser.user_id ? { ...u, avatar_url: data.avatar_url } : u));
+    } catch (error) {
+      notifyBell('Perfil não salvo', describeDatabaseFailure(error));
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   const handleUpdateUserRoleAndSector = async (userId: string, field: 'cargo' | 'setor', value: string) => {
@@ -265,16 +354,19 @@ export default function ConfiguracoesPage() {
     setUpdatingUserId(userId);
     setCompanyUsers(prev => prev.map(u => u.id === userId ? { ...u, [field]: value } : u));
 
-    const { error } = await supabase.from('doodoo_perfis').update({ [field]: value }).eq('id', userId).select('*').single();
-
-    if (error) {
+    try {
+      const { data, error } = await supabase.from('doodoo_perfis').update({ [field]: value }).eq('id', userId).select('*').single();
+      if (error) throw error;
+      if (!data) throw new Error('A atualização não foi confirmada pelo banco.');
+      setCompanyUsers(prev => prev.map(u => u.id === userId ? { ...u, ...data } : u));
+      notifyBell('Acesso atualizado', `${field === 'cargo' ? 'Cargo' : 'Setor'} atualizado com sucesso.`);
+      void registerLog('Alteração de Cadastro', `Alterou o ${field} de ${previousUser.nome} para ${value.toUpperCase()}.`);
+    } catch (error) {
       setCompanyUsers(prev => prev.map(u => u.id === userId ? previousUser : u));
-      notifyBell('Erro', `Falha ao atualizar ${field}.`);
-    } else {
-      notifyBell('Acesso Atualizado', `${field === 'cargo' ? 'Cargo' : 'Setor'} atualizado com sucesso.`);
-      registerLog('Alteração de Cadastro', `Alterou o ${field} de ${previousUser.nome} para ${value.toUpperCase()}.`);
+      notifyBell('Alteração não salva', describeDatabaseFailure(error));
+    } finally {
+      setUpdatingUserId(null);
     }
-    setUpdatingUserId(null);
   };
 
   const handleToggleUserStatus = (userId: string, nome: string, currentStatus: string = 'ativo') => {
@@ -291,16 +383,18 @@ export default function ConfiguracoesPage() {
         const previousUser = companyUsers.find(u => u.id === userId);
         setCompanyUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
 
-        const { error } = await supabase.from('doodoo_perfis').update({ status: newStatus }).eq('id', userId).select('*').single();
-
-        if (error && previousUser) {
-          setCompanyUsers(prev => prev.map(u => u.id === userId ? previousUser : u));
-          notifyBell('Erro', 'Não foi possível alterar o status do utilizador.');
-        } else {
-          notifyBell('Status Atualizado', `Acesso alterado para ${newStatus}.`);
-          registerLog('Bloqueio/Desbloqueio', `${newStatus === 'bloqueado' ? 'Bloqueou' : 'Desbloqueou'} o acesso de ${nome}.`);
+        try {
+          const { data, error } = await supabase.from('doodoo_perfis').update({ status: newStatus }).eq('id', userId).select('*').single();
+          if (error) throw error;
+          if (!data) throw new Error('O banco não confirmou a alteração de status.');
+          notifyBell('Status atualizado', `Acesso alterado para ${newStatus}.`);
+          void registerLog('Bloqueio/Desbloqueio', `${newStatus === 'bloqueado' ? 'Bloqueou' : 'Desbloqueou'} o acesso de ${nome}.`);
+        } catch (error) {
+          if (previousUser) setCompanyUsers(prev => prev.map(u => u.id === userId ? previousUser : u));
+          notifyBell('Status não atualizado', describeDatabaseFailure(error));
+        } finally {
+          setUpdatingUserId(null);
         }
-        setUpdatingUserId(null);
       }
     });
   };
@@ -356,17 +450,19 @@ export default function ConfiguracoesPage() {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setUpdatingUserId(id);
 
-        const { error } = await supabase.from('doodoo_perfis').delete().eq('id', id).select('*').single();
-
-        if (!error) {
-           setCompanyUsers(prev => prev.filter(u => u.id !== id));
-           if (currentUsers.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
-           notifyBell('Colaborador Removido', `${nome} foi excluído.`);
-           registerLog('Remoção de Perfil', `Removeu o perfil Doo Doo de ${nome}; Auth compartilhado preservado.`);
-        } else {
-           notifyBell('Erro de Exclusão', 'Não é possível excluir. O colaborador tem dependências ativas (Foreign Keys). Recomendamos bloquear o acesso.');
+        try {
+          const { data, error } = await supabase.from('doodoo_perfis').delete().eq('id', id).select('*').single();
+          if (error) throw error;
+          if (!data) throw new Error('O banco não confirmou a exclusão do perfil.');
+          setCompanyUsers(prev => prev.filter(u => u.id !== id));
+          if (currentUsers.length === 1 && currentPage > 1) setCurrentPage(p => Math.max(1, p - 1));
+          notifyBell('Colaborador removido', `${nome} foi excluído apenas do Doo Doo. A conta compartilhada do Auth foi preservada.`);
+          void registerLog('Remoção de Perfil', `Removeu o perfil Doo Doo de ${nome}; Auth compartilhado preservado.`);
+        } catch (error) {
+          notifyBell('Perfil não excluído', describeDatabaseFailure(error));
+        } finally {
+          setUpdatingUserId(null);
         }
-        setUpdatingUserId(null);
       }
     });
   };
@@ -395,15 +491,13 @@ export default function ConfiguracoesPage() {
     try {
       const { data, error } = await supabase.from('doodoo_tarefas_categorias').insert([{ nome: newCategoryName.trim(), cor: newCategoryColor }]).select().single();
 
-      if (data && !error) {
-        setTaskCategories(prev => [...prev, data]);
-        setNewCategoryName('');
-        notifyBell('Categoria Criada', `A categoria ${data.nome} foi adicionada com sucesso.`);
-      } else {
-        notifyBell('Erro na Criação', 'Tabela doodoo_tarefas_categorias não encontrada ou com RLS bloqueando.');
-      }
-    } catch {
-      notifyBell('Falha de Comunicação', 'O servidor rejeitou o pedido (Erro 400/404).');
+      if (error) throw error;
+      if (!data) throw new Error('O banco não confirmou a criação da categoria.');
+      setTaskCategories(prev => [...prev, data]);
+      setNewCategoryName('');
+      notifyBell('Categoria criada', `A categoria ${data.nome} foi adicionada com sucesso.`);
+    } catch (error) {
+      notifyBell('Categoria não criada', describeDatabaseFailure(error));
     } finally {
       setIsSavingCategory(false);
     }
@@ -414,12 +508,14 @@ export default function ConfiguracoesPage() {
       isOpen: true, title: 'Excluir Categoria', message: `Tem a certeza que deseja excluir a categoria "${nome}"?`, isDestructive: true,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        const { error } = await supabase.from('doodoo_tarefas_categorias').delete().eq('id', id).select('*').single();
-        if (!error) {
+        try {
+          const { data, error } = await supabase.from('doodoo_tarefas_categorias').delete().eq('id', id).select('*').single();
+          if (error) throw error;
+          if (!data) throw new Error('O banco não confirmou a exclusão da categoria.');
           setTaskCategories(prev => prev.filter(c => c.id !== id));
-          notifyBell('Categoria Removida', 'A categoria foi excluída com sucesso.');
-        } else {
-          notifyBell('Erro', 'Ocorreu uma falha ao tentar excluir a categoria.');
+          notifyBell('Categoria removida', `A categoria ${nome} foi excluída.`);
+        } catch (error) {
+          notifyBell('Categoria não excluída', describeDatabaseFailure(error));
         }
       }
     });
@@ -434,158 +530,195 @@ export default function ConfiguracoesPage() {
 
     setCurrentUser({ ...currentUser, [field]: newValue });
 
-    const { error } = await supabase.from('doodoo_perfis').update({ [field]: newValue }).eq('user_id', currentUser.user_id).select('*').single();
-
-    if (!error) {
-       notifyBell('Privacidade Salva', `Preferência atualizada.`);
-    } else {
-       setCurrentUser({ ...currentUser, [field]: currentValue });
-       notifyBell('Preferência não salva', 'Não foi possível salvar. A configuração anterior foi restaurada.');
-    }
-    setIsUpdatingPrivacy(false);
-  };
-
-  // 🚀 LÓGICA DE TRANSCRIPT CORRIGIDA (Mostra as mensagens apagadas no TXT)
-  const handleDownloadTranscript = async (canalId: string, canalNome: string) => {
-    setIsDownloadingTranscript(canalId);
-    notifyBell('A Preparar', 'A baixar histórico...');
-    const { data, error } = await supabase.from('doodoo_mensagens').select('*').eq('canal_id', canalId).order('created_at', { ascending: true });
-    if(error){setIsDownloadingTranscript(null);notifyBell('Exportação indisponível','Não foi possível consultar as mensagens.');return;}
-
-    if (!data || data.length === 0) {
-      setIsDownloadingTranscript(null);
-      return notifyBell('Sem dados', 'Nenhuma mensagem encontrada.');
-    }
-
-    let txt = `========================================================\n AUDITORIA DE CHAT\n========================================================\n\n`;
-    data.forEach(m => {
-       const dataStr = new Date(m.created_at).toLocaleDateString('pt-BR');
-       const horaStr = new Date(m.created_at).toLocaleTimeString('pt-BR');
-       // 🚀 Mostra a mensagem verdadeira se apagada, precedida de [APAGADA]
-       txt += `[${dataStr} ${horaStr}] ${m.sender_nome}: ${m.metadata?.deleted ? `[APAGADA] ${m.texto}` : m.texto}\n`;
-    });
-
-    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `Auditoria_${canalNome.replace(/[\/\\:?*"<>|]/g, '')}.txt`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setIsDownloadingTranscript(null);
-  };
-
-  // 🚀 LÓGICA DE BACKUP CORRIGIDA (Mostra as mensagens apagadas no ZIP)
-  const handleDownloadZipBackup = async () => {
-    setIsDownloadingZip(true);
-    notifyBell('A Gerar Backup', 'Aguarde um momento...');
     try {
-      const { data: allMsgs, error: exportError } = await supabase.from('doodoo_mensagens').select('*').order('created_at', { ascending: true });
-      if(exportError)throw exportError;
-      if (!allMsgs || allMsgs.length === 0) {
-        setIsDownloadingZip(false);
-        return notifyBell('Aviso', 'Base de dados vazia.');
-      }
+      const { data, error } = await supabase.from('doodoo_perfis').update({ [field]: newValue }).eq('user_id', currentUser.user_id).select('*').single();
+      if (error) throw error;
+      if (!data) throw new Error('O banco não confirmou a alteração.');
+      notifyBell('Privacidade salva', 'A preferência foi atualizada.');
+    } catch (error) {
+      setCurrentUser(previous => previous ? { ...previous, [field]: currentValue } : previous);
+      notifyBell('Preferência não salva', describeDatabaseFailure(error));
+    } finally {
+      setIsUpdatingPrivacy(false);
+    }
+  };
 
+  // Exportação de um canal: preserva as mensagens marcadas como apagadas para auditoria.
+  const handleDownloadTranscript = async (canalId: string, canalNome: string) => {
+    if (!isAdmin || isDownloadingTranscript || isDownloadingZip || isPurging || isPurgingGlobal) return;
+    setIsDownloadingTranscript(canalId);
+    try {
+      const data = await fetchChatHistory(canalId);
+      if (data.length === 0) {
+        notifyBell('Sem mensagens', 'Nenhuma mensagem visível foi encontrada neste canal.');
+        return;
+      }
+      const lines = [
+        '========================================================',
+        'AUDITORIA DE CHAT',
+        '========================================================',
+        '',
+        ...data.map(m => `[${new Date(m.created_at).toLocaleString('pt-BR')}] ${m.sender_nome}: ${m.metadata?.deleted ? '[APAGADA] ' : ''}${m.texto}`),
+      ];
+      saveTextOrZip(new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' }), `Auditoria_${canalNome.replace(/[\/\\:?*"<>|]/g, '')}.txt`);
+      notifyBell('Exportação concluída', `${data.length} mensagem(ns) incluída(s) no arquivo.`);
+    } catch (error) {
+      notifyBell('Falha na exportação', describeDatabaseFailure(error));
+    } finally {
+      setIsDownloadingTranscript(null);
+    }
+  };
+
+  // Backup: não declara sucesso quando uma consulta falha ou excede o limite de memória.
+  const handleDownloadZipBackup = async () => {
+    if (!isAdmin || isDownloadingZip || isDownloadingTranscript || isPurging || isPurgingGlobal) return;
+    setIsDownloadingZip(true);
+    try {
+      const allMsgs = await fetchChatHistory();
+      if (allMsgs.length === 0) {
+        notifyBell('Sem mensagens', 'Nenhuma mensagem visível para exportar.');
+        return;
+      }
       const zip = new JSZip();
-      const grouped = allMsgs.reduce<Record<string, MessageRow[]>>((acc, m) => {
-        if (!acc[m.canal_id]) acc[m.canal_id] = [];
-        acc[m.canal_id].push(m);
+      const grouped = allMsgs.reduce<Record<string, MessageRow[]>>((acc, row) => {
+        (acc[row.canal_id] ||= []).push(row);
         return acc;
       }, {});
-
-      Object.keys(grouped).forEach(canalId => {
-         const canal = adminChannels.find(c => c.id === canalId) || { name: `Chat_${canalId.substring(0,6)}` };
-         let txt = `AUDITORIA - ${canal.name}\n\n`;
-         grouped[canalId].forEach((m) => {
-           // 🚀 Mostra a mensagem verdadeira se apagada, precedida de [APAGADA]
-           txt += `[${new Date(m.created_at).toLocaleString('pt-BR')}] ${m.sender_nome}: ${m.metadata?.deleted ? `[APAGADA] ${m.texto}` : m.texto}\n`;
-         });
-         zip.file(`Auditoria_${canal.name.replace(/[\/\\:?*"<>|]/g, '')}.txt`, txt);
+      Object.entries(grouped).forEach(([channelId, messages]) => {
+        const channel = adminChannels.find(c => c.id === channelId);
+        const cleanName = (channel?.name || `Chat_${channelId.slice(0, 6)}`).replace(/[\/\\:?*"<>|]/g, '');
+        const lines = [`AUDITORIA - ${channel?.name || channelId}`, '', ...messages.map(m =>
+          `[${new Date(m.created_at).toLocaleString('pt-BR')}] ${m.sender_nome}: ${m.metadata?.deleted ? '[APAGADA] ' : ''}${m.texto}`
+        )];
+        zip.file(`Auditoria_${cleanName}_${channelId.slice(0, 8)}.txt`, lines.join('\n'));
       });
-
       const blob = await zip.generateAsync({ type: 'blob' });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.setAttribute("download", `Backup_Total.zip`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
+      saveTextOrZip(blob, 'Backup_Total_DooDoo.zip');
+      notifyBell('Backup preparado', `${allMsgs.length} mensagem(ns) incluída(s). Não contém dados que o RLS ocultou.`);
+    } catch (error) {
+      notifyBell('Backup não concluído', describeDatabaseFailure(error));
+    } finally {
       setIsDownloadingZip(false);
-    } catch {
-      setIsDownloadingZip(false);
-      notifyBell('Erro', 'Ocorreu um problema ao gerar o ZIP.');
     }
   };
 
-  // 🚀 NOVA LÓGICA DE EXCLUSÃO DE CANAL (Apenas para fantasmas e diretos - Destrói o canal)
+  // Remoção de canal: operações sobre tabelas Doo Doo, sem presunção de privilégios RLS.
   const handleDeleteChannel = (canalId: string, canalNome: string) => {
+    if (!isAdmin || isPurging || isPurgingGlobal || isDownloadingZip || isDownloadingTranscript) return;
     setConfirmModal({
-      isOpen: true, title: 'Excluir Canal', message: `Atenção: Deseja EXCLUIR permanentemente o canal "${canalNome}" e todo o seu histórico de mensagens? Esta ação é irreversível.`, isDestructive: true,
+      isOpen: true,
+      title: 'Excluir Canal',
+      message: `Deseja excluir permanentemente o canal "${canalNome}" e seu histórico? A operação pode ser interrompida por políticas RLS ou dependências do banco.`,
+      isDestructive: true,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setIsPurging(canalId);
+        let historyWasDeleted = false;
+        try {
+          if (!atomicWrites) {
+            const result = await deleteVisibleMessages({ channelId: canalId });
+            historyWasDeleted = result.removed > 0;
+            if (result.remaining > 0) throw new Error(`${result.remaining} mensagem(ns) continuam visíveis. Canal preservado.`);
 
-        if(atomicWrites){
-          try { requireResult(await supabase.from('doodoo_canais').delete().eq('id',canalId).select('*').single());setAdminChannels(prev=>prev.filter(c=>c.id!==canalId));notifyBell('Canal excluído','Canal e histórico removidos na mesma operação.'); } finally {setIsPurging(null);}return;
-        }
-        const messages = await supabase.from('doodoo_mensagens').delete().eq('canal_id',canalId);
-        if(messages.error){setIsPurging(null);throw new Error('Não foi possível excluir as mensagens. O canal foi preservado.');}
-        const notes = await supabase.from('doodoo_chat_notas').delete().eq('canal_id',canalId);
-        if(notes.error){setIsPurging(null);throw new Error('A exclusão foi interrompida. As mensagens podem ter sido removidas; revise o canal antes de tentar novamente.');}
+            const priorNotes = await supabase.from('doodoo_chat_notas').select('id', { count: 'exact', head: true }).eq('canal_id', canalId);
+            if (priorNotes.error) throw priorNotes.error;
+            if ((priorNotes.count ?? 0) > 0) {
+              const deletedNotes = await supabase.from('doodoo_chat_notas').delete({ count: 'exact' }).eq('canal_id', canalId).select('id');
+              if (deletedNotes.error) throw deletedNotes.error;
+              const leftNotes = await supabase.from('doodoo_chat_notas').select('id', { count: 'exact', head: true }).eq('canal_id', canalId);
+              if (leftNotes.error) throw leftNotes.error;
+              if ((leftNotes.count ?? 0) > 0) throw new Error('Alguns avisos do canal não puderam ser excluídos. O canal foi preservado.');
+            }
+          }
 
-        const { error } = await supabase.from('doodoo_canais').delete().eq('id', canalId);
-
-        if (!error) {
-          notifyBell('Canal Excluído', `O canal foi completamente removido da base de dados.`);
+          const { data, error } = await supabase.from('doodoo_canais')
+            .delete({ count: 'exact' }).eq('id', canalId).select('id').maybeSingle();
+          if (error) throw error;
+          if (!data) throw new Error('O banco não confirmou a remoção do canal. Verifique RLS DELETE em doodoo_canais.');
           setAdminChannels(prev => prev.filter(c => c.id !== canalId));
-        } else {
-          notifyBell('Erro', 'Ocorreu um erro ao excluir o canal. (Verifique restrições RLS)');
-        }
 
-        setIsPurging(null);
-      }
+          // O nome atomicWrites não garante, sozinho, que a FK tenha ON DELETE CASCADE.
+          if (atomicWrites) {
+            try {
+              const remaining = await countVisibleMessages({ channelId: canalId });
+              if (remaining > 0) {
+                notifyBell('Canal excluído com pendências', `${remaining} mensagem(ns) continuam visíveis. Revisar cascata/FKs antes de outras exclusões.`);
+                return;
+              }
+            } catch {
+              notifyBell('Canal removido', 'O canal foi removido, mas não foi possível confirmar a remoção do histórico.');
+              return;
+            }
+          }
+          notifyBell('Canal excluído', `O canal "${canalNome}" foi removido. Confirme também arquivos do Storage, se houver.`);
+          void registerLog('Exclusão de Canal', `Excluiu o canal ${canalNome} (${canalId}).`);
+        } catch (error) {
+          notifyBell('Exclusão de canal interrompida', `${describeDatabaseFailure(error)}${historyWasDeleted ? ' O histórico pode ter sido parcialmente removido; não repita a operação sem conferir o banco.' : ''}`);
+        } finally {
+          setIsPurging(null);
+        }
+      },
     });
   };
 
-  // 🚀 LÓGICA DE LIMPEZA DE GRUPOS (Apaga as mensagens, mantém o canal aberto)
+  // Exclusão definitiva apenas das mensagens do grupo escolhido; o canal é preservado.
   const handlePurgeChannel = (canalId: string, canalNome: string) => {
+    if (!isAdmin || isPurging || isPurgingGlobal || isDownloadingZip || isDownloadingTranscript) return;
     setConfirmModal({
-      isOpen: true, title: 'Limpar Mensagens', message: `Deseja apagar permanentemente TODAS as mensagens do grupo "${canalNome}" (O canal permanecerá ativo)?`, isDestructive: true,
+      isOpen: true,
+      title: 'Limpar Mensagens',
+      message: `Deseja apagar definitivamente as mensagens do grupo "${canalNome}"? O canal permanecerá ativo. Esta ação não pode ser desfeita.`,
+      isDestructive: true,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setIsPurging(canalId);
-
-        const { data,error } = await supabase.from('doodoo_mensagens').delete().eq('canal_id', canalId).select('id');
-
-        if (!error) notifyBell(data?.length?'Concluído':'Sem alterações',data?.length?`${data.length} mensagem(ns) removida(s).`:'Nenhuma mensagem foi removida. Verifique o histórico e suas permissões.');
-        else notifyBell('Erro', 'Ocorreu um erro ao limpar o histórico.');
-
-        setIsPurging(null);
-      }
+        try {
+          const { visibleBefore, removed, remaining } = await deleteVisibleMessages({ channelId: canalId });
+          if (visibleBefore === 0) {
+            notifyBell('Nenhuma mensagem visível', 'Não há mensagens acessíveis para este canal; isso não confirma que o banco esteja vazio.');
+          } else if (remaining > 0) {
+            notifyBell('Limpeza parcial', `${removed} excluída(s), mas ${remaining} mensagem(ns) ainda aparecem. Verifique as permissões ou envios simultâneos.`);
+          } else {
+            notifyBell('Histórico limpo', `${removed} mensagem(ns) excluída(s) do canal.`);
+            if (removed > 0) void registerLog('Limpeza de Canal', `Removeu ${removed} mensagem(ns) do canal ${canalNome} (${canalId}).`);
+          }
+        } catch (error) {
+          notifyBell('Falha ao limpar mensagens', describeDatabaseFailure(error));
+        } finally {
+          setIsPurging(null);
+        }
+      },
     });
   };
 
+  // Limpeza manual do que for anterior a sete dias, nunca uma rotina automática.
   const handlePurgeOldGlobal = () => {
+    if (!isAdmin || isPurging || isPurgingGlobal || isDownloadingZip || isDownloadingTranscript) return;
     setConfirmModal({
-      isOpen: true, title: 'Limpeza Global do Banco de Dados', message: `Atenção: Deseja apagar de forma definitiva todas as mensagens do sistema com mais de 7 dias?`, isDestructive: true,
+      isOpen: true,
+      title: 'Limpeza Global do Chat',
+      message: 'Apagar definitivamente as mensagens do Doo Doo anteriores a sete dias? Esta operação é irreversível e está sujeita às políticas RLS.',
+      isDestructive: true,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setIsPurgingGlobal(true);
-
-
-        const seteDias = new Date();
-        seteDias.setDate(seteDias.getDate() - 7);
-
+        const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
         try {
-          const {data,error}=await supabase.from('doodoo_mensagens').delete().lt('created_at',seteDias.toISOString()).select('id');
-          if(error)throw error;
-          notifyBell(data?.length?'Limpeza concluída':'Sem alterações',data?.length?`${data.length} mensagem(ns) anterior(es) ao período removida(s).`:'Nenhuma mensagem foi removida. Verifique o período e suas permissões.');
-        } finally { setIsPurgingGlobal(false); }
-
-      }
+          const { visibleBefore, removed, remaining } = await deleteVisibleMessages({ before: cutoff });
+          if (visibleBefore === 0) {
+            notifyBell('Nenhuma mensagem visível', 'Não há mensagens anteriores a sete dias acessíveis à sua sessão.');
+          } else if (remaining > 0) {
+            notifyBell('Limpeza incompleta', `${removed} excluída(s); ${remaining} ainda estão visíveis. Revise as permissões e tente somente após conferir o banco.`);
+          } else {
+            notifyBell('Limpeza concluída', `${removed} mensagem(ns) anteriores a sete dias removida(s).`);
+            if (removed > 0) await registerLog('Limpeza de Base de Dados', `Excluiu ${removed} mensagem(ns) anteriores a ${cutoff} (Doo Doo).`);
+          }
+        } catch (error) {
+          notifyBell('Limpeza não confirmada', describeDatabaseFailure(error));
+        } finally {
+          setIsPurgingGlobal(false);
+        }
+      },
     });
   };
 
@@ -638,7 +771,7 @@ export default function ConfiguracoesPage() {
 
   const dataUltimaLimpeza = useMemo(() => {
     const ultimoRegisto = systemLogs.find(log => log.acao === 'Limpeza de Base de Dados');
-    return ultimoRegisto ? new Date(ultimoRegisto.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Nunca realizada';
+    return ultimoRegisto ? new Date(ultimoRegisto.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Não identificada nos registros carregados';
   }, [systemLogs]);
 
   if (isLoading || !isMounted) {
@@ -1051,7 +1184,7 @@ export default function ConfiguracoesPage() {
                         <thead>
                           <tr className="border-b opacity-75 font-semibold uppercase text-xs tracking-wider" style={{ borderColor: 'var(--border-input)' }}>
                             <th className="p-4 md:p-5">Funcionalidade / Aba</th>
-                            <th className="p-4 md:p-5 text-center">Admin / Gestor</th>
+                            <th className="p-4 md:p-5 text-center">Gestor</th>
                             <th className="p-4 md:p-5 text-center">Coordenador</th>
                             <th className="p-4 md:p-5 text-center">Supervisor</th>
                             <th className="p-4 md:p-5 text-center">Analista</th>
@@ -1239,10 +1372,10 @@ export default function ConfiguracoesPage() {
                   <div className="space-y-6">
                     <div className="p-6 rounded-3xl border shadow-sm bg-emerald-500/5 border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
-                        <h3 className="font-semibold text-sm md:text-base text-emerald-600 flex items-center"><Archive className="w-4 h-4 mr-2" /> Backup Completo (ZIP)</h3>
-                        <p className="text-xs opacity-75 mt-1 max-w-xl font-medium">Baixe todas as mensagens e históricos de todos os canais do sistema em um único arquivo ZIP compactado.</p>
+                        <h3 className="font-semibold text-sm md:text-base text-emerald-600 flex items-center"><Archive className="w-4 h-4 mr-2" /> Backup das Mensagens Visíveis (ZIP)</h3>
+                        <p className="text-xs opacity-75 mt-1 max-w-xl font-medium">Exporte as mensagens que sua sessão pode consultar, em ZIP. O limite desta exportação é de 20.000 registros; a ferramenta avisa se houver mais.</p>
                       </div>
-                      <button onClick={handleDownloadZipBackup} disabled={isDownloadingZip} className="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer flex items-center justify-center flex-shrink-0 active:scale-95 disabled:opacity-70">
+                      <button onClick={handleDownloadZipBackup} disabled={isDownloadingZip || Boolean(isDownloadingTranscript) || Boolean(isPurging) || isPurgingGlobal} className="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer flex items-center justify-center flex-shrink-0 active:scale-95 disabled:opacity-70">
                         {isDownloadingZip ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <DownloadCloud className="w-4 h-4 mr-2" />}
                         <span>{isDownloadingZip ? 'A compactar...' : 'Baixar ZIP Global'}</span>
                       </button>
@@ -1251,7 +1384,7 @@ export default function ConfiguracoesPage() {
                     <div className="p-6 rounded-3xl border shadow-sm bg-brand-panel/5 border-brand-panel/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>
                         <h3 className="font-semibold text-sm md:text-base text-brand-panel flex items-center"><Database className="w-4 h-4 mr-2" /> Gestão de Espaço do Banco de Dados</h3>
-                        <p className="text-xs opacity-75 mt-1 max-w-xl font-medium">O sistema retém mensagens por 7 dias. Você pode forçar a exclusão imediata de todas as mensagens antigas para otimizar o Supabase.</p>
+                        <p className="text-xs opacity-75 mt-1 max-w-xl font-medium">Esta página oferece uma limpeza manual de mensagens anteriores a 7 dias. Ela não configura exclusão automática nem altera o Supabase compartilhado.</p>
 
                         <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-xl bg-brand-panel/10 border border-brand-panel/20 shadow-xs">
                           <span className="text-xs font-medium opacity-70 mr-2">Última Limpeza Global efetuada em:</span>
@@ -1259,7 +1392,7 @@ export default function ConfiguracoesPage() {
                         </div>
                       </div>
 
-                      <button onClick={handlePurgeOldGlobal} disabled={isPurgingGlobal} className="px-6 py-3.5 rounded-2xl bg-brand-panel text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer flex-shrink-0 active:scale-95 disabled:opacity-70">
+                      <button onClick={handlePurgeOldGlobal} disabled={isPurgingGlobal || Boolean(isPurging) || Boolean(isDownloadingTranscript) || isDownloadingZip} className="px-6 py-3.5 rounded-2xl bg-brand-panel text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer flex-shrink-0 active:scale-95 disabled:opacity-70">
                         {isPurgingGlobal ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : null}
                         <span>{isPurgingGlobal ? 'A limpar...' : 'Forçar Limpeza Global'}</span>
                       </button>
@@ -1269,7 +1402,7 @@ export default function ConfiguracoesPage() {
                        <h3 className="font-semibold text-xs uppercase tracking-widest opacity-75">Extração Individual de Canais</h3>
                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                           {adminChannels.map(canal => {
-                             const isSpinning = isPurging === canal.id || isDownloadingTranscript === canal.id;
+                             const isSpinning = Boolean(isPurging) || Boolean(isDownloadingTranscript) || isPurgingGlobal || isDownloadingZip;
                              return (
                               <div key={canal.id} className={`p-5 rounded-3xl border flex flex-col justify-between space-y-4 shadow-sm ${canal.isGhost ? 'bg-red-500/5 border-red-500/20' : ''}`} style={!canal.isGhost ? solidInputStyle : undefined}>
                                  <div className="flex items-center space-x-3.5">
