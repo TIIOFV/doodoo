@@ -1,0 +1,289 @@
+{
+  "browser": "157.0.8103.51",
+  "results": [
+    {
+      "area": "diary",
+      "name": "create, edit, refresh, cancel deletion and delete own update",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "diary",
+      "name": "denied edit preserves editor and denied deletion preserves confirmation",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "PATCH"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "diary",
+      "name": "other authors and unverifiable legacy updates are read only",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "diary",
+      "name": "concurrent edits reject stale text without losing either version",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    }
+  ]
+}

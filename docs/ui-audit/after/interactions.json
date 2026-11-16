@@ -1,0 +1,26 @@
+[
+  {
+    "name": "task validation, single submit, busy Escape and create",
+    "pass": true
+  },
+  {
+    "name": "failed note retains form and announces error",
+    "pass": true
+  },
+  {
+    "name": "nested dialogs restore inert state and focus",
+    "pass": true
+  },
+  {
+    "name": "missing profile fails closed without fallback identity",
+    "pass": true
+  },
+  {
+    "name": "chat mobile composer, emoji, simulated send and upload failure",
+    "pass": true
+  },
+  {
+    "name": "agenda day/week and navigation",
+    "pass": true
+  }
+]

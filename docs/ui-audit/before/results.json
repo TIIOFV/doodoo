@@ -1,0 +1,156 @@
+[
+  {
+    "route": "/",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "overflow": false,
+    "bodyWidth": 1440,
+    "text": "Bem-vindo ao\nDoo Doo.\n\nO ecossistema corporativo centralizado para a sua equipe.\n\nGOVERNANÇA & INOVAÇÃO TI\n\nAcesso Restrito\nSuporte TI\nIniciar Sessão\n\nInsira as suas credenciais corporativas.\n\nE-MAIL CORPORATIVO\nSENHA\nLembrar e-mail\nEntrar no Dashboard\nTEMA VISUAL",
+    "errors": []
+  },
+  {
+    "route": "/dashboard",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "overflow": false,
+    "bodyWidth": 1440,
+    "text": "Doo Doo\n\nPORTAL CORPORATIVO\n\nVisão Geral\nTarefas\nAgenda\nAnotações\nIris Gestão\nPT\n\nPessoa de Teste\n\nADMINISTRADOR\n\nBOM DIA, PESSOA\nVisão Geral\nSETOR TESTE\nOlá, Pessoa\nMinha Fila\n\nFila de tarefas ativas.\n\n1 Ativas\nAgenda Central\n\nAlinhamentos da equipe.\n\nHoje\nAnotações\n\nBloco de rascunhos pessoal.\n\nAtividades e Delegações Recentes\n\nRevisar documento ",
+    "errors": []
+  },
+  {
+    "route": "/dashboard/tarefas",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "overflow": false,
+    "bodyWidth": 1440,
+    "text": "Doo Doo\n\nPORTAL CORPORATIVO\n\nVisão Geral\nTarefas\nAgenda\nAnotações\nIris Gestão\nPT\n\nPessoa de Teste\n\nADMINISTRADOR\n\nBOM DIA, PESSOA\nTarefas\nTarefas & Rotinas\n\nSETOR TESTE\n\nPT\nPessoa de Teste\nADMINISTRADOR\nMinha Fila\nDelegadas\n\nFILTROS INTELIGENTES\n\nMeu Dia\n1\nTodas em Aberto\n1\nUrgentes & VIPs\n0\nRotinas do Setor\n0\nConcluídas\n0\nNova Tarefa\n\nRevisar docu",
+    "errors": []
+  },
+  {
+    "route": "/dashboard/conversas",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "overflow": false,
+    "bodyWidth": 1440,
+    "text": "Doo Doo\n\nPORTAL CORPORATIVO\n\nVisão Geral\nTarefas\nAgenda\nAnotações\nIris Gestão\nPT\n\nPessoa de Teste\n\nADMINISTRADOR\n\nBOM DIA, PESSOA\nConfigurações\nChat Corporativo\n\nSINCRONIZADO\n\nPessoa de Teste\nOnline\nAusente\nOcupado\nIndisponível\nOffline\nCANAIS E DIRETOS\n+ Novo Grupo\n\nGeral\n\n2 participantes\n\nGeral\n\nCOLEGA\n\nO histórico de conversa inicia aqui.",
+    "errors": []
+  },
+  {
+    "route": "/dashboard/agenda",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "overflow": false,
+    "bodyWidth": 1440,
+    "text": "Doo Doo\n\nPORTAL CORPORATIVO\n\nVisão Geral\nTarefas\nAgenda\nAnotações\nIris Gestão\nPT\n\nPessoa de Teste\n\nADMINISTRADOR\n\nBOM DIA, PESSOA\nAgenda\nAgenda Corporativa\n\nSETOR TESTE\n\nPessoa de Teste\n\nADMINISTRADOR\n\nPlanejamento Ativo\n\nA sua agenda mostra compromissos privados, compartilhados pelo gestor de Teste, e os eventos gerais da empresa.\n\nHorário Comerci",
+    "errors": []
+  },
+  {
+    "route": "/dashboard/notas",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "overflow": false,
+    "bodyWidth": 1440,
+    "text": "Doo Doo\n\nPORTAL CORPORATIVO\n\nVisão Geral\nTarefas\nAgenda\nAnotações\nIris Gestão\nPT\n\nPessoa de Teste\n\nADMINISTRADOR\n\nBOM DIA, PESSOA\nAnotações\nBloco Pessoal\n\nSINCRONIZADO\n\nPessoa de Teste\n\nAUTOR PRINCIPAL\n\nSEUS CADERNOS\n\nNova Pasta\nTodas as Notas\n1\nGeral\n1\nGERAL\n16/11/2026\n\nNota de teste\n\nConteúdo simulado para validação local.\n\n 16/11/2026 ÀS 10:10\nG",
+    "errors": []
+  },
+  {
+    "route": "/dashboard/configuracoes",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "overflow": false,
+    "bodyWidth": 1440,
+    "text": "Doo Doo\n\nPORTAL CORPORATIVO\n\nVisão Geral\nTarefas\nAgenda\nAnotações\nIris Gestão\nPT\n\nPessoa de Teste\n\nADMINISTRADOR\n\nBOM DIA, PESSOA\nConfigurações\nPainel de Ajustes\n\nDOO DOO OS\n\nPessoa de Teste\n\nADMINISTRADOR • TESTE\n\nPESSOAL\n\nMeu Perfil\nPrivacidade\n\nGESTÃO\n\nEquipe & Colaboradores\nPermissões de Abas\nCategorias de Tarefas\n\nSISTEMA\n\nAuditoria & Dados\nTE",
+    "errors": []
+  },
+  {
+    "route": "/",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "overflow": false,
+    "bodyWidth": 320,
+    "text": "Doo Doo\nAcesso Restrito\nSuporte TI\nIniciar Sessão\n\nInsira as suas credenciais corporativas.\n\nE-MAIL CORPORATIVO\nSENHA\nLembrar e-mail\nEntrar no Dashboard\nTEMA VISUAL",
+    "errors": []
+  },
+  {
+    "route": "/dashboard",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "overflow": false,
+    "bodyWidth": 320,
+    "text": "Visão Geral\nSETOR TESTE\nOlá, Pessoa\nMinha Fila\n\nFila de tarefas ativas.\n\n1 Ativas\nAgenda Central\n\nAlinhamentos da equipe.\n\nHoje\nAnotações\n\nBloco de rascunhos pessoal.\n\nAtividades e Delegações Recentes\n\nRevisar documento de teste\n\nPara mim\n\nHÁ 0 MIN\nVisão\nTarefas\nAgenda\nAnotações\nPerfil",
+    "errors": []
+  },
+  {
+    "route": "/dashboard/tarefas",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "overflow": false,
+    "bodyWidth": 320,
+    "text": "Fila de Tarefas\nPESSOA DE TESTE\nMinhas\nDelegadas\nMeu Dia\nTodas\nUrgentes\nRotinas\nConcluídas\nNova Tarefa\n\nRevisar documento de teste\n\nDe: Pessoa de Teste\n•\nGeral\n•\n📅 16/11/2026\nVisão\nTarefas\nAgenda\nAnotações\nPerfil",
+    "errors": []
+  },
+  {
+    "route": "/dashboard/conversas",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "overflow": false,
+    "bodyWidth": 320,
+    "text": "Chat Corporativo\n\nSINCRONIZADO\n\nPessoa de Teste\nOnline\nAusente\nOcupado\nIndisponível\nOffline\nCANAIS E DIRETOS\n+ Novo Grupo\n\nGeral\n\n2 participantes\n\nVisão\nTarefas\nAgenda\nAnotações\nPerfil",
+    "errors": []
+  },
+  {
+    "route": "/dashboard/agenda",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "overflow": false,
+    "bodyWidth": 320,
+    "text": "DOO DOO WORKSPACE\n\nA sua Agenda\nDia\nSemana\nNovo Evento\nSEG\n16\nTER\n17\nQUA\n18\nQUI\n19\nSEX\n20\nSÁB\n21\nDOM\n22\nEventos da Semana\n\nDe 16/11/2026 a 22/11/2026\n\n1 eventos\n🚀 GERAL\n16/11/2026\n10:00 - 11:00\nReunião de teste\n\nPauta simulada\n\nPresença Confirmada\nOrg: Pessoa de Teste\n1 Confirmado(s)\nVisão\nTarefas\nAgenda\nAnotações\nPerfil",
+    "errors": []
+  },
+  {
+    "route": "/dashboard/notas",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "overflow": false,
+    "bodyWidth": 320,
+    "text": "Bloco Pessoal\nPESSOA DE TESTE\nTodas (1)\nGeral\n1\nNova\nGERAL\n16/11/2026\n\nNota de teste\n\nConteúdo simulado para validação local.\n\nVisão\nTarefas\nAgenda\nAnotações\nPerfil",
+    "errors": []
+  },
+  {
+    "route": "/dashboard/configuracoes",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "overflow": false,
+    "bodyWidth": 320,
+    "text": "PAINEL DE CONTROLO\n\nMeu Perfil\nSalvar Alterações\nMeu Perfil\nPrivacidade\nColaboradores\nPermissões\nCategorias\nAuditoria\nFOTO DE PERFIL (AVATAR)\nPT\nURL DA IMAGEM\nDADOS PROFISSIONAIS BÁSICOS\nLEITURA APENAS\nNOME COMPLETO\nE-MAIL CORPORATIVO\nCARGO E ACESSO\nSETOR ATRIBUÍDO\nVisão\nTarefas\nAgenda\nAnotações\nPerfil",
+    "errors": []
+  }
+]

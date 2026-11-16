@@ -1,0 +1,38 @@
+{
+  "generatedAt": "2026-11-16T15:52:53.875Z",
+  "environment": "LOCAL CHROME / SUPABASE MOCK ONLY",
+  "realIntegration": "BLOQUEADO: Supabase compartilhado com Iris em producao",
+  "flows": {
+    "total": 25,
+    "passed": 25,
+    "failed": 0,
+    "source": "flows.json consolidated; original and chat retest preserved"
+  },
+  "matrix": {
+    "checks": 646,
+    "overflow": 0,
+    "pageErrors": 0
+  },
+  "dialogs": {
+    "cases": 28,
+    "themeChecks": 280
+  },
+  "visual": {
+    "captures": 21,
+    "pageErrors": 0,
+    "overflow": 0
+  },
+  "domain": {
+    "checks": 6
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 14
+  },
+  "build": "PASSOU LOCAL",
+  "typecheck": "PASSOU LOCAL",
+  "externalWrites": 0,
+  "commit": false,
+  "push": false,
+  "deploy": false
+}

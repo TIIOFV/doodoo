@@ -1,0 +1,679 @@
+[
+  {
+    "route": "/",
+    "width": 320,
+    "errors": [],
+    "requests": [],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard",
+    "width": 320,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_notas"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/tarefas",
+    "width": 320,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas_categorias"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/conversas",
+    "width": 320,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "PATCH",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "PATCH",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_mensagens"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/agenda",
+    "width": 320,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_agenda"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/notas",
+    "width": 320,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_notas"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/configuracoes",
+    "width": 320,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas_categorias"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_logs"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/",
+    "width": 390,
+    "errors": [],
+    "requests": [],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard",
+    "width": 390,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_notas"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/tarefas",
+    "width": 390,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas_categorias"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/conversas",
+    "width": 390,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "PATCH",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "PATCH",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_mensagens"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/agenda",
+    "width": 390,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_agenda"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/notas",
+    "width": 390,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_notas"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/configuracoes",
+    "width": 390,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas_categorias"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_logs"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/",
+    "width": 1440,
+    "errors": [],
+    "requests": [],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard",
+    "width": 1440,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_notas"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/tarefas",
+    "width": 1440,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas_categorias"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/conversas",
+    "width": 1440,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "PATCH",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "PATCH",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_mensagens"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_mensagens"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_chat_notas"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/agenda",
+    "width": 1440,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_agenda"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/notas",
+    "width": 1440,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_notas"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "route": "/dashboard/configuracoes",
+    "width": 1440,
+    "errors": [],
+    "requests": [
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_perfis"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_permissoes"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_tarefas_categorias"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_logs"
+      },
+      {
+        "method": "GET",
+        "table": "doodoo_canais"
+      }
+    ],
+    "overflow": false
+  }
+]

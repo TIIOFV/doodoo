@@ -1,0 +1,127 @@
+{
+  "date": "2026-11-16",
+  "backend": "isolated browser mocks; external HTTP and WebSockets blocked",
+  "build": {
+    "command": "npm run build",
+    "exitCode": 0
+  },
+  "typecheck": {
+    "command": "npm run typecheck",
+    "exitCode": 0
+  },
+  "lint": {
+    "command": "npm run lint",
+    "exitCode": 1,
+    "before": {
+      "errors": 62,
+      "warnings": 44
+    },
+    "after": {
+      "errors": 60,
+      "warnings": 36
+    },
+    "rulesDisabled": false
+  },
+  "browser": {
+    "baseMatrix": 560,
+    "additionalStates": 80,
+    "reflowEquivalent200": 6,
+    "horizontalOverflow": 0,
+    "javascriptErrors": 0,
+    "modalCases": 28,
+    "modalThemes": 280,
+    "modalFailures": 0,
+    "interactions": 6,
+    "interactionFailures": 0
+  },
+  "lintByFile": [
+    {
+      "file": "app/dashboard/agenda/page.tsx",
+      "errors": 4,
+      "warnings": 0,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "app/dashboard/configuracoes/page.tsx",
+      "errors": 17,
+      "warnings": 10,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "@typescript-eslint/no-unused-vars",
+        "react-hooks/set-state-in-effect",
+        "@next/next/no-location-assign-relative-destination",
+        "prefer-const",
+        "@next/next/no-img-element"
+      ]
+    },
+    {
+      "file": "app/dashboard/conversas/page.tsx",
+      "errors": 18,
+      "warnings": 16,
+      "rules": [
+        "@typescript-eslint/no-explicit-any",
+        "@typescript-eslint/no-unused-vars",
+        "@next/next/no-location-assign-relative-destination",
+        "prefer-const",
+        "react-hooks/set-state-in-effect",
+        "react-hooks/exhaustive-deps",
+        "@next/next/no-img-element"
+      ]
+    },
+    {
+      "file": "app/dashboard/layout.tsx",
+      "errors": 8,
+      "warnings": 6,
+      "rules": [
+        "@typescript-eslint/no-unused-vars",
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect",
+        "@next/next/no-location-assign-relative-destination",
+        "@next/next/no-img-element"
+      ]
+    },
+    {
+      "file": "app/dashboard/notas/page.tsx",
+      "errors": 3,
+      "warnings": 0,
+      "rules": [
+        "react-hooks/set-state-in-effect",
+        "@typescript-eslint/no-explicit-any"
+      ]
+    },
+    {
+      "file": "app/dashboard/page.tsx",
+      "errors": 1,
+      "warnings": 1,
+      "rules": [
+        "@typescript-eslint/no-unused-vars",
+        "react-hooks/set-state-in-effect"
+      ]
+    },
+    {
+      "file": "app/dashboard/tarefas/page.tsx",
+      "errors": 7,
+      "warnings": 3,
+      "rules": [
+        "@typescript-eslint/no-unused-vars",
+        "@typescript-eslint/no-explicit-any",
+        "react-hooks/set-state-in-effect",
+        "@next/next/no-location-assign-relative-destination",
+        "react-hooks/exhaustive-deps",
+        "react-hooks/purity"
+      ]
+    },
+    {
+      "file": "app/page.tsx",
+      "errors": 2,
+      "warnings": 0,
+      "rules": [
+        "react-hooks/set-state-in-effect",
+        "@typescript-eslint/no-explicit-any"
+      ]
+    }
+  ]
+}

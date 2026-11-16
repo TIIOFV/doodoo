@@ -1,0 +1,929 @@
+{
+  "results": [
+    {
+      "route": "/",
+      "width": 320,
+      "height": 568,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 164
+    },
+    {
+      "route": "/",
+      "width": 320,
+      "height": 568,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 164
+    },
+    {
+      "route": "/dashboard",
+      "width": 320,
+      "height": 568,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 322
+    },
+    {
+      "route": "/dashboard",
+      "width": 320,
+      "height": 568,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 322
+    },
+    {
+      "route": "/dashboard/tarefas",
+      "width": 320,
+      "height": 568,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 208
+    },
+    {
+      "route": "/dashboard/tarefas",
+      "width": 320,
+      "height": 568,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 208
+    },
+    {
+      "route": "/dashboard/tarefas",
+      "width": 320,
+      "height": 568,
+      "state": "selected",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 320,
+      "height": 568,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 211
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 320,
+      "height": 568,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 211
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 320,
+      "height": 568,
+      "state": "thread",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 320,
+      "height": 568,
+      "state": "members",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/agenda",
+      "width": 320,
+      "height": 568,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 318
+    },
+    {
+      "route": "/dashboard/agenda",
+      "width": 320,
+      "height": 568,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 318
+    },
+    {
+      "route": "/dashboard/agenda",
+      "width": 320,
+      "height": 568,
+      "state": "day",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/notas",
+      "width": 320,
+      "height": 568,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 159
+    },
+    {
+      "route": "/dashboard/notas",
+      "width": 320,
+      "height": 568,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 159
+    },
+    {
+      "route": "/dashboard/notas",
+      "width": 320,
+      "height": 568,
+      "state": "editor",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 320,
+      "height": 568,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 298
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 320,
+      "height": 568,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 298
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 320,
+      "height": 568,
+      "state": "Privacidade",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 320,
+      "height": 568,
+      "state": "Colaboradores",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 320,
+      "height": 568,
+      "state": "Permissões",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 320,
+      "height": 568,
+      "state": "Categorias",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 320,
+      "height": 568,
+      "state": "Auditoria",
+      "overflow": false
+    },
+    {
+      "route": "/",
+      "width": 1024,
+      "height": 768,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 264
+    },
+    {
+      "route": "/",
+      "width": 1024,
+      "height": 768,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 264
+    },
+    {
+      "route": "/dashboard",
+      "width": 1024,
+      "height": 768,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 424
+    },
+    {
+      "route": "/dashboard",
+      "width": 1024,
+      "height": 768,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 424
+    },
+    {
+      "route": "/dashboard/tarefas",
+      "width": 1024,
+      "height": 768,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 414
+    },
+    {
+      "route": "/dashboard/tarefas",
+      "width": 1024,
+      "height": 768,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 414
+    },
+    {
+      "route": "/dashboard/tarefas",
+      "width": 1024,
+      "height": 768,
+      "state": "selected",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 1024,
+      "height": 768,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 370
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 1024,
+      "height": 768,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 370
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 1024,
+      "height": 768,
+      "state": "thread",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 1024,
+      "height": 768,
+      "state": "members",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/agenda",
+      "width": 1024,
+      "height": 768,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 747
+    },
+    {
+      "route": "/dashboard/agenda",
+      "width": 1024,
+      "height": 768,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 747
+    },
+    {
+      "route": "/dashboard/agenda",
+      "width": 1024,
+      "height": 768,
+      "state": "day",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/notas",
+      "width": 1024,
+      "height": 768,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 420
+    },
+    {
+      "route": "/dashboard/notas",
+      "width": 1024,
+      "height": 768,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 420
+    },
+    {
+      "route": "/dashboard/notas",
+      "width": 1024,
+      "height": 768,
+      "state": "editor",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1024,
+      "height": 768,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 568
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1024,
+      "height": 768,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 568
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1024,
+      "height": 768,
+      "state": "Privacidade",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1024,
+      "height": 768,
+      "state": "Equipe & Colaboradores",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1024,
+      "height": 768,
+      "state": "Permissões de Abas",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1024,
+      "height": 768,
+      "state": "Categorias de Tarefas",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1024,
+      "height": 768,
+      "state": "Auditoria & Dados",
+      "overflow": false
+    },
+    {
+      "route": "/",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 264
+    },
+    {
+      "route": "/",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 264
+    },
+    {
+      "route": "/dashboard",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 424
+    },
+    {
+      "route": "/dashboard",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 424
+    },
+    {
+      "route": "/dashboard/tarefas",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 414
+    },
+    {
+      "route": "/dashboard/tarefas",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 414
+    },
+    {
+      "route": "/dashboard/tarefas",
+      "width": 1440,
+      "height": 900,
+      "state": "selected",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 370
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 370
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 1440,
+      "height": 900,
+      "state": "thread",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 1440,
+      "height": 900,
+      "state": "members",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/agenda",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 747
+    },
+    {
+      "route": "/dashboard/agenda",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 747
+    },
+    {
+      "route": "/dashboard/agenda",
+      "width": 1440,
+      "height": 900,
+      "state": "day",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/notas",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 420
+    },
+    {
+      "route": "/dashboard/notas",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 420
+    },
+    {
+      "route": "/dashboard/notas",
+      "width": 1440,
+      "height": 900,
+      "state": "editor",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1440,
+      "height": 900,
+      "theme": "light",
+      "overflow": false,
+      "bg": "#f5f5f7",
+      "utility": {
+        "darkBackground": "oklab(0 0 0 / 0.05)",
+        "brandText": "rgb(0, 113, 227)",
+        "brandBorder": "rgb(0, 113, 227)",
+        "brandAccent": "rgb(0, 113, 227)",
+        "brandTint": "oklab(0.562905 -0.0462419 -0.187701 / 0.1)"
+      },
+      "text": 568
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1440,
+      "height": 900,
+      "theme": "dark",
+      "overflow": false,
+      "bg": "#000",
+      "utility": {
+        "darkBackground": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)",
+        "brandText": "rgb(0, 110, 220)",
+        "brandBorder": "rgb(0, 110, 220)",
+        "brandAccent": "rgb(0, 110, 220)",
+        "brandTint": "oklab(0.551267 -0.0455619 -0.182395 / 0.1)"
+      },
+      "text": 568
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1440,
+      "height": 900,
+      "state": "Privacidade",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1440,
+      "height": 900,
+      "state": "Equipe & Colaboradores",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1440,
+      "height": 900,
+      "state": "Permissões de Abas",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1440,
+      "height": 900,
+      "state": "Categorias de Tarefas",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 1440,
+      "height": 900,
+      "state": "Auditoria & Dados",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard",
+      "width": 640,
+      "height": 400,
+      "zoom": "200% equivalent CSS viewport",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/tarefas",
+      "width": 640,
+      "height": 400,
+      "zoom": "200% equivalent CSS viewport",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/conversas",
+      "width": 640,
+      "height": 400,
+      "zoom": "200% equivalent CSS viewport",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/agenda",
+      "width": 640,
+      "height": 400,
+      "zoom": "200% equivalent CSS viewport",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/notas",
+      "width": 640,
+      "height": 400,
+      "zoom": "200% equivalent CSS viewport",
+      "overflow": false
+    },
+    {
+      "route": "/dashboard/configuracoes",
+      "width": 640,
+      "height": 400,
+      "zoom": "200% equivalent CSS viewport",
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

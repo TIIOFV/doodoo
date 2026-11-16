@@ -1,5 +1,10 @@
-import './globals.css'; 
-import { ThemeProvider } from './contexts/ThemeContext'; 
+import type { Viewport } from 'next';
+import { ThemeProvider } from './contexts/ThemeContext';
+import './globals.css';
+
+export const viewport: Viewport = {
+  width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content', themeColor: '#0284c7',
+};
 
 export const metadata = {
   title: 'Doo Doo - Portal Corporativo',
@@ -18,7 +23,6 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="theme-color" content="#0284c7" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body>

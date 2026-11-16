@@ -1,0 +1,11 @@
+﻿{
+  "purpose": "Synthetic actors only. Create Auth users manually on the independent project AFTER authorization. Never import shared users.",
+  "actors": [
+    {"alias":"A","name":"DOO HOMO Ana","email":"doo-homo-a@example.invalid","role":"administrador","sector":"TI"},
+    {"alias":"B","name":"DOO HOMO Bruno","email":"doo-homo-b@example.invalid","role":"colaborador","sector":"TI"},
+    {"alias":"C","name":"DOO HOMO Carla","email":"doo-homo-c@example.invalid","role":"colaborador","sector":"RH"}
+  ],
+  "authCreation":"NOT EXECUTED; example.invalid addresses require a reviewed local mail inbox or manual confirmation in the NEW project",
+  "passwords":"Not stored or generated in this repository",
+  "seedLedger":{"task":"a3000000-0000-4000-8000-000000000001","channel":"a3000000-0000-4000-8000-000000000002","event":"a3000000-0000-4000-8000-000000000003","note":"a3000000-0000-4000-8000-000000000004"}
+}

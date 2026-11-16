@@ -1,0 +1,2046 @@
+[
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Resumo: Minha Fila",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Nova Demanda (TI)",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 1,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Excluir Tarefa",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Novo Compromisso",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 1,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Reunião de teste",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Novo Caderno",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Nova Anotação",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Excluir Anotação",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Novo Colaborador",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Excluir Colaborador",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Criar Novo Grupo",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Reunião no Chat",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Convidar Colega",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Excluir Conversa",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Resumo: Minha Fila",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Nova Demanda (TI)",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 1,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Excluir Tarefa",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Novo Compromisso",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Reunião de teste",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Novo Caderno",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Nova Anotação",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Excluir Anotação",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Novo Colaborador",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Excluir Colaborador",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Criar Novo Grupo",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Reunião no Chat",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Convidar Colega",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  },
+  {
+    "themeChecks": [
+      {
+        "theme": "light",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "dark",
+        "visible": true,
+        "bg": "rgb(17, 24, 39)"
+      },
+      {
+        "theme": "ocean",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "nature",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "sunset",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "amethyst",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "aurora",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "solar",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "coral",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      },
+      {
+        "theme": "graphite",
+        "visible": true,
+        "bg": "rgb(255, 255, 255)"
+      }
+    ],
+    "name": "Excluir Conversa",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "portal": true,
+    "inViewport": true,
+    "headerVisible": true,
+    "footerVisible": true,
+    "focusInside": true,
+    "inertBackground": true,
+    "scrollOwners": 0,
+    "tabContained": true,
+    "shiftTabContained": true,
+    "tabWrap": true,
+    "shiftTabWrap": true,
+    "escapeClosed": true,
+    "focusRestored": true,
+    "backdropCorrect": true
+  }
+]

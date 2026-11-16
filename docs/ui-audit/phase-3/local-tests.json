@@ -1,0 +1,62 @@
+[
+  {
+    "name": "consistent target is not marked remotely verified or authorized",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "preflight refuses same project",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "preflight refuses wrong deny reference",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "preflight refuses shared mode",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "preflight refuses SSO target",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "preflight refuses secret key",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "preflight refuses admin variable",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "preflight refuses invalid URL",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "preflight refuses admin JWT",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "mock mode accepts only unreachable synthetic host",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "atomic RPC opt-in is refused on shared mode",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "outbox isolates actors and reconciles by identity",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "outbox rejects forged sender and malformed cache",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "storage quota raises recovery notice without pretending durability",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "reviewable SQL has guards and no resets or Auth mutations (static scan only)",
+    "status": "PASSOU LOCAL"
+  }
+]

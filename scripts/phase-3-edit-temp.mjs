@@ -1,0 +1,1 @@
+﻿import fs from 'node:fs';const p='scripts/phase-3-additional.mjs';let s=fs.readFileSync(p,'utf8');s=s.replace("const id=s.tables.doodoo_tarefas[0].chat[0].id;","await poll(()=>s.tables.doodoo_tarefas[0].chat.length>0,'Diary send was not confirmed');const id=s.tables.doodoo_tarefas[0].chat[0].id;");fs.writeFileSync(p,s);

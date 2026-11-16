@@ -1,48 +1,36 @@
-'use client';
+﻿'use client';
+import { createContext,useContext,useEffect,useSyncExternalStore } from 'react';
 
-import { createContext, useContext, useEffect, useState } from 'react';
 
-type ThemeContextType = {
-  theme: string;
-  changeTheme: (newTheme: string) => void;
+const themes = ['light', 'dark', 'ocean', 'nature', 'sunset', 'amethyst', 'aurora', 'solar', 'coral', 'graphite'];
+const normalize = (value: string | null) => themes.includes(value || '') ? value! : 'light';
+let memoryTheme = 'light';
+let memoryOverride = false;
+const readTheme = () => {
+  if(memoryOverride)return memoryTheme;
+  try { return normalize(localStorage.getItem('doodoo_theme')); } catch { return memoryTheme; }
 };
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const subscribe = (callback: () => void) => {
+  window.addEventListener('storage', callback);
+  window.addEventListener('doodoo:theme', callback);
+  return () => {
+    window.removeEventListener('storage', callback);
+    window.removeEventListener('doodoo:theme', callback);
+  };
+};
+const ThemeContext = createContext<{ theme: string; changeTheme: (theme: string) => void } | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState('light');
-
-  // Inicializa o tema ao abrir o site
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('doodoo_theme') || 'light';
-    setTheme(savedTheme);
-    document.documentElement.setAttribute('data-theme', savedTheme);
-  }, []);
-
-  // Função global para trocar o tema
-  const changeTheme = (newTheme: string) => {
-    setTheme(newTheme);
-    localStorage.setItem('doodoo_theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
+  const theme = useSyncExternalStore(subscribe, readTheme, () => 'light');
+  useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
+  const changeTheme = (value: string) => {
+    const next = normalize(value);
+    memoryTheme=next;
+    try { localStorage.setItem('doodoo_theme', next);memoryOverride=false; } catch { memoryOverride=true; }
+    document.documentElement.setAttribute('data-theme', next);
+    window.dispatchEvent(new Event('doodoo:theme'));
   };
-
-  // Sincroniza o tema se o utilizador abrir o sistema em duas abas diferentes
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'doodoo_theme' && e.newValue) {
-        setTheme(e.newValue);
-        document.documentElement.setAttribute('data-theme', e.newValue);
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
-
-  return (
-    <ThemeContext.Provider value={{ theme, changeTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={{ theme, changeTheme }}>{children}</ThemeContext.Provider>;
 }
 
 export const useTheme = () => {

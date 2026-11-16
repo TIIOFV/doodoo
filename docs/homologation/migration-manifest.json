@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-11-16T16:47:25.450Z",
+  "scope": "review-only candidate, not an export of shared schema",
+  "migrations": [
+    {
+      "name": "001_candidate_baseline.sql",
+      "sha256": "25a11ec89f81e7f454480d8c37fe3ae2aa57ef8bd625c0d1c30fd6d0081f2942",
+      "status": "PREPARED ONLY / NOT APPLIED"
+    },
+    {
+      "name": "002_atomic_operations.sql",
+      "sha256": "a2a940cdd6660a58c9d27e5bd1f8e6623acd823a29b9ded3e89cdac7b0cc4091",
+      "status": "PREPARED ONLY / NOT APPLIED"
+    },
+    {
+      "name": "003_candidate_policies.sql",
+      "sha256": "5e90531e3175aa3032384a5bf0162be415ffc7cc2902510ac6e07455b1e551e7",
+      "status": "PREPARED ONLY / NOT APPLIED"
+    },
+    {
+      "name": "004_candidate_storage_realtime.sql",
+      "sha256": "7b6b66058bc0890935605df398b328174bec12db59d708018b6130ff2a959fd5",
+      "status": "PREPARED ONLY / NOT APPLIED"
+    },
+    {
+      "name": "005_candidate_storage_cleanup_outbox.sql",
+      "sha256": "291f45306b9e010aee5b35b470174a28ed8790242dcbed72b3af19abee87c68d",
+      "status": "PREPARED ONLY / NOT APPLIED"
+    }
+  ],
+  "staticChecks": "guard and forbidden-operation scan only; NOT a SQL compilation or RLS test",
+  "applied": false,
+  "externalResourcesCreated": false,
+  "requires": [
+    "explicit independent project authorization",
+    "review of inferred schema and business rules",
+    "SQL compilation and rollback tests on isolated Supabase",
+    "RLS/Storage/Auth/realtime integration verification"
+  ]
+}

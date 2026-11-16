@@ -1,0 +1,65 @@
+[
+  {
+    "area": "login",
+    "name": "protected route does not mount hidden child queries",
+    "status": "PASSOU MOCK",
+    "requests": [],
+    "externalForwarded": 0
+  },
+  {
+    "area": "login",
+    "name": "invalid login, valid login, logout and protected back navigation",
+    "status": "PASSOU MOCK",
+    "requests": [
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      }
+    ],
+    "externalForwarded": 0
+  },
+  {
+    "area": "login",
+    "name": "direct URL denied by role and blocked profile",
+    "status": "PASSOU MOCK",
+    "requests": [
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      }
+    ],
+    "externalForwarded": 0
+  }
+]
