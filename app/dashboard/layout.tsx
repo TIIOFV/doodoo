@@ -327,10 +327,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col h-full relative overflow-hidden z-10">
+      <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         
-        {/* 🚀 HEADER DESAPARECE NO MOBILE SE ESTIVERMOS NUM CHAT IMERSIVO */}
-        <header className={`absolute top-0 left-0 right-0 h-20 md:h-28 flex items-center justify-between px-5 md:px-10 transition-all duration-500 z-40 lg:flex ${isImmersivePage ? 'md:hidden' : 'flex'} ${hideBottomNavOnMobile ? 'hidden' : 'flex'}`} style={glassHeader}>
+        {/* Em páginas imersivas, o cabeçalho aparece apenas no desktop.
+            Z-index reduzido para não cobrir modais abertos na área de conteúdo. */}
+        <header className={`absolute top-0 left-0 right-0 z-20 h-20 md:h-28 items-center justify-between px-5 md:px-10 transition-all duration-500 ${hideBottomNavOnMobile ? 'hidden' : isImmersivePage ? 'hidden lg:flex' : 'flex'}`} style={glassHeader}>
           <div className="flex items-center gap-4">
             <div className="flex flex-col justify-center">
               <div className="hidden md:flex items-center space-x-2 opacity-60 mb-1">
@@ -383,8 +384,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* 🚀 O PADDING FOI AJUSTADO PARA O DESKTOP (lg:pt-28) E MOBILE (pt-0 no chat / pt-24 normal) */}
-        <main className={`flex-1 overflow-y-auto h-full w-full flex flex-col ${isImmersivePage ? (hideBottomNavOnMobile ? 'p-0' : 'p-0 md:p-5 md:pt-5 lg:pt-28') : 'px-5 md:px-10 pt-24 md:pt-32'} pb-24 lg:pb-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']`}>
+        {/* A área rolável precisa de min-h-0 em um contêiner flex.
+            O modal deve ser renderizado no body por um portal (ver ModalShell.tsx). */}
+        <main className={`flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-contain ${isImmersivePage ? (hideBottomNavOnMobile ? 'p-0' : 'p-0 md:p-5 md:pt-5 lg:pt-28') : 'px-5 md:px-10 pt-24 md:pt-32'} ${hideBottomNavOnMobile ? 'pb-0 lg:pb-5' : 'pb-24 lg:pb-5'} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']`}>
           {children}
         </main>
 

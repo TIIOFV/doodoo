@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   CheckSquare, Plus, Trash2, Bell, Send, Sun, 
   X, Star, Search, Repeat, Shield, 
@@ -110,6 +111,30 @@ export default function TarefasPage() {
   const inputFieldRef = useRef<HTMLTextAreaElement>(null);
 
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+  // Enquanto um modal estiver aberto, impede a rolagem da página.
+  // O portal é montado diretamente em document.body, fora do overflow-hidden do Dashboard.
+  useEffect(() => {
+    if (!isCreateModalOpen && !confirmModal.isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleModalEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (confirmModal.isOpen) {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      } else if (!isSaving) {
+        setIsCreateModalOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleModalEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleModalEscape);
+    };
+  }, [isCreateModalOpen, confirmModal.isOpen, isSaving]);
 
   const glassContainerStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-card) 50%, transparent)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid color-mix(in srgb, var(--border-input) 40%, transparent)', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)' };
   const glassSidebarStyle = { backgroundColor: 'color-mix(in srgb, var(--bg-input) 30%, transparent)', borderRight: '1px solid color-mix(in srgb, var(--border-input) 40%, transparent)' };
@@ -950,21 +975,34 @@ export default function TarefasPage() {
         </div>
       </div>
 
-      {/* MODAL CRIAR TAREFA Z-[999] */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="w-full max-w-lg rounded-[2.5rem] border shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" style={solidCardStyle}>
-            <div className="px-6 md:px-8 py-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
-              <div>
+      {/* Modal em portal: fora do stacking context do dashboard e acima do header. */}
+      {isCreateModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-6 animate-in fade-in"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isSaving) setIsCreateModalOpen(false);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="nova-demanda-title"
+            className="flex min-h-0 w-full max-w-[620px] max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-3rem)] flex-col overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border shadow-2xl"
+            style={solidCardStyle}
+          >
+            {/* Cabeçalho sempre visível */}
+            <div className="flex flex-shrink-0 items-center justify-between gap-4 border-b px-5 py-4 sm:px-8 sm:py-5" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
+              <div className="min-w-0">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-panel">Novo Registro</span>
-                <h3 className="font-extrabold text-lg md:text-xl mt-1">Nova Demanda ({currentUser?.setor})</h3>
+                <h3 id="nova-demanda-title" className="mt-1 break-words text-lg font-extrabold leading-tight sm:text-xl">Nova Demanda ({currentUser?.setor})</h3>
               </div>
-              <button onClick={() => setIsCreateModalOpen(false)} className="p-2.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors">
-                <X className="w-5 h-5" />
+              <button type="button" aria-label="Fechar nova demanda" onClick={() => !isSaving && setIsCreateModalOpen(false)} className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5">
+                <X className="h-5 w-5" />
               </button>
             </div>
-            
-            <form onSubmit={handleCreateTask} className="p-6 md:p-8 overflow-y-auto custom-scrollbar space-y-6">
+
+            {/* Só os campos rolam. O topo e os botões permanecem visíveis. */}
+            <form id="form-criar-demanda" onSubmit={handleCreateTask} className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-5 custom-scrollbar sm:p-8">
               <div>
                 <label className="text-[11px] font-extrabold uppercase tracking-widest opacity-60 block mb-2">Título da Demanda *</label>
                 <input type="text" required value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Ex: Verificar servidor X..." className="w-full px-4 py-3.5 rounded-2xl border text-[13px] font-bold outline-none focus:border-brand-panel transition-colors" style={solidInputStyle} />
@@ -1034,21 +1072,23 @@ export default function TarefasPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 pt-6 border-t" style={{ borderColor: 'var(--border-input)' }}>
-                <button type="button" onClick={() => setIsCreateModalOpen(false)} className="w-full sm:w-auto px-6 py-3.5 rounded-xl border text-[13px] font-extrabold cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
-                <button type="submit" disabled={isSaving} className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-brand-panel text-white text-[13px] font-extrabold cursor-pointer hover:opacity-90 active:scale-95 transition-transform shadow-lg flex items-center justify-center space-x-2">
-                  {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>{isSaving ? 'Agendando...' : 'Salvar Tarefa'}</span>
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
+
+            <div className="flex flex-shrink-0 flex-col justify-end gap-3 border-t px-5 py-4 sm:flex-row sm:px-8" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
+              <button type="button" disabled={isSaving} onClick={() => setIsCreateModalOpen(false)} className="w-full rounded-xl border px-6 py-3 text-[13px] font-extrabold transition-colors hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/5 sm:w-auto" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
+              <button type="submit" form="form-criar-demanda" disabled={isSaving} className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-panel px-7 py-3 text-[13px] font-extrabold text-white shadow-lg transition-transform hover:opacity-90 active:scale-95 disabled:opacity-50 sm:w-auto">
+                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                <span>{isSaving ? 'Agendando...' : 'Salvar Tarefa'}</span>
+              </button>
+            </div>
+          </section>
+        </div>,
+        document.body
       )}
 
-      {/* MODAL 3: CONFIRMAÇÃO DE EXCLUSÃO Z-[999] */}
-      {confirmModal.isOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
+      {/* Modal de confirmação também usa portal para respeitar a camada superior. */}
+      {confirmModal.isOpen && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
           <div className="w-full max-w-sm rounded-[2.5rem] border shadow-2xl overflow-hidden" style={solidCardStyle}>
             <div className="px-6 md:px-8 py-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
               <div className="flex items-center space-x-2 text-red-500"><AlertTriangle className="w-6 h-6" /><h3 className="font-extrabold text-base md:text-lg">{confirmModal.title}</h3></div>
@@ -1060,7 +1100,8 @@ export default function TarefasPage() {
               <button onClick={confirmModal.onConfirm} className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13px] font-extrabold cursor-pointer transition-colors shadow-md active:scale-95">Sim, Excluir</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
