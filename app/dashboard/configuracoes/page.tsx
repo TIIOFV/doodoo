@@ -558,9 +558,9 @@ export default function ConfiguracoesPage() {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setIsPurging(canalId);
 
-        const { error } = await supabase.from('doodoo_mensagens').delete().eq('canal_id', canalId);
+        const { data,error } = await supabase.from('doodoo_mensagens').delete().eq('canal_id', canalId).select('id');
 
-        if (!error) notifyBell('Concluído', `Histórico apagado com sucesso.`);
+        if (!error) notifyBell(data?.length?'Concluído':'Sem alterações',data?.length?`${data.length} mensagem(ns) removida(s).`:'Nenhuma mensagem foi removida. Verifique o histórico e suas permissões.');
         else notifyBell('Erro', 'Ocorreu um erro ao limpar o histórico.');
 
         setIsPurging(null);
@@ -580,9 +580,9 @@ export default function ConfiguracoesPage() {
         seteDias.setDate(seteDias.getDate() - 7);
 
         try {
-          const {error}=await supabase.from('doodoo_mensagens').delete().lt('created_at',seteDias.toISOString());
+          const {data,error}=await supabase.from('doodoo_mensagens').delete().lt('created_at',seteDias.toISOString()).select('id');
           if(error)throw error;
-          notifyBell('Limpeza concluída','As mensagens anteriores ao período foram removidas.');
+          notifyBell(data?.length?'Limpeza concluída':'Sem alterações',data?.length?`${data.length} mensagem(ns) anterior(es) ao período removida(s).`:'Nenhuma mensagem foi removida. Verifique o período e suas permissões.');
         } finally { setIsPurgingGlobal(false); }
 
       }

@@ -1,0 +1,8 @@
+﻿import fs from 'node:fs';import path from 'node:path';import {pathToFileURL} from 'node:url';import pp from './playwright-path.mjs';
+const {chromium}=await import(pathToFileURL(path.join(pp,'index.mjs')).href);
+const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#2563eb"/><path d="M22 18H36C45.9411 18 54 26.0589 54 36C54 45.9411 45.9411 54 36 54H22V18Z" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="36" cy="36" r="5" fill="white"/></svg>';
+fs.writeFileSync('public/icon.svg',svg);
+const browser=await chromium.launch({channel:'chrome',headless:true});const p=await browser.newPage();await p.route('**/*',r=>r.abort());
+for(const size of [192,512]){await p.setViewportSize({width:size,height:size});await p.setContent('<html><body style="margin:0">'+svg.replace('viewBox=',`width="${size}" height="${size}" viewBox=`)+'</body></html>');await p.locator('svg').screenshot({path:`public/icon-${size}.png`,omitBackground:true});}
+await browser.close();
+fs.writeFileSync('public/manifest.json',JSON.stringify({name:'Doo Doo Corporativo',short_name:'Doo Doo',id:'/',start_url:'/dashboard',scope:'/',display:'standalone',background_color:'#f8fafc',theme_color:'#2563eb',icons:[{src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any'}]},null,2));fs.copyFileSync('public/manifest.json','public/mainfest.json');console.log('Local manifest/icons generated from existing Doo Doo vector mark; no external requests.');

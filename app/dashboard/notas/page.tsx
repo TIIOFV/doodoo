@@ -126,9 +126,14 @@ export default function AnotacoesPage() {
       isOpen: true, title: 'Excluir Pasta', message: `Excluir permanentemente o caderno "${folderName}" e todas as anotações dentro dele?`,
       onConfirm: async () => {
         if (!await drafts.flushAll()) return;
-        const { error } = await supabase.from('doodoo_notas').delete().eq('cor', folderName).eq('usuario_id', userId);
+        const { data,error } = await supabase.from('doodoo_notas').delete().eq('cor', folderName).eq('usuario_id', userId).select('id');
         if (error) throw error;
-        setNotes(prev => prev.filter(n => n.folder !== folderName));
+        if(!data?.length)throw new Error('Nenhuma nota foi removida. Verifique o acesso e atualize a página.');
+        const removed=new Set(data.map(n=>n.id));
+        setNotes(prev => prev.filter(n => !removed.has(n.id)));
+        if(selectedNoteId&&removed.has(selectedNoteId))setSelectedNoteId(null);
+        for(const id of removed)drafts.forget(id);
+        if(notes.some(n=>n.folder===folderName&&!removed.has(n.id))){notifyBell('Exclusão parcial','Algumas notas não foram removidas. Atualize a página antes de continuar.');return;}
         if (selectedFolder === folderName) setSelectedFolder('Todas');
         notifyBell('Pasta Excluída', `O caderno "${folderName}" foi removido.`);
         setConfirmModal(prev => ({ ...prev, isOpen: false }));

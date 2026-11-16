@@ -1,0 +1,655 @@
+{
+  "browser": "157.0.8103.51",
+  "results": [
+    {
+      "area": "settings",
+      "name": "pending Auth identity survives refresh and profile retry does not sign up again",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "POST"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "POST"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "POST"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "settings",
+      "name": "role changes persist and own privilege controls are disabled",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "POST"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "settings",
+      "name": "permission role change and individual exception persist",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "settings",
+      "name": "delete disposable profile preserves shared Auth identity in mock",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "DELETE"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "POST"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "settings",
+      "name": "transcript and ZIP export contain fixture content and deleted markers",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "settings",
+      "name": "global retention purges old fixture messages and preserves recent ones",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "DELETE"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "settings",
+      "name": "manager cannot change global permissions or administrator role",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "settings",
+      "name": "channel deletion is one operation and rolls back children when denied",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "DELETE"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "DELETE"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "settings",
+      "name": "group history purge preserves channel and other channel messages",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "DELETE"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "settings",
+      "name": "retention returning zero rows does not claim deletion",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_logs",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "DELETE"
+        }
+      ],
+      "externalForwarded": 0
+    }
+  ]
+}

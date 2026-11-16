@@ -7,7 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "audit:homologation:prepare": "node scripts/phase-3-prepare.mjs",
+    "test:phase3:local": "node scripts/phase-3-local-tests.mjs",
+    "test:phase3:domain": "node scripts/phase-3-domain.mjs",
+    "test:phase3:regression": "node scripts/phase-3-flows.mjs",
+    "test:phase3:extended": "node scripts/phase-3-additional.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

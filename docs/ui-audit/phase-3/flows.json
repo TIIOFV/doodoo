@@ -449,6 +449,10 @@
       },
       {
         "table": "doodoo_perfis",
+        "method": "PATCH"
+      },
+      {
+        "table": "doodoo_perfis",
         "method": "GET"
       },
       {
@@ -458,10 +462,6 @@
       {
         "table": "doodoo_mensagens",
         "method": "GET"
-      },
-      {
-        "table": "doodoo_perfis",
-        "method": "PATCH"
       },
       {
         "table": "doodoo_canais",
@@ -1043,6 +1043,10 @@
       },
       {
         "table": "doodoo_perfis",
+        "method": "PATCH"
+      },
+      {
+        "table": "doodoo_perfis",
         "method": "GET"
       },
       {
@@ -1054,23 +1058,11 @@
         "method": "GET"
       },
       {
-        "table": "doodoo_perfis",
-        "method": "PATCH"
-      },
-      {
         "table": "doodoo_canais",
         "method": "PATCH"
       },
       {
         "table": "doodoo_perfis",
-        "method": "GET"
-      },
-      {
-        "table": "doodoo_mensagens",
-        "method": "GET"
-      },
-      {
-        "table": "doodoo_chat_notas",
         "method": "GET"
       },
       {
@@ -1082,8 +1074,20 @@
         "method": "GET"
       },
       {
+        "table": "doodoo_mensagens",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_chat_notas",
+        "method": "GET"
+      },
+      {
         "table": "doodoo_perfis",
         "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "PATCH"
       },
       {
         "table": "doodoo_perfis",
@@ -1096,10 +1100,6 @@
       {
         "table": "doodoo_canais",
         "method": "GET"
-      },
-      {
-        "table": "doodoo_perfis",
-        "method": "PATCH"
       },
       {
         "table": "doodoo_mensagens",
@@ -1259,13 +1259,13 @@
         "method": "GET"
       },
       {
-        "table": "doodoo_agenda",
-        "method": "GET"
-      },
-      {
         "table": "doodoo_accept_event",
         "method": "POST",
         "mockRpc": true
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
       },
       {
         "table": "doodoo_agenda",
@@ -1533,15 +1533,15 @@
       },
       {
         "table": "doodoo_perfis",
+        "method": "PATCH"
+      },
+      {
+        "table": "doodoo_perfis",
         "method": "GET"
       },
       {
         "table": "doodoo_canais",
         "method": "GET"
-      },
-      {
-        "table": "doodoo_perfis",
-        "method": "PATCH"
       },
       {
         "table": "doodoo_mensagens",
@@ -1617,6 +1617,10 @@
       },
       {
         "table": "doodoo_perfis",
+        "method": "PATCH"
+      },
+      {
+        "table": "doodoo_perfis",
         "method": "GET"
       },
       {
@@ -1626,10 +1630,6 @@
       {
         "table": "doodoo_mensagens",
         "method": "GET"
-      },
-      {
-        "table": "doodoo_perfis",
-        "method": "PATCH"
       },
       {
         "table": "doodoo_canais",
@@ -1688,16 +1688,16 @@
         "method": "GET"
       },
       {
+        "table": "doodoo_perfis",
+        "method": "PATCH"
+      },
+      {
         "table": "doodoo_canais",
         "method": "GET"
       },
       {
         "table": "doodoo_mensagens",
         "method": "GET"
-      },
-      {
-        "table": "doodoo_perfis",
-        "method": "PATCH"
       },
       {
         "table": "doodoo_mensagens",

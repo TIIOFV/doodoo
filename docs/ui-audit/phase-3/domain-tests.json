@@ -1,0 +1,26 @@
+[
+  {
+    "name": "midnight preserves hour and minute zero",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "00:30 preserves hour zero",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "invalid calendar and time values rejected",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "deadline crosses midnight and completed tasks stay closed",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "accent-insensitive search",
+    "status": "PASSOU LOCAL"
+  },
+  {
+    "name": "routine ID deterministic per source",
+    "status": "PASSOU LOCAL"
+  }
+]

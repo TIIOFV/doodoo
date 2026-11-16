@@ -1,3 +1,5 @@
+> **Fase 3:** [correções, diário editável e validação](phase-3-report.md) · [pacote de homologação revisável](../homologation/README.md). Nenhuma migration aplicada ou integração real aprovada.
+
 > **Fase 2:** [redesign e auditoria funcional](phase-2-report.md) · [resultados consolidados](phase-2/validation-summary.json) · [plano de homologação independente](phase-2-homologation-plan.md). Supabase compartilhado com Iris tratado como produção; validação de integração exclusivamente simulada.
 
 ﻿# Auditoria e correção UI/UX — Doo Doo

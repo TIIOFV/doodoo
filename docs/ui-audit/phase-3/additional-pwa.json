@@ -1,0 +1,70 @@
+{
+  "browser": "157.0.8103.51",
+  "results": [
+    {
+      "area": "pwa",
+      "name": "manifest, legacy alias, icons and protected start route are valid",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_notas",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    }
+  ]
+}
