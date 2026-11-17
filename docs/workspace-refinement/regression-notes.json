@@ -1,0 +1,322 @@
+[
+  {
+    "area": "notes",
+    "name": "rapid title/content edits persist both fields across reload",
+    "status": "PASSOU MOCK",
+    "requests": [
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "PATCH"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "PATCH"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      }
+    ],
+    "externalForwarded": 0
+  },
+  {
+    "area": "notes",
+    "name": "failed autosave retains draft and retry persists",
+    "status": "PASSOU MOCK",
+    "requests": [
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "PATCH"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "PATCH"
+      }
+    ],
+    "externalForwarded": 0
+  },
+  {
+    "area": "notes",
+    "name": "conflicting edits preserve both the confirmed version and the losing draft",
+    "status": "PASSOU MOCK",
+    "requests": [
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "PATCH"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "PATCH"
+      }
+    ],
+    "externalForwarded": 0
+  },
+  {
+    "area": "notes",
+    "name": "create, accent-insensitive search, refresh, delete and private isolation",
+    "status": "PASSOU MOCK",
+    "requests": [
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "POST"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_notas",
+        "method": "DELETE"
+      }
+    ],
+    "externalForwarded": 0
+  }
+]

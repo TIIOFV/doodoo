@@ -1,4 +1,6 @@
 'use client';
+import './settings-workspace.css';
+import NotificationPreferences from './NotificationPreferences';
 
 import { useHydrated } from '@/app/lib/useHydrated';
 import ModalShell from '../ModalShell';
@@ -787,7 +789,7 @@ export default function ConfiguracoesPage() {
   if (authError || !currentUser) return <Notice>Não foi possível carregar as configurações. Atualize a página para tentar novamente.</Notice>;
 
   return (
-    <div className="w-full h-full flex-1 flex flex-col animate-in fade-in duration-500 pb-0 relative z-0">
+    <div className="settings-workspace w-full h-full min-h-0 min-w-0 flex-1 flex flex-col animate-in fade-in duration-500 pb-0 relative z-0">
 
       {isPurgingGlobal && (
          <ModalShell open busy title="Limpeza em andamento" onClose={() => {}}>
@@ -871,9 +873,9 @@ export default function ConfiguracoesPage() {
         </div>
 
         {/* ÁREA DE CONTEÚDO PRINCIPAL (100% de largura) */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ backgroundColor: 'var(--bg-card)' }}>
+        <div className="settings-main min-h-0 min-w-0 flex-1 flex flex-col h-full overflow-hidden" style={{ backgroundColor: 'var(--bg-card)' }}>
 
-          <div className="p-5 md:p-8 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-0 flex-shrink-0" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}>
+          <div className="settings-header p-5 md:p-8 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-0 flex-shrink-0" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}>
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-brand-panel mb-1">Painel de Controlo</p>
               <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
@@ -881,7 +883,7 @@ export default function ConfiguracoesPage() {
                 {activeTab === 'usuarios' && 'Controle de Colaboradores'}
                 {activeTab === 'permissoes' && 'Permissões e Exceções VIP'}
                 {activeTab === 'categorias' && 'Categorias das Tarefas'}
-                {activeTab === 'notificacoes' && 'Privacidade do Sistema'}
+                {activeTab === 'notificacoes' && 'Notificações e privacidade'}
                 {activeTab === 'logs' && 'Auditoria de Sistema & Dados'}
               </h2>
             </div>
@@ -895,7 +897,7 @@ export default function ConfiguracoesPage() {
             </div>
           </div>
 
-          <div className="lg:hidden flex overflow-x-auto p-4 border-b space-x-3 flex-shrink-0 custom-scrollbar" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
+          <div className="settings-mobile-tabs lg:hidden flex overflow-x-auto p-4 border-b space-x-3 flex-shrink-0 custom-scrollbar" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
             {[
               { id: 'geral', label: 'Meu Perfil' },
               { id: 'notificacoes', label: 'Privacidade' },
@@ -917,10 +919,11 @@ export default function ConfiguracoesPage() {
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-5 md:p-8 space-y-6 custom-scrollbar">
+          <div className="settings-content min-h-0 min-w-0 flex-1 overflow-y-auto p-5 md:p-8 space-y-6 custom-scrollbar">
 
             {activeTab === 'geral' && (
               <form onSubmit={handleSaveProfile} className="space-y-6 max-w-3xl">
+                <section className="settings-appearance"><h3>Aparência do portal</h3><p>Escolha o tema que deixa sua rotina mais confortável.</p><label>Tema<select aria-label="Tema das configurações" value={theme} onChange={e=>changeTheme(e.target.value)}>{themes.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label></section>
                 <div className="p-6 md:p-8 rounded-3xl border space-y-6 shadow-sm" style={solidInputStyle}>
                   <h3 className="text-sm font-semibold uppercase tracking-wider opacity-75">Foto de Perfil (Avatar)</h3>
                   <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
@@ -1445,13 +1448,14 @@ export default function ConfiguracoesPage() {
             {/* PRIVACIDADE E NOTIFICAÇÕES */}
             {activeTab === 'notificacoes' && (
               <div className="space-y-4 max-w-3xl">
+                <NotificationPreferences userId={currentUser.user_id}/>
                 <div className="p-6 md:p-8 rounded-3xl border space-y-6" style={solidInputStyle}>
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-wider opacity-75 mb-4">Notificações do Sistema Doo Doo</h3>
                     <label className="flex items-center justify-between p-4 rounded-2xl border cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm group" style={solidCardStyle}>
                       <div>
                         <span className="font-semibold text-sm block">Notificações por E-mail</span>
-                        <span className="text-xs opacity-75 mt-0.5 block font-medium">Receba e-mails ao receber convites para Reuniões ou atribuição de Tarefas VIP.</span>
+                        <span className="text-xs opacity-75 mt-0.5 block font-medium">Preferência para convites e tarefas; o envio depende da configuração do serviço de e-mail.</span>
                       </div>
                       <input type="checkbox" checked={currentUser.email_notifications ?? false} onChange={() => handleTogglePrivacySetting('email_notifications')} disabled={isUpdatingPrivacy} className="w-5 h-5 rounded border-gray-300 accent-brand-panel cursor-pointer shadow-sm disabled:opacity-70 group-hover:scale-110 transition-transform" />
                     </label>
@@ -1464,7 +1468,7 @@ export default function ConfiguracoesPage() {
                     <label className="flex items-center justify-between p-4 rounded-2xl border cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm group" style={solidCardStyle}>
                       <div>
                         <span className="font-semibold text-sm block">Confirmação de Leitura (Visto Azul)</span>
-                        <span className="text-xs opacity-75 mt-0.5 block font-medium">Permitir que os seus colegas vejam exatamente o horário em que leu as mensagens diretas.</span>
+                        <span className="text-xs opacity-75 mt-0.5 block font-medium">Permitir que os seus colegas vejam que você leu as mensagens.</span>
                       </div>
                       <input type="checkbox" checked={currentUser.read_receipts ?? true} onChange={() => handleTogglePrivacySetting('read_receipts')} disabled={isUpdatingPrivacy} className="w-5 h-5 rounded border-gray-300 accent-brand-panel cursor-pointer shadow-sm disabled:opacity-70 group-hover:scale-110 transition-transform" />
                     </label>

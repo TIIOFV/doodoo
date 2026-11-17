@@ -24,7 +24,7 @@ interface SubStep { id: number; text: string; note?: string; done: boolean; }
 interface ChatComment { id: number | string; author: string; authorId?: string; text: string; time: string; isAlert?: boolean; editedAt?: string; }
 
 interface TaskItem {
-  id: string; title: string; description: string; category: string; priority: 'Normal' | 'Urgente'; status: 'pendente' | 'andamento' | 'bloqueado' | 'concluida';
+  creatorId?:string; id: string; title: string; description: string; category: string; priority: 'Normal' | 'Urgente'; status: 'pendente' | 'andamento' | 'bloqueado' | 'concluida';
   important: boolean; myDay: boolean; isRoutine: boolean; assignee: string; sector: string; assignedBy: string; dueDate: string; dueTime: string; createdAt: string;
   steps: SubStep[]; chat: ChatComment[];
 }
@@ -45,9 +45,9 @@ const getLocalTodayISO = () => {
 };
 
 
-interface DbTask { id: string; titulo: string; descricao?: string; categoria?: string; prioridade?: string; status: TaskItem['status']; importante?: boolean; meu_dia?: boolean; rotina?: boolean; responsavel?: string; setor?: string; atribuido_por?: string; data_limite?: string; hora_limite?: string; created_at?: string; etapas?: SubStep[]; chat?: ChatComment[]; metadata?: Record<string, unknown>; }
+interface DbTask { usuario_id?:string; id: string; titulo: string; descricao?: string; categoria?: string; prioridade?: string; status: TaskItem['status']; importante?: boolean; meu_dia?: boolean; rotina?: boolean; responsavel?: string; setor?: string; atribuido_por?: string; data_limite?: string; hora_limite?: string; created_at?: string; etapas?: SubStep[]; chat?: ChatComment[]; metadata?: Record<string, unknown>; }
 const mapDbToTask = (dbTask: DbTask): TaskItem => ({
-  id: dbTask.id, title: dbTask.titulo || 'Sem título', description: dbTask.descricao || '', category: dbTask.categoria || 'Geral',
+  creatorId:dbTask.usuario_id, id: dbTask.id, title: dbTask.titulo || 'Sem título', description: dbTask.descricao || '', category: dbTask.categoria || 'Geral',
   priority: dbTask.prioridade === 'Urgente' ? 'Urgente' : 'Normal', status: dbTask.status || 'pendente', important: Boolean(dbTask.importante),
   myDay: Boolean(dbTask.meu_dia), isRoutine: Boolean(dbTask.rotina), assignee: dbTask.responsavel || '', sector: dbTask.setor || 'Geral',
   assignedBy: dbTask.atribuido_por || 'Sistema', dueDate: dbTask.data_limite || '', dueTime: dbTask.hora_limite || '17:00',
@@ -63,7 +63,7 @@ const formatLinks = (text: string) => {
 
 export default function TarefasPage() {
   const dialogAction = useDialogAction();
-  const taskMotion = useTaskMotion();
+  const {root:taskMotionRoot,switchView:switchTaskView} = useTaskMotion();
   const recordActions = useRecordActions();
   const isMounted = useHydrated();
 
@@ -83,6 +83,9 @@ export default function TarefasPage() {
   const [selectedTaskId, setTaskSelection] = useState<string | null>(null);
 
   const [detailTab, setDetailTab] = useState<'overview' | 'updates'>('overview');
+  const [editingDeadline,setEditingDeadline]=useState(false);
+  const [deadlineDate,setDeadlineDate]=useState('');
+  const [deadlineTime,setDeadlineTime]=useState('17:00');
   const [isAddingStep, setIsAddingStep] = useState(false);
   const detailHeadingRef = useRef<HTMLHeadingElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -116,7 +119,7 @@ export default function TarefasPage() {
   const taskChatEndRef = useRef<HTMLDivElement>(null);
   const inputFieldRef = useRef<HTMLTextAreaElement>(null);
 
-  const setSelectedTaskId = (id: React.SetStateAction<string|null>) => { setTaskSelection(id); setIsEditingTask(false); setEditingStepId(null); setEditingComment(null); setChatInput(''); setIsDifficultyAlert(false); setIsAddingStep(false); setStepInput(''); setStepNoteInput(''); setDetailTab('overview'); };
+  const setSelectedTaskId = (id: React.SetStateAction<string|null>) => { setTaskSelection(id);setEditingDeadline(false); setIsEditingTask(false); setEditingStepId(null); setEditingComment(null); setChatInput(''); setIsDifficultyAlert(false); setIsAddingStep(false); setStepInput(''); setStepNoteInput(''); setDetailTab('overview'); };
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   const glassContainerStyle = panelStyle;
@@ -158,6 +161,10 @@ export default function TarefasPage() {
           if (equipeRes.error || tarefasRes.error || categoriasRes.error) throw equipeRes.error || tarefasRes.error || categoriasRes.error;
           if (tarefasRes.data) setTasks(tarefasRes.data.map(mapDbToTask));
           setSelectedTaskId(new URLSearchParams(window.location.search).get('taskId'));
+      const locationParams=new URLSearchParams(window.location.search);
+      const list=locationParams.get('list');
+      if(list==='meu-dia'||list==='todas'||list==='importante'||list==='rotinas'||list==='concluidas')setSmartList(list);
+      if(locationParams.get('queue')==='delegadas')setViewMode('delegadas');
           if (new URLSearchParams(window.location.search).get('tab') === 'updates') setDetailTab('updates');
           if (categoriasRes.data && categoriasRes.data.length > 0) {
             setTaskCategories(categoriasRes.data);
@@ -275,6 +282,10 @@ export default function TarefasPage() {
     const openFromUrl = () => {
       const params = new URLSearchParams(window.location.search);
       setSelectedTaskId(params.get('taskId'));
+      const locationParams=new URLSearchParams(window.location.search);
+      const list=locationParams.get('list');
+      if(list==='meu-dia'||list==='todas'||list==='importante'||list==='rotinas'||list==='concluidas')setSmartList(list);
+      if(locationParams.get('queue')==='delegadas')setViewMode('delegadas');
       if (params.get('tab') === 'updates') setDetailTab('updates');
     };
     const onOpen = (event: Event) => {
@@ -292,8 +303,8 @@ export default function TarefasPage() {
     if (detailTab === 'updates' && lastChat.current.taskId === selectedTask?.id && selectedTask.chat.length > lastChat.current.count) taskChatEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
     lastChat.current = { taskId: selectedTask?.id || '', count: selectedTask?.chat.length || 0 };
   }, [selectedTask?.id, selectedTask?.chat.length, detailTab]);
-  const openTask = (id: string) => { void taskMotion.switchView(() => setSelectedTaskId(id), 'open'); };
-  const closeTask = () => { void taskMotion.switchView(() => {
+  const openTask = (id: string) => { void switchTaskView(() => setSelectedTaskId(id), 'open'); };
+  const closeTask = () => { void switchTaskView(() => {
     const id = selectedTaskId;
     setSelectedTaskId(null);
     const url = new URL(window.location.href);
@@ -378,6 +389,16 @@ export default function TarefasPage() {
     }
     throw new Error('A tarefa mudou em outra sessão. Atualize e tente novamente.');
   });
+  const saveDeadline=async()=>{
+    if(!currentUser||!selectedTask||selectedTask.creatorId!==currentUser.user_id||!deadlineDate||!deadlineTime)return;
+    const actorId=currentUser.user_id;
+    const id=selectedTask.id;
+    const updated=await mutateTask(id,live=>{
+      if(live.usuario_id!==actorId)throw new Error('Somente quem criou a tarefa pode alterar o prazo.');
+      return {data_limite:deadlineDate.split('-').reverse().join('/'),hora_limite:deadlineTime};
+    });
+    if(updated){setEditingDeadline(false);notifyBell('Prazo atualizado','A nova data de entrega foi salva.');}
+  };
   const handleSaveTaskInfo = async () => {
     if (!selectedTask || !editTitle.trim() || !canEditTask) return;
     if (await mutateTask(selectedTask.id, () => ({ titulo: editTitle.trim(), descricao: editDesc.trim() }))) {
@@ -548,7 +569,7 @@ export default function TarefasPage() {
   if (authError || !currentUser) return <div className="w-full h-full flex flex-col items-center justify-center"><button onClick={handleForceLogout} className="px-6 py-3 rounded-2xl bg-brand-panel text-white font-medium"><LogOut className="w-4 h-4 mr-2 inline" />Sair</button></div>;
 
   return (
-    <div ref={taskMotion.root} aria-busy={recordActions.pending > 0} className={`task-workspace w-full h-full min-h-0 min-w-0 flex-1 flex flex-col animate-in fade-in duration-300 relative z-0`}>
+    <div ref={taskMotionRoot} aria-busy={recordActions.pending > 0} className={`task-workspace w-full h-full min-h-0 min-w-0 flex-1 flex flex-col animate-in fade-in duration-300 relative z-0`}>
 
       <div className="w-full flex-1 flex flex-col lg:flex-row rounded-xl rounded-bl-none rounded-br-none md:rounded-xl md:rounded-xl border-t border-l-0 border-r-0 border-b-0 md:border overflow-hidden relative z-10" style={glassContainerStyle}>
 
@@ -762,6 +783,7 @@ export default function TarefasPage() {
                 </select> : <strong>{selectedTask.assignee}</strong>}</div>
                 <div><span>Prazo de entrega</span><strong className={isTaskOverdue(selectedTask.dueDate, selectedTask.dueTime, selectedTask.status) ? 'text-[var(--error-text)]' : ''}><Calendar size={15}/>{selectedTask.dueDate || 'Sem prazo'}{selectedTask.dueDate && <small>às {selectedTask.dueTime}</small>}</strong></div>
               </div>
+              {selectedTask.creatorId===currentUser.user_id&&<div className="task-deadline-editor">{editingDeadline?<form onSubmit={e=>{e.preventDefault();void saveDeadline();}}><label>Nova data de entrega<input aria-label="Nova data de entrega" required type="date" value={deadlineDate} onChange={e=>setDeadlineDate(e.target.value)}/></label><label>Horário de entrega<input aria-label="Horário de entrega" required type="time" value={deadlineTime} onChange={e=>setDeadlineTime(e.target.value)}/></label><div><Button variant="secondary" disabled={recordActions.pending>0} onClick={()=>setEditingDeadline(false)}>Cancelar</Button><Button type="submit" disabled={recordActions.pending>0}>Salvar prazo</Button></div></form>:<button onClick={()=>{setDeadlineDate(selectedTask.dueDate.split('/').reverse().join('-'));setDeadlineTime(selectedTask.dueTime.slice(0,5));setEditingDeadline(true);}}><Calendar size={14}/>Alterar prazo de entrega</button>}</div>}
               <div className="task-flags" aria-label="Organização da tarefa">
                 <button disabled={recordActions.pending > 0} aria-pressed={selectedTask.myDay} onClick={() => toggleTaskFlag(selectedTask.id, 'myDay')}><Sun size={15}/>Meu Dia</button>
                 <button disabled={recordActions.pending > 0} aria-pressed={selectedTask.important} onClick={() => toggleTaskFlag(selectedTask.id, 'important')}><Star size={15} fill={selectedTask.important ? 'currentColor' : 'none'}/>Destacar</button>

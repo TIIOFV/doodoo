@@ -121,3 +121,9 @@
 .task-workspace .task-flags { padding:14px 0 0; }
 .task-workspace .task-journal-preview { margin:0; }
 .task-workspace .task-detail-footer { border:0; }
+.task-workspace .task-deadline-editor { border-top:1px solid var(--border-input); padding-top:8px; }
+.task-workspace .task-deadline-editor > button { display:flex; align-items:center; gap:6px; min-height:34px; color:var(--tab-active); font-size:11px; cursor:pointer; }
+.task-workspace .task-deadline-editor label { display:block; margin-bottom:10px; font-size:12px; color:var(--text-muted); }
+.task-workspace .task-deadline-editor input { display:block; width:100%; min-width:0; border:1px solid var(--border-input); border-radius:8px; padding:8px; margin-top:4px; background:var(--bg-input); }
+.task-workspace .task-deadline-editor form > div { display:flex; flex-wrap:wrap; gap:6px; }
+.task-workspace .task-deadline-editor .ui-button { min-height:34px; padding:6px 9px; font-size:11px; }

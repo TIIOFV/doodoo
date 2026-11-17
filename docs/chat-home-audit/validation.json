@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-17",
+  "environment": "Local isolated server with intercepted Auth/REST/Storage/Realtime; no remote writes",
+  "chromium": {
+    "cases": 10,
+    "passed": 10
+  },
+  "webkit": {
+    "cases": 10,
+    "passed": 10,
+    "deviceLimit": "Windows WebKit, not a physical installed iPhone PWA"
+  },
+  "chatRegressions": {
+    "workspace": 6,
+    "flows": 4
+  },
+  "typecheck": "PASS",
+  "build": "PASS: node scripts/phase-3-local.mjs build",
+  "changedFilesLint": "PASS",
+  "repositoryLint": {
+    "status": "3 existing issues outside this step",
+    "agenda": [
+      "render-time clock",
+      "effect state synchronization"
+    ],
+    "notes": [
+      "effect state synchronization"
+    ]
+  },
+  "privateTypingBackend": "Not inspected, migrated or validated remotely; review SQL authorization before production use",
+  "publication": "No commit, push or deploy"
+}

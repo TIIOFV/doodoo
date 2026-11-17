@@ -1,0 +1,45 @@
+[
+  {
+    "name": "manual presence survives inactivity, reload and navigation; auto-away recovers only for online preference",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "old direct conversations remain discoverable and directory refresh does not duplicate legacy rooms",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "presence save failures are visible and retry confirms the row",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "same-user tabs keep a visible session online and synchronize manual preference",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "peer does not become away between heartbeats and stale presence expires on screen",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "typing stays visible through long input, stops on blur and switching does not publish saved drafts",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "private typing denial is isolated to its channel and explicit retry reconnects securely",
+    "status": "PASS MOCK",
+    "verification": "Targeted rerun after stabilizing automatic reconnect timing"
+  },
+  {
+    "name": "new direct conversation supports typing before first message and membership removal closes the conversation",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "dashboard shows real priorities, delegated work, upcoming events and notes together on desktop/mobile",
+    "status": "PASS MOCK",
+    "verification": "Targeted rerun"
+  },
+  {
+    "name": "dashboard respects module access and recovers partial query failures without fake zero counts",
+    "status": "PASS MOCK",
+    "verification": "Targeted rerun"
+  }
+]

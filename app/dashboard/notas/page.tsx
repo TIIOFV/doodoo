@@ -1,4 +1,5 @@
 'use client';
+import './notes-workspace.css';
 
 import { useHydrated } from '@/app/lib/useHydrated';
 import ModalShell from '../ModalShell';
@@ -6,7 +7,7 @@ import { useDialogAction } from '../useDialogAction';
 
 import { Button,inputStyle,panelStyle,sidebarStyle } from '@/app/components/ui';
 import { notify as notifyBell,searchKey } from '@/app/lib/domain';
-import { ArrowLeft,Calendar,FileText,Folder,FolderOpen,FolderPlus,Loader2,Plus,Search,Shield,StickyNote,Trash2 } from 'lucide-react';
+import { ArrowLeft,Calendar,FileText,Folder,FolderOpen,FolderPlus,Download,Maximize2,Minimize2,Loader2,Plus,Search,Shield,StickyNote,Trash2 } from 'lucide-react';
 import { useEffect,useMemo,useRef,useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { storedNoteDrafts,useNoteDrafts,type NotePatch } from '../useNoteDrafts';
@@ -34,6 +35,7 @@ export default function AnotacoesPage() {
   const draftsRef = useRef(drafts);
   useEffect(() => { draftsRef.current = drafts; });
 
+  useEffect(()=>{if(drafts.status!=='saved')return;setNotes(prev=>{let changed=false;const next=prev.map(note=>{const version=drafts.version(note.id);if(version&&version!==note.updated_at){changed=true;return {...note,updated_at:version};}return note;});return changed?next:prev;});},[drafts.status]);
   const folders = useMemo(() => {
     const uniqueFolders = Array.from(new Set(notes.map(n => n.folder || 'Geral')));
     if (!uniqueFolders.includes('Geral')) uniqueFolders.unshift('Geral');
@@ -45,6 +47,9 @@ export default function AnotacoesPage() {
   const [newFolderName, setNewFolderName] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
+  const noteTitleRef=useRef<HTMLTextAreaElement>(null);
+  const [focusMode,setFocusMode]=useState(false);
+  const [sortBy,setSortBy]=useState<'recent'|'title'>('recent');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
@@ -179,11 +184,17 @@ export default function AnotacoesPage() {
         return searchKey(n.title || '').includes(q) || searchKey(n.content || '').includes(q);
       }
       return true;
-    });
-  }, [notes, selectedFolder, searchQuery]);
+    }).sort((a,b)=>sortBy==='title'?(a.title||'').localeCompare(b.title||'','pt-BR'):b.updated_at.localeCompare(a.updated_at));
+  }, [notes, selectedFolder, searchQuery,sortBy]);
 
   const selectedNote = useMemo(() => notes.find(n => n.id === selectedNoteId) || null, [notes, selectedNoteId]);
 
+  useEffect(()=>{
+    const node=noteTitleRef.current;if(!node)return;let width=node.clientWidth,frame=0;
+    const resize=()=>{node.style.height='auto';node.style.height=node.scrollHeight+'px';};resize();
+    const observer=new ResizeObserver(()=>{if(node.clientWidth!==width){width=node.clientWidth;cancelAnimationFrame(frame);frame=requestAnimationFrame(resize);}});observer.observe(node);
+    return()=>{observer.disconnect();cancelAnimationFrame(frame);};
+  },[selectedNote?.id,selectedNote?.title]);
   const formatTime = (dateStr: string) => {
     if (!isMounted) return '';
     const date = new Date(dateStr);
@@ -199,7 +210,7 @@ export default function AnotacoesPage() {
   }
 
   return (
-    <div onBlur={() => { void drafts.flushAll(); }} className="w-full h-full min-h-0 min-w-0 flex-1 flex flex-col animate-in fade-in duration-500 pb-0 relative z-0">
+    <div onBlur={() => { void drafts.flushAll(); }} data-focus={focusMode&&Boolean(selectedNoteId)} className="notes-workspace w-full h-full min-h-0 min-w-0 flex-1 flex flex-col animate-in fade-in duration-500 pb-0 relative z-0">
       {orphanDrafts.length>0&&<div role="alert" className="shrink-0 flex flex-wrap items-center gap-3 border rounded-xl p-3 mb-3" style={solidInputStyle}><p className="text-sm">Há rascunhos de notas removidas ou indisponíveis. Recupere como uma nova nota privada.</p>{orphanDrafts.map(d=><Button key={d.id} variant="secondary" disabled={dialogAction.pending} onClick={()=>dialogAction.run(async()=>{if(await handleDirectCreateNote(d.patch.titulo||'Nota recuperada',d.patch.conteudo||'',d.patch.cor||'Geral')){drafts.forget(d.id);setOrphanDrafts(prev=>prev.filter(v=>v.id!==d.id));}})}>Recuperar {d.patch.titulo||'rascunho'}</Button>)}</div>}
 
       <div className="w-full flex-1 flex flex-col lg:flex-row rounded-xl rounded-bl-none rounded-br-none md:rounded-xl border-t border-l-0 border-r-0 border-b-0 md:border overflow-hidden relative z-10" style={glassContainerStyle}>
@@ -207,12 +218,12 @@ export default function AnotacoesPage() {
         {/* ==========================================================
             COLUNA 1: MENU LATERAL DE PASTAS (Apenas Desktop)
             ========================================================== */}
-        <div className="hidden lg:flex flex-col w-[280px] xl:w-[320px] flex-shrink-0" style={glassSidebarStyle}>
+        <div className="notes-folders hidden lg:flex flex-col w-[280px] xl:w-[320px] flex-shrink-0" style={glassSidebarStyle}>
           <div className="p-6 md:p-8 space-y-8 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
 
             <div className="pb-5 border-b" style={{ borderColor: 'var(--border-input)' }}>
               <h3 className="font-semibold text-base tracking-tight">Bloco Pessoal</h3>
-              <p className="text-xs font-medium uppercase tracking-widest text-brand-panel mt-1">Sincronizado</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-brand-panel mt-1">{drafts.status==='saving'?'Salvando…':drafts.status==='error'?'Revisar salvamento':'Anotações privadas'}</p>
             </div>
 
             <div className="flex items-center space-x-4">
@@ -262,7 +273,7 @@ export default function AnotacoesPage() {
         {/* ==========================================================
             COLUNA 2: LISTA DE NOTAS (Dinâmica)
             ========================================================== */}
-        <div className={`${selectedNoteId ? 'hidden lg:flex lg:w-[350px] xl:w-[400px] lg:flex-none lg:border-r' : 'flex-1 w-full'} flex-col h-full overflow-hidden transition-all duration-300`} style={{ borderColor: 'var(--border-input)' }}>
+        <div className={`${selectedNoteId ? 'hidden lg:flex lg:w-[350px] xl:w-[400px] lg:flex-none lg:border-r' : 'flex-1 w-full'} notes-list flex-col min-h-0 min-w-0 h-full overflow-hidden transition-all duration-300`} style={{ borderColor: 'var(--border-input)' }}>
 
           {/* Cabeçalho Mobile */}
           <div className="lg:hidden flex flex-col border-b flex-shrink-0" style={{ borderColor: 'var(--border-input)' }}>
@@ -304,7 +315,7 @@ export default function AnotacoesPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Pesquisar notas..."
+                aria-label="Pesquisar anotações" placeholder="Pesquisar notas..."
                 className="w-full pl-10 pr-4 py-3.5 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors"
                 style={solidInputStyle}
               />
@@ -318,12 +329,13 @@ export default function AnotacoesPage() {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+          <div className="notes-list-scroll min-h-0 flex-1 overflow-y-auto p-4 md:p-6 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            <label className="notes-sort">Organizar<select aria-label="Ordenar anotações" value={sortBy} onChange={e=>setSortBy(e.target.value as typeof sortBy)}><option value="recent">Mais recentes</option><option value="title">Título A–Z</option></select></label>
             {filteredNotes.map(note => {
               const isSelected = selectedNote?.id === note.id;
               return (
                 <div role="button" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }}
-                  key={note.id}
+                  data-note-card key={note.id}
                   onClick={() => setSelectedNoteId(note.id)}
                   className={`p-5 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-3 ${isSelected ? 'shadow-sm scale-[1.01]' : 'hover:brightness-95 shadow-sm'}`}
                   style={{
@@ -356,16 +368,16 @@ export default function AnotacoesPage() {
         {/* ==========================================================
             COLUNA 3: EDITOR (Expande a 100% no Mobile)
             ========================================================== */}
-        <div className={`${selectedNoteId ? 'flex' : 'hidden'} flex-col min-h-0 min-w-0 flex-1 h-full overflow-hidden`} style={{ backgroundColor: 'var(--bg-card)' }}>
+        <div className={`${selectedNoteId ? 'flex' : 'hidden'} notes-editor flex-col min-h-0 min-w-0 flex-1 h-full overflow-hidden`} style={{ backgroundColor: 'var(--bg-card)' }}>
           {selectedNote && (
             <>
               <div className="flex shrink-0 items-center justify-between gap-3 border-b px-5 py-2" style={{borderColor:'var(--border-input)'}}><span role="status" className="text-xs text-[var(--text-muted)]">{drafts.status==='saving'?'Salvando alterações...':drafts.status==='error'?'Alterações não salvas. Rascunho preservado.':'Todas as alterações salvas'}</span>{drafts.status==='error'&&<div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={()=>drafts.flushAll()}>Tentar salvar novamente</Button><Button variant="secondary" onClick={()=>drafts.resolve(selectedNote.id)}>Mesclar rascunho</Button></div>}</div>
-              <div className="p-5 md:p-8 border-b flex flex-col gap-3 flex-shrink-0" style={{ borderColor: 'var(--border-input)' }}>
+              <div className="notes-editor-header p-5 md:p-8 border-b flex flex-col gap-3 flex-shrink-0" style={{ borderColor: 'var(--border-input)' }}>
                 <div className="w-full pr-2 flex flex-col">
 
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-2">
-                      <button onClick={() => setSelectedNoteId(null)} className="lg:hidden p-2 -ml-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center text-brand-panel font-semibold text-sm transition-colors">
+                      <button onClick={() => {setSelectedNoteId(null);setFocusMode(false);}} className=" p-2 -ml-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center text-brand-panel font-semibold text-sm transition-colors">
                         <ArrowLeft className="w-4 h-4 mr-1.5" /> Voltar
                       </button>
                       <span className="hidden lg:inline text-xs font-medium uppercase tracking-wider opacity-45">
@@ -373,7 +385,8 @@ export default function AnotacoesPage() {
                       </span>
                     </div>
 
-                    <select
+                    <div className="notes-editor-tools"><button type="button" aria-label={focusMode?'Sair do modo foco':'Modo foco'} onClick={()=>setFocusMode(v=>!v)}>{focusMode?<Minimize2 size={16}/>:<Maximize2 size={16}/>}</button><button type="button" aria-label="Exportar anotação" onClick={()=>{const url=URL.createObjectURL(new Blob([selectedNote.title+'\n\n'+selectedNote.content],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=(selectedNote.title||'anotacao').replace(/[<>:"/\\|?*]/g,'-').slice(0,100)+'.txt';a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}}><Download size={16}/></button></div>
+                    <select aria-label="Caderno da anotação"
                       value={selectedNote.folder}
                       onChange={(e) => handleUpdateNote(selectedNote.id, { folder: e.target.value })}
                       className="text-xs font-semibold px-3.5 py-2 rounded-xl border outline-none cursor-pointer focus:border-brand-panel transition-colors shadow-sm"
@@ -385,17 +398,17 @@ export default function AnotacoesPage() {
                     </select>
                   </div>
 
-                  <input
-                    type="text"
+                  <textarea ref={noteTitleRef}
+                    rows={1}
                     aria-label="Título da anotação" value={selectedNote.title}
                     onChange={(e) => handleUpdateNote(selectedNote.id, { title: e.target.value })}
                     placeholder="Título da anotação..."
-                    className="text-2xl font-semibold leading-tight p-1 bg-transparent border-b border-transparent hover:border-black/10 dark:hover:border-white/10 focus:border-brand-panel outline-none w-full transition-colors break-words whitespace-normal"
+                    className="notes-title text-2xl font-semibold leading-tight p-1 bg-transparent border-b border-transparent hover:border-black/10 dark:hover:border-white/10 focus:border-brand-panel outline-none w-full transition-colors break-words whitespace-normal"
                   />
                 </div>
               </div>
 
-              <div className="flex-1 p-5 md:p-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] flex min-h-0 flex-col">
+              <div className="notes-content min-w-0 flex-1 p-5 md:p-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] flex min-h-0 flex-col">
                 <textarea
                   aria-label="Conteúdo da anotação" value={selectedNote.content || ''}
                   onChange={(e) => handleUpdateNote(selectedNote.id, { content: e.target.value })}
@@ -405,9 +418,9 @@ export default function AnotacoesPage() {
                 />
               </div>
 
-              <div className="p-5 md:p-6 pb-6 border-t flex flex-col sm:flex-row items-center justify-between text-xs gap-4 sm:gap-0 flex-shrink-0" style={{ borderColor: 'var(--border-input)' }}>
+              <div className="notes-footer p-5 md:p-6 pb-6 border-t flex flex-col sm:flex-row items-center justify-between text-xs gap-4 sm:gap-0 flex-shrink-0" style={{ borderColor: 'var(--border-input)' }}>
                 <span className="opacity-70 font-medium text-xs text-center sm:text-left w-full sm:w-auto">
-                  Este documento é visível apenas para você.
+                  {selectedNote.content.trim().split(/\s+/).filter(Boolean).length} palavras · Documento privado
                 </span>
 
                 <button onClick={() => confirmDeleteNote(selectedNote.id)} className="w-full sm:w-auto px-6 py-3.5 rounded-xl text-[var(--error-text)] hover:text-white hover:bg-red-500 bg-red-500/10 font-medium flex items-center justify-center space-x-2 cursor-pointer transition-colors shadow-sm">

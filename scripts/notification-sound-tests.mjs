@@ -1,0 +1,12 @@
+import fs from 'node:fs';import ts from 'typescript';import assert from 'node:assert/strict';
+const values=new Map();globalThis.localStorage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value)};globalThis.window={dispatchEvent:()=>{}};
+let starts=0,contexts=0,now=100000;Date.now=()=>now;
+globalThis.AudioContext=class{constructor(){contexts++;this.state='suspended';this.currentTime=0;this.destination={};}async resume(){this.state='running';}createOscillator(){return{frequency:{},connect(){},start(){starts++;},stop(){}};}createGain(){return{gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}};}};
+const js=ts.transpileModule(fs.readFileSync('app/lib/notificationSound.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
+const {readSoundPreference,saveSoundPreference,unlockPortalAudio,playPortalSound}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
+assert.equal(playPortalSound('user'),false);assert.equal(contexts,0,'audio started without gesture');await unlockPortalAudio();assert.equal(starts,0,'a blocked sound was queued');
+assert.equal(playPortalSound('user'),true);assert.equal(playPortalSound('user'),false,'burst was not throttled');assert.equal(starts,2);
+saveSoundPreference('user',{enabled:false,volume:.18,tone:'soft'});now+=6000;assert.equal(playPortalSound('user'),false,'mute ignored');assert.equal(playPortalSound('user',true),true,'explicit preview unavailable');
+saveSoundPreference('user',{enabled:true,volume:0,tone:'chime'});now+=6000;assert.equal(playPortalSound('user'),false,'zero volume ignored');
+assert.equal(readSoundPreference('other').enabled,true,'preferences leaked to another user');values.set('doodoo:sound:user','{"volume":999}');assert.equal(readSoundPreference('user').volume,.5);await unlockPortalAudio();assert.equal(contexts,1,'audio context leaked');
+console.log('PASS sound: no autoplay or delayed queue, mute, quiet volume bounds, preview, burst limiting and per-user storage.');

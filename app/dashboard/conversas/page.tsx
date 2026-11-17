@@ -1,5 +1,9 @@
 'use client';
 import './chat-workspace.css';
+import {useChatTyping} from './useChatTyping';
+import {PortalPresenceContext} from '../usePortalPresence';
+import {getRealUserStatus,type UserStatusType} from '../../lib/chatPresence';
+import {playPortalSound} from '../../lib/notificationSound';
 import { useSignOut } from '@/app/lib/useSignOut';
 
 import ModalShell from '../ModalShell';
@@ -9,12 +13,11 @@ import { messageOf,occurrenceId,requireResult,searchKey } from '@/app/lib/domain
 import {confirmOutgoing,pendingOutgoing,retainOutgoing} from '@/app/lib/chatOutbox';
 import type { ChannelRow,Member,MessageMetadata,MessageRow } from '@/app/lib/models';
 import { BellRing,ArrowDown,AlertTriangle,ArrowLeft,Calendar,Check,CheckCheck,Clock,Download,FileText,Image as ImageIcon,Loader2,LogOut,Megaphone,MessageSquare,Paperclip,Reply,Search,Send,Smile,Trash2,UserPlus,Users,X } from 'lucide-react';
-import { useCallback,useEffect,useMemo,useRef,useState } from 'react';
+import { useCallback,useContext,useEffect,useMemo,useRef,useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRecordActions } from '../useRecordActions';
 
 type RoleType = 'administrador' | 'gestor' | 'coordenador' | 'supervisor' | 'analista' | 'colaborador';
-type UserStatusType = 'online' | 'ausente' | 'ocupado' | 'indisponivel' | 'offline';
 
 interface DBProfile { id: string; user_id: string; nome: string; email: string; cargo: RoleType; setor: string; avatar_url?: string; status_presenca?: UserStatusType; last_seen?: string; read_receipts?: boolean; }
 interface ReplyInfo { id: string; sender: string; text: string; }
@@ -61,35 +64,7 @@ const mapDbToMessage = (dbMsg: MessageRow): Message => ({
   eventDetails: dbMsg.metadata?.eventDetails, acceptedBy: dbMsg.metadata?.acceptedBy || [], lidoPor: dbMsg.metadata?.lidoPor || [], replyTo: dbMsg.metadata?.replyTo, created_at: dbMsg.created_at, deleted: dbMsg.metadata?.deleted || false, metadata: dbMsg.metadata
 });
 
-const getRealUserStatus = (profile?: DBProfile | null): { status: UserStatusType; label: string; color: string; lastSeenText: string } => {
-  if (!profile) return { status: 'offline', label: 'Offline', color: 'bg-gray-400', lastSeenText: 'Offline' };
-  let lastSeenText = 'Visto por último recentemente';
-  let diffSeconds = 999999;
-  if (profile.last_seen) {
-    const seenDate = new Date(profile.last_seen);
-    diffSeconds = (new Date().getTime() - seenDate.getTime()) / 1000;
-    const timeStr = seenDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const isToday = seenDate.toDateString() === new Date().toDateString();
-    lastSeenText = isToday ? `Hoje às ${timeStr}` : `Visto em ${seenDate.toLocaleDateString('pt-BR')} às ${timeStr}`;
-  }
-  if (profile.status_presenca === 'offline' || diffSeconds > 65) return { status: 'offline', label: 'Offline', color: 'bg-gray-400', lastSeenText };
-  if (profile.status_presenca === 'ocupado') return { status: 'ocupado', label: 'Ocupado', color: 'bg-red-500', lastSeenText: 'Não perturbe' };
-  if (profile.status_presenca === 'indisponivel') return { status: 'indisponivel', label: 'Indisponível', color: 'bg-purple-500', lastSeenText: 'Em atendimento' };
-  if (profile.status_presenca === 'ausente' || diffSeconds > 35) return { status: 'ausente', label: 'Ausente', color: 'bg-amber-500 animate-pulse', lastSeenText };
-  return { status: 'online', label: 'Online', color: 'bg-emerald-500', lastSeenText: 'Online agora' };
-};
 
-const playNotificationSound = () => {
-  try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.type = 'sine'; osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
-    gain.gain.setValueAtTime(0.08, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + 0.2); osc.onended = () => { void ctx.close(); };
-  } catch { }
-};
 
 const formatLinks = (text: string) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -111,8 +86,12 @@ export default function ConversasPage() {
 
   const [currentUser, setCurrentUser] = useState<DBProfile | null>(null);
   const [chatConnection,setChatConnection]=useState('Conectando…');
+  const [focusedMessageId,setFocusedMessageId]=useState<string|null>(()=>typeof window==='undefined'?null:new URLSearchParams(window.location.search).get('messageId'));
   const focusedScroll=useRef<string|null>(null);
-  const [userStatus, setUserStatus] = useState<UserStatusType>('online');
+  const presence=useContext(PortalPresenceContext);
+  const userStatus=presence.status;
+  const [presenceTime,tickPresence]=useState(()=>Date.now());
+  useEffect(()=>{const timer=setInterval(()=>tickPresence(Date.now()),10000);return()=>clearInterval(timer);},[]);
   const [teamMembers, setTeamMembers] = useState<DBProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
@@ -140,12 +119,13 @@ export default function ConversasPage() {
       const params = new URLSearchParams(window.location.search);
       const cId = params.get('chatId');
       if (cId) pendingChatIdRef.current = cId;
-      setFocusedMessageId(params.get('messageId'));
+
     }
   }, []);
 
   const [drafts, setDrafts] = useState<Record<string,string>>({});
   const inputText = drafts[activeChatId || ''] || '';
+  const typing=useChatTyping(currentUser?.user_id,channels,activeChatId);
   const setInputText = (value: React.SetStateAction<string>) => { const id=activeChatIdRef.current;if(id)setDrafts(prev=>({...prev,[id]:typeof value==='function'?value(prev[id]||''):value})); };
 
   const [replyingTo, setReplyingTo] = useState<ReplyInfo | null>(null);
@@ -156,7 +136,7 @@ export default function ConversasPage() {
   const [urgentChannelId,setUrgentChannelId]=useState<string|null>(null);
   const urgentLocks=useRef(new Set<string>());
   const [awayFromBottom,setAwayFromBottom]=useState(false);
-  const [focusedMessageId,setFocusedMessageId]=useState<string|null>(null);
+
 
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -187,31 +167,36 @@ export default function ConversasPage() {
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => { messagesEndRef.current?.scrollIntoView({ behavior,block:'nearest' }); }, []);
   useEffect(()=>{if(stickToBottom.current)scrollToBottom('auto');},[activeMessages.length,activeChatId,scrollToBottom]);
 
-  const updateStatusInDatabase = useCallback(async (newStatus: UserStatusType) => {
-    setUserStatus(newStatus);
-    if (!currentUser) return;
-    await supabase.from('doodoo_perfis').update({ status_presenca: newStatus, last_seen: new Date().toISOString() }).eq('user_id', currentUser.user_id);
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    const sendHeartbeat = async () => { await supabase.from('doodoo_perfis').update({ last_seen: new Date().toISOString(), status_presenca: userStatus }).eq('user_id', currentUser.user_id); };
-    sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 60000);
-    return () => clearInterval(interval);
-  }, [currentUser, userStatus]);
-
-  useEffect(() => {
-    let idleTimer: NodeJS.Timeout;
-    const resetTimer = () => {
-      clearTimeout(idleTimer);
-      if (userStatus === 'ausente') updateStatusInDatabase('online');
-      idleTimer = setTimeout(() => updateStatusInDatabase('ausente'), 3 * 60 * 1000);
+  useEffect(()=>{
+    if(!currentUser)return;
+    let mounted=true,loading=false;
+    const refresh=async()=>{
+      if(loading||document.visibilityState!=='visible')return;loading=true;
+      try{
+        const [{data:profiles,error:profilesError},{data:rows,error:channelsError}]=await Promise.all([supabase.from('doodoo_perfis').select('*').eq('status','ativo'),supabase.from('doodoo_canais').select('*')]);
+        if(!mounted)return;
+        if(!profilesError&&profiles)setTeamMembers(profiles);
+        if(!channelsError&&rows){
+          const permitted=rows.filter(c=>c.membros?.some((m:Member)=>m.user_id===currentUser.user_id));
+          const id=activeChatIdRef.current;
+          if(id&&!id.startsWith('temp_')&&!permitted.some(c=>c.id===id)){setActiveChatId(null);setIsInfoDrawerOpen(false);}
+          setChannels(prev=>{
+            const candidates:ChatChannel[]=[...prev.filter(c=>c.id.startsWith('temp_')),...permitted.map(c=>{
+              const previous=prev.find(p=>p.id===c.id),peer=c.membros.find((m:Member)=>m.user_id!==currentUser.user_id);
+              return {...previous,id:c.id,name:c.is_direct?(profiles?.find(p=>p.user_id===peer?.user_id)?.nome||peer?.name||'Conversa'):c.nome,isGroup:c.is_group,isDirect:c.is_direct,members:c.membros,foto_url:c.foto_url,sector:c.setor,unread:previous?.unread||0,updatedAt:previous?.updatedAt||c.created_at};
+            })];
+            // Keep the chosen direct room stable if legacy duplicates exist for a pair.
+            candidates.sort((a,b)=>Number(b.id===id)-Number(a.id===id)||Number(prev.some(p=>p.id===b.id))-Number(prev.some(p=>p.id===a.id)));
+            const peers=new Set<string>();
+            return candidates.filter(c=>{if(!c.isDirect)return true;const peer=c.members.find(m=>m.user_id!==currentUser.user_id)?.user_id;if(!peer||peers.has(peer))return false;peers.add(peer);return true;}).sort((a,b)=>a.name==='Geral'?-1:b.name==='Geral'?1:new Date(b.updatedAt||0).getTime()-new Date(a.updatedAt||0).getTime());
+          });
+        }
+      }catch{ /* Keep the last directory snapshot until the next successful refresh. */ }finally{loading=false;}
     };
-    window.addEventListener('mousemove', resetTimer); window.addEventListener('keydown', resetTimer); window.addEventListener('click', resetTimer);
-    resetTimer();
-    return () => { clearTimeout(idleTimer); window.removeEventListener('mousemove', resetTimer); window.removeEventListener('keydown', resetTimer); window.removeEventListener('click', resetTimer); };
-  }, [userStatus, updateStatusInDatabase]);
+    const timer=setInterval(()=>void refresh(),30000),visible=()=>{void refresh();};
+    window.addEventListener('online',visible);window.addEventListener('focus',visible);document.addEventListener('visibilitychange',visible);
+    return()=>{mounted=false;clearInterval(timer);window.removeEventListener('online',visible);window.removeEventListener('focus',visible);document.removeEventListener('visibilitychange',visible);};
+  },[currentUser]);
 
   const activeChat = useMemo(() => channels.find(c => c.id === activeChatId) || null, [channels, activeChatId]);
 
@@ -245,14 +230,12 @@ export default function ConversasPage() {
         if (session?.user) {
           const { data } = await supabase.from('doodoo_perfis').select('*').eq('user_id', session.user.id).maybeSingle();
           perfilAtual = data;
-          await supabase.from('doodoo_perfis').update({ status_presenca: 'online', last_seen: new Date().toISOString() }).eq('user_id', session.user.id);
         }
 
         if (!session?.user || !perfilAtual) { setAuthError(true); return; }
 
         if (perfilAtual) {
           setCurrentUser(perfilAtual);
-          if (perfilAtual.status_presenca) setUserStatus(perfilAtual.status_presenca);
 
           const seteDias = new Date(); seteDias.setDate(seteDias.getDate() - 7);
 
@@ -353,13 +336,8 @@ export default function ConversasPage() {
             }
           });
 
-          let canaisValidos = [...groupChats, ...Array.from(directChatsMap.values())];
+          const canaisValidos = [...groupChats, ...Array.from(directChatsMap.values())];
 
-          canaisValidos = canaisValidos.filter(c => {
-            if (c.isGroup) return true;
-            if (c.id === targetId || c.id === chatToFocusFirst) return true;
-            return recentMsgs.some(m => m.canal_id === c.id);
-          });
 
           canaisValidos.sort((a, b) => {
             if (a.name === 'Geral') return -1;
@@ -562,14 +540,14 @@ export default function ConversasPage() {
           });
 
           if (incoming.sender_id !== currentUser.user_id) {
-            playNotificationSound();
+            playPortalSound(currentUser.user_id);
             if (currentUser.read_receipts === true) {
                void mergeMetadata(incoming.id,value=>({...value,lidoPor:Array.from(new Set([...(value.lidoPor||[]),currentUser.nome]))})).catch(()=>notifyBell('Leitura não sincronizada','Não foi possível confirmar a leitura desta mensagem.'));
             }
           }
           if(stickToBottom.current)scrollToBottom('smooth');
         } else if (incoming.sender_id !== currentUser.user_id) {
-          playNotificationSound();
+          playPortalSound(currentUser.user_id);
         }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'doodoo_mensagens' }, (payload) => {
@@ -614,7 +592,10 @@ export default function ConversasPage() {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'doodoo_canais' }, (payload) => {
         const updated = payload.new;
-        setChannels(prev => prev.map(c => c.id === updated.id ? { ...c, foto_url: updated.foto_url, members: updated.membros, name: c.isDirect ? c.name : updated.nome } : c));
+        const members=Array.isArray(updated.membros)?updated.membros:[];
+        const remains=members.some((m:Member)=>m.user_id===currentUser.user_id);
+        setChannels(prev => remains?prev.map(c => c.id === updated.id ? { ...c, foto_url: updated.foto_url, members, name: c.isDirect ? c.name : updated.nome } : c):prev.filter(c=>c.id!==updated.id));
+        if(!remains&&activeChatIdRef.current===updated.id){setActiveChatId(null);setIsInfoDrawerOpen(false);}
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'doodoo_canais' }, (payload) => {
         const deletedId = payload.old?.id || (payload.old as {old_record?:{id:string}})?.old_record?.id;
@@ -628,12 +609,12 @@ export default function ConversasPage() {
     return () => { supabase.removeChannel(globalSub); };
   }, [currentUser, scrollToBottom, mergeMetadata, notifyBell, fetchMessagesForActiveChannel]);
 
-  const resolveChannel = async (requestedId:string) => {
+  const resolveChannel = async (requestedId:string,seed?:ChatChannel) => {
     if(!currentUser||!requestedId)throw new Error('Selecione uma conversa válida.');
     let targetChannelId=requestedId;
     if(targetChannelId.startsWith('temp_chat_')) {
       const temporaryId=targetChannelId;
-      const channel=channels.find(c=>c.id===temporaryId);if(!channel)throw new Error('Conversa indisponível');
+      const channel=seed||channels.find(c=>c.id===temporaryId);if(!channel)throw new Error('Conversa indisponível');
       if(!directRequests.current.has(temporaryId))directRequests.current.set(temporaryId,(async()=>{
         const id=await occurrenceId('direct:'+channel.members.map(m=>m.user_id).sort().join(':'));
         const result=await supabase.from('doodoo_canais').insert({id,nome:channel.name,is_group:false,is_direct:true,membros:channel.members}).select('*').single();
@@ -728,16 +709,17 @@ export default function ConversasPage() {
     const cooldownKey='doodoo:urgent:'+currentUser?.user_id+':'+activeChatId;
     if(urgent){
       let last=0;try{last=Number(sessionStorage.getItem(cooldownKey)||0);}catch{}
-      if(urgentLocks.current.has(activeChatId)||Date.now()-last<60000){notifyBell('Aguarde um momento','Você já chamou a atenção desta conversa. Aguarde um minuto para outra urgência.');return;}
+      if(urgentLocks.current.has(activeChatId)||new Date().getTime()-last<60000){notifyBell('Aguarde um momento','Você já chamou a atenção desta conversa. Aguarde um minuto para outra urgência.');return;}
       urgentLocks.current.add(activeChatId);
     }
+    typing.stop();
     setInputText('');
     if (inputFieldRef.current) inputFieldRef.current.style.height = 'auto';
     const id=activeChatIdRef.current;
     try {
       const sent=await sendToDatabase('text',textToSend,urgent?{urgent:true}: {},undefined,id);
       if(!sent&&id)setDrafts(prev=>({...prev,[id]:prev[id]?prev[id]+'\n'+textToSend:textToSend}));
-      if(sent&&urgent){setUrgentChannelId(null);try{sessionStorage.setItem(cooldownKey,String(Date.now()));}catch{}}
+      if(sent&&urgent){setUrgentChannelId(null);try{sessionStorage.setItem(cooldownKey,String(new Date().getTime()));}catch{}}
     } catch(error) {
       if(id)setDrafts(prev=>({...prev,[id]:prev[id]?prev[id]+'\n'+textToSend:textToSend}));
       notifyBell('Falha no envio',messageOf(error));
@@ -745,6 +727,7 @@ export default function ConversasPage() {
   };
 
   const handleInputResize = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    typing.input(e.target.value);
     setInputText(e.target.value);
     e.target.style.height = 'auto';
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
@@ -927,6 +910,7 @@ export default function ConversasPage() {
     setActiveChatId(tempId);
     if (typeof window !== 'undefined') window.history.replaceState(null, '', `/dashboard/conversas?chatId=${tempId}`);
     setSearchQuery('');
+    try{await resolveChannel(tempId,newDirect);}catch{notifyBell('Conversa ainda não conectada','Você pode escrever; ao enviar, vamos tentar conectar novamente.');}
   };
 
   const mutateMembers=async(id:string,transform:(members:Member[])=>Member[])=>recordActions.run('members:'+id,async()=>{
@@ -1053,12 +1037,14 @@ export default function ConversasPage() {
                   <span className={`w-3.5 h-3.5 rounded-full flex-shrink-0 shadow-sm ${userStatus === 'online' ? 'bg-emerald-500' : userStatus === 'ausente' ? 'bg-amber-500 animate-pulse' : userStatus === 'ocupado' ? 'bg-red-500' : userStatus === 'indisponivel' ? 'bg-purple-500' : 'bg-gray-400'}`} />
                   <span className="truncate flex-1">{currentUser.nome}</span>
                 </div>
-                <select value={userStatus} onChange={e => updateStatusInDatabase(e.target.value as UserStatusType)} className="bg-transparent text-xs uppercase font-semibold outline-none cursor-pointer opacity-70 hover:opacity-100 flex-shrink-0">
+                <select aria-label="Meu status no chat" aria-busy={presence.sync==='saving'} value={presence.preference} onChange={e => presence.choose(e.target.value as UserStatusType)} className="bg-transparent text-xs uppercase font-semibold outline-none cursor-pointer opacity-70 hover:opacity-100 flex-shrink-0">
                   <option value="online">Online</option><option value="ausente">Ausente</option><option value="ocupado">Ocupado</option><option value="indisponivel">Indisponível</option><option value="offline">Offline</option>
                 </select>
               </div>
             </div>
 
+{presence.sync==='error'&&<p className="chat-presence-feedback" role="status">Não foi possível atualizar sua presença. <button type="button" onClick={presence.retry}>Tentar novamente</button></p>}
+            {presence.status==='ausente'&&presence.preference==='online'&&<p className="chat-presence-feedback">Ausente por inatividade. Seu status volta ao usar o portal.</p>}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-widest opacity-70 px-1">Canais e Diretos</span>
@@ -1085,10 +1071,10 @@ export default function ConversasPage() {
               <div className="mb-4">
                 <span className="text-xs font-semibold uppercase tracking-wider opacity-70 px-2 mb-3 block">Colaboradores</span>
                 {filteredTeamMembers.map(colab => {
-                  const peerStatus = getRealUserStatus(colab);
+                  const peerStatus = getRealUserStatus(colab,presenceTime);
                   return (
                     <button key={colab.user_id} onClick={() => handleOpenDirectChat(colab)} className="w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center space-x-3.5 my-1.5 bg-black/5 dark:bg-white/5 border-transparent hover:bg-black/10 dark:hover:bg-white/10 shadow-sm hover:scale-[1.01]">
-                      <div className="relative flex-shrink-0">
+                      <div className="chat-avatar relative flex-shrink-0">
                         {colab.avatar_url ? <img src={colab.avatar_url} alt="" className="w-10 h-10 rounded-xl object-cover shadow-sm border border-white/20" /> : <div className="w-10 h-10 rounded-xl bg-brand-panel text-white font-semibold flex items-center justify-center text-[12px] shadow-sm">{getInitials(colab.nome)}</div>}
                         <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm ${peerStatus.color}`} />
                       </div>
@@ -1117,12 +1103,12 @@ export default function ConversasPage() {
                   className={`w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center space-x-3.5 ${isActive ? 'bg-brand-panel text-white shadow-sm border-transparent scale-[1.02]' : 'hover:bg-black/5 dark:hover:bg-white/5 shadow-sm'}`}
                   style={!isActive ? { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-input)' } : undefined}
                 >
-                  <div className="relative flex-shrink-0">
+                  <div className="chat-avatar relative flex-shrink-0">
                     {isGeneralGroup ? <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${isActive ? 'bg-white/20 text-white' : 'bg-brand-panel/10 text-brand-panel'}`}><Megaphone className="w-6 h-6" /></div>
                     : chat.foto_url ? <img src={chat.foto_url} alt="" className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-white/20" />
                     : peerForChannel?.avatar_url ? <img src={peerForChannel.avatar_url} alt="" className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-white/20" />
                     : <div className={`w-12 h-12 rounded-2xl text-white font-semibold flex items-center justify-center text-sm shadow-sm ${isActive ? 'bg-white/20' : 'bg-brand-panel'}`}>{getInitials(displayName)}</div>}
-                    {chat.isDirect && peerForChannel && <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white shadow-sm ${getRealUserStatus(peerForChannel).color}`} />}
+                    {chat.isDirect && peerForChannel && <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white shadow-sm ${getRealUserStatus(peerForChannel,presenceTime).color}`} />}
                   </div>
                   <div className="overflow-hidden flex-1 min-w-0">
                     <div className="flex items-center justify-between">
@@ -1130,7 +1116,7 @@ export default function ConversasPage() {
                       {chat.lastMessageTime && <span className={`text-xs font-medium ml-2 flex-shrink-0 ${isActive ? 'text-white/80' : 'opacity-45'}`}>{chat.lastMessageTime}</span>}
                     </div>
                     <div className="flex items-center justify-between mt-1">
-                      <p className={`text-[12px] truncate font-medium ${isActive ? 'text-white/85' : 'opacity-75'}`}>{chat.lastMessage || (chat.isDirect ? getRealUserStatus(peerForChannel).label : `${chat.members.length} membros`)}</p>
+                      <p className={`text-[12px] truncate font-medium ${isActive ? 'text-white/85' : 'opacity-75'}`}>{typing.label(chat.id)?<span className="chat-typing-text">{typing.label(chat.id)}</span>:chat.lastMessage || (chat.isDirect ? getRealUserStatus(peerForChannel,presenceTime).label : `${chat.members.length} membros`)}</p>
                       {chat.unread > 0 && !isActive && <span className="ml-2 px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-semibold shadow-sm animate-bounce">{chat.unread}</span>}
                     </div>
                   </div>
@@ -1146,21 +1132,21 @@ export default function ConversasPage() {
 
             {/* CABEÇALHO DO CHAT */}
             <div role="button" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }} onClick={() => setIsInfoDrawerOpen(!isInfoDrawerOpen)} className="chat-conversation-header p-4 md:p-6 border-b flex items-center justify-between cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors shadow-sm z-10 flex-shrink-0" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
-              <div className="flex items-center space-x-3.5 overflow-hidden">
+              <div className="chat-header-identity flex items-center space-x-3.5 min-w-0">
                 {/* 🚀 BOTÃO VOLTAR (LIMPA O CHAT ATIVO - MOBILE ONLY) */}
                 <button aria-label="Voltar" onClick={(e) => { e.stopPropagation(); setActiveChatId(null); if (typeof window !== 'undefined') window.history.replaceState(null, '', '/dashboard/conversas'); }} className="lg:hidden p-2 -ml-2 mr-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-brand-panel font-semibold text-sm transition-colors flex items-center">
                   <ArrowLeft className="w-5 h-5" />
                 </button>
-                <div className="relative flex-shrink-0">
+                <div className="chat-avatar relative flex-shrink-0">
                   {activeChat.name === 'Geral' ? <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-brand-panel/10 text-brand-panel shadow-inner border" style={{ borderColor: 'var(--border-input)' }}><Megaphone className="w-5 h-5" /></div>
                   : activeChat.foto_url ? <img src={activeChat.foto_url} alt="" className="w-11 h-11 rounded-2xl object-cover shadow-sm border border-white/20" />
                   : directPeer?.avatar_url ? <img src={directPeer.avatar_url} alt="" className="w-11 h-11 rounded-2xl object-cover shadow-sm border border-white/20" />
                   : <div className="w-11 h-11 rounded-2xl bg-brand-panel text-white font-semibold flex items-center justify-center text-sm shadow-sm">{getInitials(directPeer ? directPeer.nome : activeChat.name)}</div>}
-                  {activeChat.isDirect && directPeer && <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm ${getRealUserStatus(directPeer).color}`} />}
+                  {activeChat.isDirect && directPeer && <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm ${getRealUserStatus(directPeer,presenceTime).color}`} />}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <h3 className="text-[16px] md:text-lg font-semibold leading-tight truncate">{directPeer ? directPeer.nome : activeChat.name}</h3>
-                  <p className="text-xs opacity-75 font-medium truncate max-w-sm mt-0.5 uppercase tracking-wider">{activeChat.isDirect && directPeer ? `${getRealUserStatus(directPeer).label} • ${getRealUserStatus(directPeer).lastSeenText}` : <span title="Clique para ver detalhes do grupo">{formatGroupMembers(activeChat.members, currentUser.user_id)}</span>}</p>
+                  <h3 className="chat-person-title text-[16px] md:text-lg font-semibold leading-tight">{directPeer ? directPeer.nome : activeChat.name}</h3>
+                  <p className="text-xs opacity-75 font-medium truncate max-w-sm mt-0.5 uppercase tracking-wider">{typing.label(activeChat.id)?<span className="chat-typing-text">{typing.label(activeChat.id)}</span>:activeChat.isDirect && directPeer ? `${getRealUserStatus(directPeer,presenceTime).label} • ${getRealUserStatus(directPeer,presenceTime).lastSeenText}` : <span title="Clique para ver detalhes do grupo">{formatGroupMembers(activeChat.members, currentUser.user_id)}</span>}</p>
                 </div>
               </div>
               <div role="button" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }} className="hidden sm:flex items-center space-x-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -1278,6 +1264,7 @@ export default function ConversasPage() {
               </div>
             ) : (
               <div className="chat-composer p-4 md:p-6 border-t flex flex-col flex-shrink-0 pb-safe" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}>
+                {typing.unavailable&&<p className="chat-typing-unavailable" role="status">Não foi possível conectar o indicador de digitação. <button type="button" onClick={typing.retry}>Tentar novamente</button></p>}
                 <div className="chat-compose-toolbar"><label className="chat-urgent-toggle" data-active={urgentChannelId===activeChatId}><input type="checkbox" checked={urgentChannelId===activeChatId} onChange={e=>setUrgentChannelId(e.target.checked?activeChatId:null)}/><BellRing size={14}/>Enviar como urgente</label><span>{urgentChannelId===activeChatId?'Destaca a mensagem e chama a atenção dos participantes.':'Enter para enviar · Shift + Enter para nova linha'}</span></div>
                 <form onSubmit={handleSendMessage} className="chat-compose-form flex flex-wrap items-end gap-2 sm:flex-nowrap">
                   <div className="flex items-center bg-black/5 dark:bg-white/5 rounded-full p-1 shadow-sm mb-0.5">
@@ -1290,6 +1277,7 @@ export default function ConversasPage() {
                      ref={inputFieldRef}
                      value={inputText}
                      onChange={handleInputResize}
+                     onBlur={typing.stop}
                      onKeyDown={handleKeyDown}
                      rows={1}
                      placeholder="Escreva a sua mensagem..."

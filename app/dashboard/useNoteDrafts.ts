@@ -77,5 +77,5 @@ export function useNoteDrafts(userId: string | null) {
   const flushAll = async () => (await Promise.all([...drafts.current.keys()].map(flush))).every(Boolean);
   const forget = (id: string) => {if(userId&&!drafts.current.size)for(const d of storedNoteDrafts(userId))drafts.current.set(d.id,{patch:d.patch,version:d.version});const d=drafts.current.get(id);clearTimeout(d?.timer);drafts.current.delete(id);store();};
   useEffect(()=>{alive.current=true;const map=drafts.current;return()=>{alive.current=false;map.forEach(d=>clearTimeout(d.timer));};},[userId]);
-  return { edit,restore,flush,flushAll,forget,resolve,status };
+  return { edit,restore,flush,flushAll,forget,resolve,status,version:(id:string)=>drafts.current.get(id)?.version };
 }

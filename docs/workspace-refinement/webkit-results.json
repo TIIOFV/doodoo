@@ -1,0 +1,26 @@
+[
+  {
+    "name": "private typing appears in header/sidebar, expires and shares no message text",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "direct-chat presence dot remains visible beside long contact names",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "creator changes deadline, recipient cannot, failed save retains new date",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "notes preserve autosave, long title, focus mode and private text export",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "sound and typing preferences persist locally without changing profile permissions",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "mobile layouts and full titles across pages, visual viewport keyboard resize",
+    "status": "PASS MOCK"
+  }
+]

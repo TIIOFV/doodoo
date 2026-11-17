@@ -1,307 +1,50 @@
 'use client';
-import { panelStyle } from '../components/ui';
-
-import { Notice } from '@/app/components/ui';
-import { isTaskOverdue } from '@/app/lib/domain';
-
-import { useHydrated } from '@/app/lib/useHydrated';
-import ModalShell from './ModalShell';
-
-import { AlertTriangle,ArrowUpRight,Calendar,CheckCircle2,CheckSquare,Clock,FileText,Flame,Loader2,MessageSquare,PlayCircle,Sparkles,StickyNote } from 'lucide-react';
+import './overview-workspace.css';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect,useState } from 'react';
-import { supabase } from './../lib/supabase';
+import {useEffect,useState} from 'react';
+import {ArrowRight,ArrowUpRight,Calendar,Check,CheckCircle2,CheckSquare,Clock,Flame,Loader2,MapPin,MessageSquare,RefreshCw,Sparkles,StickyNote,TriangleAlert} from 'lucide-react';
+import {isTaskOverdue,localISO,taskDeadline} from '../lib/domain';
+import {useOverviewData,type OverviewTask} from './useOverviewData';
 
-interface DBProfile {
-  id: string; user_id: string; nome: string; cargo: string; setor: string; avatar_url?: string;
-}
-
-interface TaskItem {
-  id: string; titulo: string; status: 'pendente' | 'andamento' | 'concluida' | 'bloqueado'; prioridade: string; responsavel: string; atribuido_por: string; data_limite: string; hora_limite: string; created_at: string;
-}
-interface NoteItem {
-  id: string; titulo: string; conteudo: string; created_at: string; cor: string;
-}
-
-
-export default function DashboardOverviewPage() {
-  const router = useRouter();
-
-  const isMounted = useHydrated();
-
-  const [currentUser, setCurrentUser] = useState<DBProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError,setLoadError] = useState(false);
-  const [allowedTabs, setAllowedTabs] = useState<string[]>([]);
-  const [pendingTasks, setPendingTasks] = useState<TaskItem[]>([]);
-  const [overdueTasks, setOverdueTasks] = useState<TaskItem[]>([]);
-  const [recentActivities, setRecentActivities] = useState<TaskItem[]>([]);
-  const [recentNotes, setRecentNotes] = useState<NoteItem[]>([]);
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-
-  // 🚀 ESTILOS LIQUID GLASS PRO (Design Unificado e Premium)
-  const glassCardStyle = panelStyle;
-
-  const solidItemStyle = panelStyle;
-
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
-
-        let userProfile = null;
-        if (session?.user) {
-          const { data } = await supabase.from('doodoo_perfis').select('*').eq('user_id', session.user.id).maybeSingle();
-          userProfile = data;
-        }
-
-        if (userProfile) {
-          setCurrentUser(userProfile as DBProfile);
-
-          // Permissões
-          let myAllowedTabs: string[] = [];
-          const { data: permissoesDb,error:permissionsError } = await supabase.from('doodoo_permissoes').select('*');
-          if(permissionsError)throw permissionsError;
-          if (permissoesDb) {
-            myAllowedTabs = permissoesDb.filter(p => p.cargos_permitidos.includes(userProfile.cargo) || (p.usuarios_permitidos && p.usuarios_permitidos.includes(userProfile.user_id))).map(p => p.aba_key.replace('tarefas_todas', 'tarefas').replace('tarefas_minha', 'tarefas'));
-            const uniqueTabs = Array.from(new Set(myAllowedTabs));
-            setAllowedTabs(uniqueTabs); myAllowedTabs = uniqueTabs;
-          }
-
-          // Tarefas
-          if (myAllowedTabs.includes('tarefas')) {
-            const { data: taskRows, error: taskError } = await supabase.from('doodoo_tarefas').select('id, titulo, status, prioridade, responsavel, atribuido_por, data_limite, hora_limite, created_at').eq('setor', userProfile.setor).order('created_at', { ascending: false });
-            if (taskError) throw taskError;
-            const tarefas=(taskRows || []).filter(t=>t.responsavel===userProfile.nome||t.atribuido_por===userProfile.nome);
-            if (tarefas) {
-              const activeTasks = tarefas.filter(t => t.status !== 'concluida');
-              const myQueue = activeTasks.filter(t => t.responsavel === userProfile.nome);
-              setOverdueTasks(myQueue.filter(t => isTaskOverdue(t.data_limite, t.hora_limite, t.status)));
-              setPendingTasks(myQueue.filter(t => !isTaskOverdue(t.data_limite, t.hora_limite, t.status)));
-              setRecentActivities(tarefas.slice(0, 5) as TaskItem[]);
-            }
-          }
-
-          // Anotações
-          if (myAllowedTabs.includes('anotacoes') && session?.user) {
-             const { data: notas,error:notesError } = await supabase.from('doodoo_notas').select('id, titulo, conteudo, cor, created_at').eq('usuario_id', session.user.id).order('updated_at', { ascending: false }).limit(3);
-             if(notesError)throw notesError;
-             if (notas) setRecentNotes(notas as NoteItem[]);
-          }
-        }
-        setLoadError(false);
-      } catch { setLoadError(true); } finally { setIsLoading(false); }
-    };
-    void fetchData();
-    const channel=supabase.channel('overview').on('postgres_changes',{event:'*',schema:'public',table:'doodoo_tarefas'},()=>{void fetchData();}).on('postgres_changes',{event:'*',schema:'public',table:'doodoo_notas'},()=>{void fetchData();}).subscribe();
-    return()=>{void supabase.removeChannel(channel);};
-  }, []);
-
-  const formatTimeAgo = (dateString: string) => {
-    if (!isMounted) return '';
-    const diff = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 1000 / 60);
-    if (diff < 60) return `Há ${diff} min`;
-    if (diff < 1440) return `Há ${Math.floor(diff / 60)}h`;
-    return `Há ${Math.floor(diff / 1440)} dias`;
-  };
-
-  const handleOpenTask = (id: string) => { router.push(`/dashboard/tarefas?taskId=${id}`); setIsTaskModalOpen(false); };
-
-  if (isLoading || !isMounted) {
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center">
-        <div className="w-16 h-16 rounded-xl flex items-center justify-center animate-pulse" style={{ backgroundColor: 'var(--bg-card)' }}>
-          <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--tab-active)' }} />
-        </div>
-      </div>
-    );
-  }
-
-  const hasTasksPermission = allowedTabs.includes('tarefas');
-  const hasNotesPermission = allowedTabs.includes('anotacoes');
-
-  return (
-    <div className="w-full flex flex-col space-y-4 md:space-y-6 animate-in fade-in duration-500 relative z-0">
-
-      {loadError && <Notice>Não foi possível atualizar todos os indicadores. Atualize a página para tentar novamente.</Notice>}
-      {/* BANNER DINÂMICO LIQUID GLASS (Ajustado para Mobile App Feel) */}
-      <div className="w-full p-5 md:p-6 rounded-xl md:rounded-xl relative overflow-hidden flex flex-col justify-center min-h-24" style={glassCardStyle}>
-        <div className="absolute top-0 right-0 w-64 md:w-96 h-64 md:h-96 bg-brand-panel opacity-10 rounded-full hidden pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-48 md:w-72 h-48 md:h-72 bg-brand-panel opacity-10 rounded-full hidden pointer-events-none"></div>
-
-        <div className="relative z-10 flex items-center space-x-2 mb-1.5 md:mb-3">
-          <Sparkles className="w-3.5 h-3.5 md:w-5 md:h-5 text-brand-panel" />
-          <span className="text-xs md:text-sm font-semibold uppercase tracking-widest opacity-75 truncate">Setor {currentUser?.setor || 'Geral'}</span>
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight relative z-10 truncate">
-          Olá, {currentUser?.nome?.split(' ')[0] || 'Usuário'}
-        </h1>
-      </div>
-
-      {/* GRID DE ATALHOS - ALTO CONTRASTE */}
-      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-
-        {allowedTabs.includes('chat') && (
-          <Link href="/dashboard/conversas" className="w-full p-5 md:p-6 rounded-xl md:rounded-xl transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm active:scale-95 md:active:scale-100" style={glassCardStyle}>
-            <div className="p-3 md:p-4 rounded-2xl bg-blue-500/10 text-brand-panel group-hover:scale-110 transition-transform flex-shrink-0 mr-4 md:mr-0 border border-blue-500/20">
-              <MessageSquare className="w-6 h-6 md:w-7 md:h-7" />
-            </div>
-            <div className="flex-1 min-w-0 md:mt-6 text-left">
-              <h3 className="text-[15px] md:text-lg font-semibold truncate">Chat Corporativo</h3>
-              <p className="text-xs md:text-sm opacity-75 mt-0.5 md:mt-1 truncate font-medium">Comunicações rápidas.</p>
-            </div>
-          </Link>
-        )}
-
-        {hasTasksPermission && (
-          <button onClick={() => setIsTaskModalOpen(true)} className="w-full text-left p-5 md:p-6 rounded-xl md:rounded-xl transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm active:scale-95 md:active:scale-100" style={glassCardStyle}>
-            {overdueTasks.length > 0 && <div className="absolute top-0 right-0 w-24 md:w-28 h-24 md:h-28 bg-red-500/10 rounded-bl-[100%] pointer-events-none transition-all group-hover:scale-110"></div>}
-
-            <div className="p-3 md:p-4 rounded-2xl bg-emerald-500/10 text-[var(--success)] group-hover:scale-110 transition-transform flex-shrink-0 mr-4 md:mr-0 relative z-10 border border-emerald-500/20">
-              <CheckSquare className="w-6 h-6 md:w-7 md:h-7" />
-            </div>
-
-            <div className="flex-1 min-w-0 md:mt-6 text-left flex flex-col justify-center">
-              <h3 className="text-[15px] md:text-lg font-semibold truncate">Minha Fila</h3>
-              <p className="text-xs md:text-sm opacity-75 mt-0.5 md:mt-1 truncate font-medium">{overdueTasks.length > 0 ? <span className="text-[var(--error-text)] font-medium">Atenção: {overdueTasks.length} atrasos</span> : 'Fila de tarefas ativas.'}</p>
-            </div>
-
-            {(pendingTasks.length > 0 || overdueTasks.length > 0) && (
-              <div className="flex-shrink-0 ml-3 md:absolute md:top-6 md:right-6">
-                <span className={`text-xs md:text-xs font-semibold px-3 py-1.5 rounded-xl border ${overdueTasks.length > 0 ? 'bg-red-500/10 text-[var(--error-text)] border-red-500/30' : 'bg-black/5 dark:bg-white/5 border-transparent'}`}>
-                  {pendingTasks.length + overdueTasks.length} Ativas
-                </span>
-              </div>
-            )}
-          </button>
-        )}
-
-        {allowedTabs.includes('agenda') && (
-          <Link href="/dashboard/agenda" className="w-full p-5 md:p-6 rounded-xl md:rounded-xl transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm active:scale-95 md:active:scale-100" style={glassCardStyle}>
-            <div className="p-3 md:p-4 rounded-2xl bg-amber-500/10 text-[var(--warning)] group-hover:scale-110 transition-transform flex-shrink-0 mr-4 md:mr-0 border border-amber-500/20">
-              <Calendar className="w-6 h-6 md:w-7 md:h-7" />
-            </div>
-            <div className="flex-1 min-w-0 md:mt-6 text-left">
-              <h3 className="text-[15px] md:text-lg font-semibold truncate">Agenda Central</h3>
-              <p className="text-xs md:text-sm opacity-75 mt-0.5 md:mt-1 truncate font-medium">Alinhamentos da equipe.</p>
-            </div>
-            <div className="flex-shrink-0 ml-3 md:absolute md:top-6 md:right-6">
-              <span className="text-xs md:text-xs font-semibold px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 border-transparent">Hoje</span>
-            </div>
-          </Link>
-        )}
-
-        {hasNotesPermission && (
-          <Link href="/dashboard/notas" className="w-full p-5 md:p-6 rounded-xl md:rounded-xl transition-transform hover:-translate-y-1 group cursor-pointer flex flex-row md:flex-col items-center md:items-start justify-start relative overflow-hidden shadow-sm active:scale-95 md:active:scale-100" style={glassCardStyle}>
-            <div className="p-3 md:p-4 rounded-2xl bg-purple-500/10 text-purple-500 group-hover:scale-110 transition-transform flex-shrink-0 mr-4 md:mr-0 border border-purple-500/20">
-              <StickyNote className="w-6 h-6 md:w-7 md:h-7" />
-            </div>
-            <div className="flex-1 min-w-0 md:mt-6 text-left">
-              <h3 className="text-[15px] md:text-lg font-semibold truncate">Anotações</h3>
-              <p className="text-xs md:text-sm opacity-75 mt-0.5 md:mt-1 truncate font-medium">Bloco de rascunhos pessoal.</p>
-            </div>
-          </Link>
-        )}
-      </div>
-
-      {/* PAINEL INFERIOR DINÂMICO */}
-      {hasTasksPermission && (
-        <div className="w-full p-5 md:p-6 rounded-xl md:rounded-xl space-y-5 md:space-y-6 shadow-sm" style={glassCardStyle}>
-          <h3 className="font-semibold text-[15px] md:text-lg border-b pb-4 opacity-80" style={{ borderColor: 'var(--border-input)' }}>Atividades e Delegações Recentes</h3>
-
-          <div className="space-y-3">
-            {recentActivities.map(tarefa => (
-              <div key={tarefa.id} className="p-4 md:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between hover:scale-[1.01] transition-transform gap-3" style={solidItemStyle}>
-                <div className="flex items-center space-x-4 overflow-hidden">
-                  {tarefa.status === 'concluida' ? <CheckCircle2 className="w-5 h-5 text-[var(--success)] flex-shrink-0" /> : tarefa.status === 'andamento' ? <PlayCircle className="w-5 h-5 text-[var(--success)] flex-shrink-0" /> : tarefa.status === 'bloqueado' ? <AlertTriangle className="w-5 h-5 text-[var(--warning)] flex-shrink-0" /> : <Clock className="w-5 h-5 text-brand-panel flex-shrink-0" />}
-                  <div className="overflow-hidden min-w-0">
-                    <p className="font-semibold text-[14px] md:text-[15px] truncate" title={tarefa.titulo}>{tarefa.titulo}</p>
-                    <p className="opacity-75 text-xs md:text-xs truncate flex items-center space-x-2 mt-1">
-                      {tarefa.responsavel === currentUser?.nome ? <span className="font-medium text-brand-panel bg-blue-500/10 px-2 py-0.5 rounded flex-shrink-0">Para mim</span> : <span className="truncate">Delegado para <span className="font-semibold">{tarefa.responsavel}</span></span>}
-                    </p>
-                  </div>
-                </div>
-                <span className="opacity-70 text-xs md:text-xs font-semibold uppercase tracking-widest whitespace-nowrap sm:pl-4">{formatTimeAgo(tarefa.created_at)}</span>
-              </div>
-            ))}
-            {recentActivities.length === 0 && <div className="text-center p-8 opacity-70 font-semibold text-xs md:text-sm border-2 border-dashed rounded-2xl" style={{ borderColor: 'var(--border-input)' }}>Nenhum histórico de atividade no momento.</div>}
-          </div>
-        </div>
-      )}
-
-      {/* Espaço preenchido por Anotações se não tiver tarefas */}
-      {!hasTasksPermission && hasNotesPermission && (
-        <div className="w-full p-5 md:p-6 rounded-xl md:rounded-xl space-y-5 md:space-y-6 shadow-sm" style={glassCardStyle}>
-          <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--border-input)' }}>
-            <h3 className="font-semibold text-[15px] md:text-lg flex items-center space-x-2 opacity-80"><StickyNote className="w-5 h-5 text-purple-500" /><span>Lembretes Rápidos</span></h3>
-            <Link href="/dashboard/notas" className="text-xs md:text-xs font-medium text-brand-panel hover:underline">Ver todas</Link>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {recentNotes.map(nota => (
-              <Link href="/dashboard/notas" key={nota.id} className="w-full p-5 md:p-6 rounded-3xl hover:-translate-y-1 transition-transform cursor-pointer group flex flex-col h-32 md:h-44 min-w-0" style={solidItemStyle}>
-                <div className="flex items-center justify-between mb-3">
-                   <span className="text-xs font-semibold uppercase tracking-widest opacity-70 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-md">{nota.cor || 'Geral'}</span>
-                </div>
-                <h4 className="font-semibold truncate group-hover:text-brand-panel transition-colors text-[14px] md:text-[15px]">{nota.titulo}</h4>
-                <p className="opacity-75 text-[12px] md:text-sm mt-2 line-clamp-2 leading-relaxed flex-1 font-medium">{nota.conteudo}</p>
-                <span className="opacity-70 text-xs md:text-xs font-semibold mt-3 block uppercase">{new Date(nota.created_at).toLocaleDateString('pt-BR')}</span>
-              </Link>
-            ))}
-            {recentNotes.length === 0 && <div className="col-span-full text-center p-8 opacity-70 font-semibold text-xs md:text-sm border-2 border-dashed rounded-3xl flex flex-col items-center justify-center space-y-3" style={{ borderColor: 'var(--border-input)' }}><FileText className="w-8 h-8 opacity-70" /><span>O seu bloco de anotações está vazio.</span></div>}
-          </div>
-        </div>
-      )}
-
-      {/* 🚀 ESPAÇADOR VITAL PARA O MOBILE PWA - PREVINE COLISÕES COM A BOTTOM NAV */}
-      <div className="h-32 md:h-10 w-full flex-shrink-0 pointer-events-none"></div>
-
-      {/* MODAL DE RESUMO DE TAREFAS */}
-      {isTaskModalOpen && hasTasksPermission && (
-        <ModalShell open description={<><p className="text-xs font-medium opacity-70 uppercase tracking-widest mt-1">Tarefas que dependem de si</p></>} title={<><CheckSquare className="w-5 h-5 text-brand-panel" /><span>Resumo: Minha Fila</span></>} onClose={() => setIsTaskModalOpen(false)} footer={<div className="p-5 border-t" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
-              <Link href="/dashboard/tarefas" className="w-full py-4 rounded-xl bg-brand-panel text-white text-sm font-semibold shadow-sm flex items-center justify-center space-x-2 hover:scale-[1.02] active:scale-[0.98] transition-transform">
-                 <span>Abrir Painel Completo Kanban</span>
-                 <ArrowUpRight className="w-4 h-4" />
-              </Link>
-            </div>}>
-<div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-              {overdueTasks.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="text-xs md:text-xs font-semibold text-[var(--error-text)] flex items-center space-x-2 border-b pb-2.5 border-red-500/20"><AlertTriangle className="w-4 h-4" /> <span>Em Atraso ({overdueTasks.length})</span></h4>
-                  <div className="space-y-3">
-                    {overdueTasks.map(t => (
-                      <div role="button" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }} key={t.id} onClick={() => handleOpenTask(t.id)} className="p-4 rounded-2xl border border-red-500/40 bg-red-500/5 hover:bg-red-500/10 cursor-pointer transition-colors shadow-sm">
-                        <p className="text-[14px] font-semibold leading-tight">{t.titulo}</p>
-                        <p className="text-xs text-[var(--error-text)] font-medium mt-2 uppercase tracking-wide">Prazo era: {t.data_limite} às {t.hora_limite}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <h4 className="text-xs md:text-xs font-semibold flex items-center space-x-2 border-b pb-2.5 opacity-70" style={{ borderColor: 'var(--border-input)' }}><Clock className="w-4 h-4" /> <span>Ativas e No Prazo ({pendingTasks.length})</span></h4>
-                {pendingTasks.length > 0 ? (
-                  <div className="space-y-3">
-                    {pendingTasks.map(t => (
-                      <div role="button" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }} key={t.id} onClick={() => handleOpenTask(t.id)} className="p-4 rounded-2xl border hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors shadow-sm" style={solidItemStyle}>
-                        <div className="flex items-start justify-between gap-3">
-                           <p className="text-[14px] font-semibold leading-tight flex-1">{t.titulo}</p>
-                           {t.prioridade === 'Urgente' && <Flame className="w-4 h-4 text-[var(--warning)] flex-shrink-0" />}
-                        </div>
-                        <p className="text-xs opacity-75 font-medium mt-2 uppercase tracking-wide">Prazo: {t.data_limite || 'Sem prazo'} às {t.hora_limite}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs md:text-xs opacity-70 font-semibold text-center p-5 border border-dashed rounded-2xl" style={{ borderColor: 'var(--border-input)' }}>Nenhuma tarefa pendente na fila.</p>
-                )}
-              </div>
-            </div>
-</ModalShell>
-      )}
-    </div>
-  );
+export default function DashboardOverviewPage(){
+ const {data,loading,refreshing,refresh}=useOverviewData();
+ const [scope,setScope]=useState<'mine'|'delegated'>('mine'),[now,setNow]=useState(()=>new Date());
+ useEffect(()=>{const timer=setInterval(()=>setNow(new Date()),30_000);return()=>clearInterval(timer);},[]);
+ const {profile,allowed,tasks,notes,events}=data;
+ const today=localISO(now),has=(key:string)=>allowed.includes(key);
+ const mine=tasks.filter(t=>t.responsavel===profile?.nome),delegated=tasks.filter(t=>t.responsavel!==profile?.nome&&(t.usuario_id?t.usuario_id===profile?.user_id:t.atribuido_por===profile?.nome));
+ const overdue=(t:OverviewTask)=>isTaskOverdue(t.data_limite||'',t.hora_limite,t.status,now);
+ const active=mine.filter(t=>t.status!=='concluida'),late=active.filter(overdue),completed=mine.filter(t=>t.status==='concluida');
+ const focus=(scope==='mine'?mine:delegated).filter(t=>t.status!=='concluida').sort((a,b)=>Number(overdue(b))-Number(overdue(a))||Number(b.status==='bloqueado')-Number(a.status==='bloqueado')||((taskDeadline(a.data_limite||'',a.hora_limite)?.getTime()??Infinity)-(taskDeadline(b.data_limite||'',b.hora_limite)?.getTime()??Infinity))||a.titulo.localeCompare(b.titulo));
+ const upcoming=events.filter(e=>new Date(e.data+'T'+(e.hora_fim||e.hora_inicio||'23:59')).getTime()>now.getTime()).sort((a,b)=>(a.data+a.hora_inicio).localeCompare(b.data+b.hora_inicio));
+ const todayEvents=events.filter(e=>e.data===today);
+ const taskHref=(t:OverviewTask)=>'/dashboard/tarefas?taskId='+encodeURIComponent(t.id)+(scope==='delegated'?'&queue=delegadas':'');
+ const dateLabel=(date:string)=>new Date(date+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}).replace('.','');
+ const shortcuts=[{key:'chat',href:'/dashboard/conversas',title:'Conversas',desc:'Fale com a equipe',icon:MessageSquare},{key:'tarefas',href:'/dashboard/tarefas',title:'Tarefas',desc:'Organize suas entregas',icon:CheckSquare},{key:'agenda',href:'/dashboard/agenda',title:'Agenda',desc:'Planeje seus encontros',icon:Calendar},{key:'anotacoes',href:'/dashboard/notas',title:'Anotações',desc:'Guarde suas ideias',icon:StickyNote}].filter(s=>has(s.key));
+ if(loading)return <div className="overview-loading" role="status"><Loader2 className="animate-spin" size={24}/><span>Preparando seu resumo…</span></div>;
+ return <div className="overview-workspace">
+  <header className="overview-welcome">
+   <div><span className="overview-eyebrow"><Sparkles size={14}/>SEU DIA NO DOO DOO · {profile?.setor||'WORKSPACE'}</span><h1>Olá, {profile?.nome.split(' ')[0]||'você'}<span className="overview-greeting-dot">.</span></h1><p>Suas prioridades, seus encontros e suas ideias em um só lugar.</p></div>
+   <div className="overview-date"><span>{now.toLocaleDateString('pt-BR',{weekday:'long'})}</span><strong>{now.toLocaleDateString('pt-BR',{day:'numeric',month:'long'})}</strong><button type="button" onClick={refresh} disabled={refreshing} aria-label="Atualizar resumo"><RefreshCw size={13} className={refreshing?'animate-spin':''}/>{refreshing?'Atualizando…':data.loadedAt?'Atualizado às '+new Date(data.loadedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Tentar novamente'}</button></div>
+  </header>
+  {data.errors.length>0&&<div className="overview-error" role="status"><TriangleAlert size={16}/><span>Não foi possível carregar: {data.errors.join(', ')}.</span><button onClick={refresh} disabled={refreshing}>Tentar novamente</button></div>}
+  {(has('tarefas')||has('agenda'))&&<div className="overview-metrics">
+   {has('tarefas')&&<><Link href="/dashboard/tarefas?list=todas" className="overview-metric"><span><CheckSquare size={16}/>Na minha fila</span><strong>{data.errors.includes('tarefas')?'—':active.length}</strong><small>tarefas em aberto <ArrowUpRight size={14}/></small></Link><Link href="/dashboard/tarefas?list=todas" className="overview-metric" data-tone={late.length?'danger':undefined}><span><Clock size={16}/>Prazos vencidos</span><strong>{data.errors.includes('tarefas')?'—':late.length}</strong><small>{data.errors.includes('tarefas')?'indicador indisponível':late.length?'precisam de atenção':'entregas sob controle'} <ArrowUpRight size={14}/></small></Link><Link href="/dashboard/tarefas?list=concluidas" className="overview-metric"><span><CheckCircle2 size={16}/>Concluídas</span><strong>{data.errors.includes('tarefas')?'—':completed.length}</strong><small>na minha responsabilidade <ArrowUpRight size={14}/></small></Link></>}
+   {has('agenda')&&<Link href="/dashboard/agenda" className="overview-metric"><span><Calendar size={16}/>Na agenda hoje</span><strong>{data.errors.includes('agenda')?'—':todayEvents.length}</strong><small>{todayEvents.length?'compromissos no seu dia':'espaço para se organizar'} <ArrowUpRight size={14}/></small></Link>}
+  </div>}
+  <div className="overview-columns">
+   {has('tarefas')&&<section className="overview-panel overview-priorities" aria-label="Prioridades de tarefas"><div className="overview-section-heading"><div><span className="overview-eyebrow">FOCO E ACOMPANHAMENTO</span><h2>Uma entrega de cada vez</h2></div><Link href="/dashboard/tarefas" aria-label="Ver todas as tarefas"><ArrowUpRight size={19}/></Link></div>
+    <div className="overview-switch" aria-label="Origem das tarefas"><button aria-pressed={scope==='mine'} onClick={()=>setScope('mine')}>Minha fila <span>{active.length}</span></button><button aria-pressed={scope==='delegated'} onClick={()=>setScope('delegated')}>Delegadas <span>{delegated.filter(t=>t.status!=='concluida').length}</span></button></div>
+    {data.errors.includes('tarefas')?<p className="overview-empty">Suas tarefas estão indisponíveis. Tente atualizar o resumo.</p>:focus.length===0?<div className="overview-empty"><CheckCircle2 size={24}/><strong>Tudo em dia por aqui</strong><span>{scope==='mine'?'Nenhuma tarefa em aberto na sua fila.':'Nenhuma delegação em aberto.'}</span></div>:<div className="overview-task-list">{focus.slice(0,5).map((t,i)=><Link href={taskHref(t)} key={t.id} className="overview-task" data-overdue={overdue(t)}><span className="overview-task-mark">{overdue(t)?<Clock size={17}/>:t.status==='bloqueado'?<TriangleAlert size={17}/>:<span>{String(i+1).padStart(2,'0')}</span>}</span><div><div className="overview-task-tags">{overdue(t)&&<span>Prazo vencido</span>}{t.status==='bloqueado'&&<span>Com dificuldade</span>}{t.prioridade==='Urgente'&&<span><Flame size={11}/>Urgente</span>}{!overdue(t)&&t.status!=='bloqueado'&&<span>{t.status==='andamento'?'Em andamento':'A iniciar'}</span>}</div><h3>{t.titulo}</h3><p>{scope==='delegated'?'Para '+t.responsavel+' · ':''}{t.data_limite?`${t.data_limite}${t.hora_limite?' às '+t.hora_limite.slice(0,5):''}`:'Sem prazo definido'}</p></div><ArrowRight size={16}/></Link>)}</div>}
+    {focus.length>5&&<Link className="overview-more" href="/dashboard/tarefas">Ver mais {focus.length-5} tarefas <ArrowRight size={14}/></Link>}
+   </section>}
+   {has('agenda')&&<section className="overview-panel overview-agenda" aria-label="Próximos compromissos"><div className="overview-section-heading"><div><span className="overview-eyebrow">RESERVE UM TEMPO</span><h2>O que vem a seguir</h2></div><Link href="/dashboard/agenda" aria-label="Abrir agenda"><Calendar size={18}/></Link></div>
+    {data.errors.includes('agenda')?<p className="overview-empty">Sua agenda está indisponível.</p>:upcoming.length===0?<div className="overview-empty"><Calendar size={24}/><strong>Agenda livre pela frente</strong><span>Seus próximos compromissos aparecerão aqui.</span></div>:<div className="overview-event-list">{upcoming.slice(0,4).map(e=>{const ongoing=e.data===today&&e.hora_inicio.slice(0,5)<=now.toTimeString().slice(0,5);return <Link href="/dashboard/agenda" className="overview-event" key={e.id}><div className="overview-event-date"><strong>{new Date(e.data+'T12:00').getDate()}</strong><span>{e.data===today?'HOJE':dateLabel(e.data).split(' ').slice(1).join(' ')}</span></div><div><span className="overview-event-time">{ongoing?'Acontecendo agora':e.hora_inicio.slice(0,5)+' – '+e.hora_fim.slice(0,5)}</span><h3>{e.titulo}</h3>{e.local&&<p><MapPin size={11}/>{e.local}</p>}{e.visibilidade!=='pessoal'&&e.organizador_id!==profile?.user_id&&!e.aceitos_por?.includes(profile?.nome||'')&&<small>Confirmação pendente</small>}</div></Link>;})}</div>}
+    <Link href="/dashboard/agenda" className="overview-more">Ver minha agenda <ArrowRight size={14}/></Link>
+   </section>}
+  </div>
+  {has('anotacoes')&&<section className="overview-panel overview-notes"><div className="overview-section-heading"><div><span className="overview-eyebrow">PARA CONTINUAR DE ONDE PAROU</span><h2>Suas anotações recentes</h2></div><Link href="/dashboard/notas">Abrir anotações <ArrowUpRight size={15}/></Link></div>{data.errors.includes('anotações')?<p className="overview-empty">Suas anotações estão indisponíveis.</p>:notes.length===0?<p className="overview-empty">Uma ideia nova? Seu espaço de anotações está pronto para você.</p>:<div className="overview-note-grid">{notes.map(n=><Link href="/dashboard/notas" className="overview-note" key={n.id}><StickyNote size={17}/><h3>{n.titulo||'Sem título'}</h3><p>{n.conteudo||'Continue escrevendo sua anotação…'}</p><span>{n.updated_at?'Editada em '+new Date(n.updated_at).toLocaleDateString('pt-BR'):'Anotação pessoal'}</span></Link>)}</div>}</section>}
+  {shortcuts.length>0&&<nav className="overview-shortcuts" aria-label="Acessos rápidos">{shortcuts.map(s=><Link href={s.href} key={s.key}><s.icon size={19}/><div><strong>{s.title}</strong><span>{s.desc}</span></div><ArrowUpRight size={15}/></Link>)}</nav>}
+  {!shortcuts.length&&!data.errors.length&&<div className="overview-panel overview-empty"><Check size={22}/><strong>Bem-vindo ao seu workspace</strong><span>Os módulos liberados para seu perfil aparecerão aqui.</span></div>}
+ </div>;
 }

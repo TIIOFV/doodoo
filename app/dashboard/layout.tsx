@@ -3,6 +3,11 @@ import { panelStyle } from '../components/ui';
 import { environment } from '../lib/environment';
 import { useTaskNotifications } from './useTaskNotifications';
 import ChatAttention from './ChatAttention';
+import {useMobileViewport} from './useMobileViewport';
+import {PortalPresenceContext,usePortalPresence} from './usePortalPresence';
+import type {UserStatusType} from '../lib/chatPresence';
+import {unlockPortalAudio,playPortalSound} from '../lib/notificationSound';
+import './portal-mobile.css';
 
 import type { Session } from '@supabase/supabase-js';
 import {
@@ -30,7 +35,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from './../lib/supabase';
 
 type RoleType = 'administrador' | 'gestor' | 'coordenador' | 'supervisor' | 'analista' | 'colaborador';
-interface DBProfile { id: string; user_id: string; nome: string; email: string; cargo: RoleType; setor: string; avatar_url?: string; status?: string; }
+interface DBProfile { id: string; user_id: string; nome: string; email: string; cargo: RoleType; setor: string; avatar_url?: string; status?: string; status_presenca?:UserStatusType; }
 
 const LogoDooDoo = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
   <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} style={style}>
@@ -44,6 +49,7 @@ interface AppNotification { id: number; title: string; desc: string; time: strin
 const getInitials = (name: string) => { if (!name) return '..'; const parts = name.trim().split(' ').filter(Boolean); if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase(); return name.slice(0, 2).toUpperCase(); };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  useMobileViewport();
   const pathname = usePathname();
   const router = useRouter();
   const { theme, changeTheme } = useTheme();
@@ -57,6 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  useEffect(()=>{const unlock=()=>{void unlockPortalAudio();};window.addEventListener('pointerdown',unlock,{passive:true});window.addEventListener('keydown',unlock);return()=>{window.removeEventListener('pointerdown',unlock);window.removeEventListener('keydown',unlock);};},[]);
   const greeting = 'Seu workspace';
   const GreetingIcon = Sun;
 
@@ -70,6 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [accessVersion,setAccessVersion]=useState(0);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   useTaskNotifications(currentUser?.user_id === sessionId ? currentUser : null, allowedTabs.includes('tarefas'));
+  const portalPresence=usePortalPresence(currentUser?.user_id===sessionId?currentUser:null,allowedTabs.includes('chat'));
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
@@ -159,7 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             setUnreadChatCount(prev => prev + 1);
             const titulo = `Mensagem de ${msg.sender_nome}`;
             const descricao = msg.tipo === 'image' ? 'Enviou uma imagem' : msg.tipo === 'file' ? 'Enviou um documento' : msg.texto;
-            window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title: titulo, desc: descricao, link: `/dashboard/conversas?chatId=${msg.canal_id}` } }));
+            window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title: titulo, desc: descricao, link: `/dashboard/conversas?chatId=${msg.canal_id}`,eventKey:'chat:'+msg.id } }));
           }
         }
       })
@@ -179,12 +187,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const handleNewNotif = (e: Event) => {
       const { title, desc, link, eventKey } = (e as CustomEvent<{title?:string;desc?:string;link?:string;eventKey?:string}>).detail;
       if(!eventKey?.startsWith('chat-urgent:'))setFeedback({ title: title || 'Alerta', desc: desc || '' });
+      if(eventKey&&currentUser?.user_id)playPortalSound(currentUser.user_id);
       const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       setNotifications(prev => eventKey && prev.some(n => n.eventKey === eventKey) ? prev : [{ id: Date.now(), title: title || 'Alerta', desc: desc || '', time: timeStr, unread: true, link: link || '', eventKey }, ...prev].slice(0, 30));
     };
     window.addEventListener('doodoo:notify', handleNewNotif);
     return () => window.removeEventListener('doodoo:notify', handleNewNotif);
-  }, []);
+  }, [currentUser?.user_id]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -249,7 +258,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const routeKey = pathname.startsWith('/dashboard/configuracoes') ? null : rawNav.find(item => item.path === '/dashboard' ? pathname === item.path : pathname.startsWith(item.path))?.key;
   const permitted = !routeKey || allowedTabs.includes(routeKey);
   return (
-    <div className="app-shell flex h-[100dvh] overflow-hidden transition-colors duration-700 relative z-0" style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-main)' }}>
+    <PortalPresenceContext.Provider value={portalPresence}><div data-chat-open={hideBottomNavOnMobile} className="app-shell flex h-[100dvh] overflow-hidden transition-colors duration-700 relative z-0" style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-main)' }}>
 
       {currentUser && allowedTabs.includes('chat') && <ChatAttention key={currentUser.user_id} userId={currentUser.user_id}/>}
       {feedback && createPortal(<div data-modal-live role="status" aria-live="polite" className="pointer-events-none fixed top-[max(.75rem,env(safe-area-inset-top))] left-1/2 z-[1100] w-[min(90vw,380px)] -translate-x-1/2 rounded-2xl border p-4 shadow-sm" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderColor: 'var(--border-input)' }}><strong className="text-sm">{feedback.title}</strong><p className="mt-1 text-sm">{feedback.desc}</p></div>, document.body)}
@@ -348,14 +357,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Em páginas imersivas, o cabeçalho aparece apenas no desktop.
             Z-index reduzido para não cobrir modais abertos na área de conteúdo. */}
-        <header className={`relative z-20 shrink-0 h-16 md:h-[72px] items-center justify-between px-5 md:px-10 transition-all duration-500 ${hideBottomNavOnMobile ? 'hidden' : isImmersivePage ? 'hidden lg:flex' : 'flex'}`} style={glassHeader}>
+        <header className={`portal-page-header relative z-20 shrink-0 h-16 md:h-[72px] items-center justify-between px-5 md:px-10 transition-all duration-500 ${hideBottomNavOnMobile ? 'hidden' : isImmersivePage ? 'hidden lg:flex' : 'flex'}`} style={glassHeader}>
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex min-w-0 flex-col justify-center">
               <div className="hidden md:flex items-center space-x-2 opacity-60 mb-1">
                 <GreetingIcon className="w-4 h-4" style={{ color: 'var(--tab-active)' }} />
                 <span className="text-xs font-semibold uppercase tracking-widest">{greeting}{currentUser ? `, ${currentUser.nome?.split(' ')[0]}` : ''}</span>
               </div>
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight truncate">{currentPageTitle}</h2>
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{currentPageTitle}</h2>
             </div>
           </div>
 
@@ -396,12 +405,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* A área rolável precisa de min-h-0 em um contêiner flex.
             O modal deve ser renderizado no body por um portal (ver ModalShell.tsx). */}
-        <main className={`flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-contain ${isImmersivePage ? (hideBottomNavOnMobile ? 'p-0' : 'p-0 md:p-5') : 'px-4 md:px-8 pt-5'} ${hideBottomNavOnMobile ? 'pb-0 lg:pb-5' : 'pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-5'} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']`}>
+        <main data-immersive={isImmersivePage} className={`portal-content flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-contain ${isImmersivePage ? (hideBottomNavOnMobile ? 'p-0' : 'p-0 md:p-5') : 'px-4 md:px-8 pt-5'} ${hideBottomNavOnMobile ? 'pb-0 lg:pb-5' : 'pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-5'} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']`}>
           {permitted ? <div key={currentUser.user_id} className="contents">{children}</div> : <EmptyState title="Acesso não permitido">Seu perfil não tem acesso a esta aba. Solicite a liberação ao administrador.</EmptyState>}
         </main>
 
         {/* BOTTOM NAVIGATION (MOBILE PWA STYLE) - ESCONDE QUANDO NO CHAT INDIVIDUAL */}
-        <nav className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around pb-safe pt-2 px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transition-transform duration-300 ${hideBottomNavOnMobile ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`} style={glassBottomNav}>
+        <nav className={`portal-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around pb-safe pt-2 px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transition-transform duration-300 ${hideBottomNavOnMobile ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`} style={glassBottomNav}>
           {mainNav.map((item) => {
             const isActive = item.path === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(item.path);
             return (
@@ -423,6 +432,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
         </nav>
       </div>
-    </div>
+    </div></PortalPresenceContext.Provider>
   );
 }

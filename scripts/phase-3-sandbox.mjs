@@ -47,14 +47,16 @@ export function createSandbox({origin='http://127.0.0.1:3300'}={}) {
    if(new URL(ws.url()).host===new URL(origin).host){ws.connectToServer();return;}
    if(new URL(ws.url()).hostname!==host){ws.close();return;}
    const client={ws,user,topics:new Map()};state.sockets.add(client);
-   ws.onMessage(raw=>{let msg;try{msg=JSON.parse(String(raw));if(Array.isArray(msg)){client.v2=true;const[join_ref,ref,topic,event,payload]=msg;msg={join_ref,ref,topic,event,payload};}}catch{return;}
+   ws.onMessage(raw=>{let msg;try{if(typeof raw!=='string'){const bytes=Buffer.from(raw);if(bytes[0]!==3)return;let offset=7;const parts=[];for(const size of bytes.subarray(1,6)){parts.push(bytes.subarray(offset,offset+size).toString('utf8'));offset+=size;}msg={join_ref:parts[0],ref:parts[1],topic:parts[2],event:'broadcast',payload:{type:'broadcast',event:parts[3],payload:JSON.parse(bytes.subarray(offset).toString('utf8'))}};}else msg=JSON.parse(String(raw));if(Array.isArray(msg)){client.v2=true;const[join_ref,ref,topic,event,payload]=msg;msg={join_ref,ref,topic,event,payload};}}catch{return;}
     if(msg.event==='phx_join'){
      try{const id=JSON.parse(Buffer.from(msg.payload.access_token.split('.')[1],'base64url')).sub;client.user=state.users.find(u=>u.user_id===id)||client.user;}catch{}
 
+     if(msg.topic.startsWith('realtime:doodoo:typing:')){const channelId=msg.topic.slice('realtime:doodoo:typing:'.length);state.typingJoins??=[];state.typingJoins.push({channelId,userId:client.user?.user_id,private:msg.payload?.config?.private});const allowed=!state.typingDeniedIds?.has(channelId)&&msg.payload?.config?.private===true&&tables.doodoo_canais.some(c=>c.id===channelId&&c.membros.some(m=>m.user_id===client.user?.user_id));if(!allowed){send(client,{topic:msg.topic,event:'phx_reply',payload:{status:'error',response:{reason:'not authorized'}},ref:msg.ref,join_ref:msg.join_ref});return;}}
      const filters=(msg.payload?.config?.postgres_changes||[]).map((f,i)=>({...f,id:i+1}));client.topics.set(msg.topic,filters);
      send(client,{topic:msg.topic,event:'phx_reply',payload:{status:'ok',response:{postgres_changes:filters}},ref:msg.ref,join_ref:msg.join_ref});
      send(client,{topic:msg.topic,event:'system',payload:{status:'ok',extension:'postgres_changes',message:'fixture'},ref:null});
     } else if(msg.event==='phx_leave'){client.topics.delete(msg.topic);send(client,{...msg,event:'phx_reply',payload:{status:'ok',response:{}}});}
+    else if(msg.event==='broadcast'){const channelId=msg.topic.slice('realtime:doodoo:typing:'.length);const allowed=client.topics.has(msg.topic)&&tables.doodoo_canais.some(c=>c.id===channelId&&c.membros.some(m=>m.user_id===client.user?.user_id));if(allowed){state.typingEvents??=[];state.typingEvents.push(structuredClone(msg.payload));for(const peer of state.sockets)if(peer!==client&&peer.topics.has(msg.topic))send(peer,{topic:msg.topic,event:'broadcast',payload:msg.payload,ref:null});send(client,{...msg,event:'phx_reply',payload:{status:'ok',response:{}}});}}
     else if(msg.event==='heartbeat')send(client,{...msg,event:'phx_reply',payload:{status:'ok',response:{}}});
    });ws.onClose(()=>state.sockets.delete(client));
   });
@@ -63,7 +65,8 @@ export function createSandbox({origin='http://127.0.0.1:3300'}={}) {
    if(url.origin===origin){if(url.pathname==='/__fixture__/file.txt')return route.fulfill({body:'Fixture file',contentType:'text/plain'});return route.continue();}
    if(url.hostname!==host){state.blocked.push(url.hostname);return route.abort();}
    const method=request.method(),user=actor(request);let body=null;try{body=request.postDataJSON()}catch{}
-   const reply=(data,status=200)=>route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:status===204?'':JSON.stringify(data)});
+   const reply=(data,status=200)=>route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'GET, POST, PATCH, DELETE, OPTIONS'},body:status===204?'':JSON.stringify(data)});
+   if(method==='OPTIONS')return reply(null,204);
    if(url.pathname.startsWith('/auth/v1/')){
     const action=url.pathname.split('/').at(-1);state.auth.push({action});
     if(action==='logout')return reply(null,204);

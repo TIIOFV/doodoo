@@ -1,0 +1,43 @@
+.settings-workspace { min-height:0; min-width:0; }
+.settings-workspace .settings-header { padding:20px 26px; gap:14px; background:linear-gradient(115deg,color-mix(in srgb,var(--tab-active) 5%,var(--bg-card)),var(--bg-card)); }
+.settings-workspace .settings-header > div { min-width:0; }
+.settings-workspace .settings-header h2 { font-size:24px; line-height:1.35; overflow-wrap:anywhere; }
+.settings-workspace .settings-header .text-xs { font-size:10px; letter-spacing:.05em; }
+.settings-workspace .settings-content { padding:22px 26px; background:var(--bg-page); }
+.settings-workspace .settings-content > div,.settings-workspace .settings-content > form { min-width:0; max-width:1050px; }
+.settings-workspace .settings-content .rounded-3xl { border-radius:14px; }
+.settings-workspace .settings-content label { letter-spacing:0; text-transform:none; }
+.settings-workspace .settings-content h3 { letter-spacing:0; text-transform:none; line-height:1.5; }
+.settings-workspace .settings-appearance,.settings-preferences { padding:22px; border:1px solid var(--border-input); border-radius:14px; background:var(--bg-card); }
+.settings-workspace .settings-appearance h3 { font-size:16px; font-weight:600; }
+.settings-workspace .settings-appearance p { color:var(--text-muted); font-size:13px; line-height:1.7; margin:5px 0 14px; }
+.settings-workspace .settings-appearance label { display:flex; align-items:center; gap:14px; font-size:13px; }
+.settings-workspace .settings-appearance select { min-height:40px; padding:8px 12px; border:1px solid var(--border-input); background:var(--bg-input); border-radius:8px; }
+.settings-section-title { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+.settings-section-title > span { display:grid; place-items:center; width:40px; height:40px; border-radius:12px; background:color-mix(in srgb,var(--tab-active) 8%,var(--bg-card)); color:var(--tab-active); flex-shrink:0; }
+.settings-section-title h3 { margin:0 !important; font-size:15px; font-weight:600; }
+.settings-section-title p { font-size:12px; line-height:1.6; color:var(--text-muted); margin-top:3px; }
+.settings-preference-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px; border:1px solid var(--border-input); border-radius:10px; background:var(--bg-input); }
+.settings-preference-row strong { display:block; font-size:13px; font-weight:550; }
+.settings-preference-row small { display:block; font-size:12px; color:var(--text-muted); line-height:1.6; margin-top:4px; }
+.settings-preference-row input { width:18px; height:18px; flex-shrink:0; accent-color:var(--btn-primary); }
+.settings-sound-controls { display:flex; flex-wrap:wrap; align-items:center; gap:18px; padding:18px 0 26px; }
+.settings-sound-controls label { display:flex; flex-direction:column; gap:8px; font-size:12px; min-width:120px; color:var(--text-muted); }
+.settings-sound-controls select { min-height:36px; padding:7px; border:1px solid var(--border-input); border-radius:8px; background:var(--bg-input); color:var(--text-main); }
+.settings-sound-controls input { accent-color:var(--btn-primary); }
+.settings-sound-controls button { display:flex; align-items:center; gap:7px; min-height:38px; padding:8px 12px; border:1px solid var(--border-input); border-radius:8px; color:var(--tab-active); font-size:12px; cursor:pointer; }
+.settings-local-note,.settings-preference-feedback { margin-top:12px; color:var(--text-muted); font-size:11px; line-height:1.7; }
+@media(max-width:1023px) {
+ .settings-workspace .settings-header { padding:16px; }
+ .settings-workspace .settings-header h2 { font-size:21px; }
+ .settings-workspace .settings-header button { padding:9px 12px; min-height:38px; }
+ .settings-workspace .settings-mobile-tabs { padding:10px 12px; gap:6px; }
+ .settings-workspace .settings-mobile-tabs button { padding:7px 11px; min-height:36px; font-size:12px; border-radius:8px; margin-left:0; }
+ .settings-workspace .settings-content { padding:14px 12px 24px; }
+ .settings-workspace .settings-content .p-6,.settings-workspace .settings-content .md\:p-8 { padding:16px; }
+ .settings-preferences { padding:16px; }
+ .settings-sound-controls { gap:14px; }
+ .settings-workspace .settings-content label.flex { gap:12px; }
+ .settings-workspace .settings-content label.flex input[type=checkbox] { flex-shrink:0; }
+ .settings-workspace .settings-content .min-w-\[600px\],.settings-workspace .settings-content .min-w-\[700px\],.settings-workspace .settings-content .min-w-\[800px\] { max-width:none; }
+}
