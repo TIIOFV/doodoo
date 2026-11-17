@@ -1,0 +1,220 @@
+[
+  {
+    "area": "agenda",
+    "name": "create event persists across refresh",
+    "status": "PASSOU MOCK",
+    "requests": [
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "POST"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      }
+    ],
+    "externalForwarded": 0
+  },
+  {
+    "area": "agenda",
+    "name": "invalid time, edit with attendance preserved and denied deletion",
+    "status": "PASSOU MOCK",
+    "requests": [
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "PATCH"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "DELETE"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "DELETE"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      }
+    ],
+    "externalForwarded": 0
+  },
+  {
+    "area": "agenda",
+    "name": "concurrent attendance with version and realtime preserves two participants",
+    "status": "PASSOU MOCK",
+    "requests": [
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_permissoes",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_canais",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_perfis",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_tarefas",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_accept_event",
+        "method": "POST",
+        "mockRpc": true
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_accept_event",
+        "method": "POST",
+        "mockRpc": true
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      },
+      {
+        "table": "doodoo_agenda",
+        "method": "GET"
+      }
+    ],
+    "externalForwarded": 0
+  }
+]

@@ -43,6 +43,8 @@ export function createSandbox({origin='http://127.0.0.1:3300'}={}) {
  state.attach=async(context,user=a)=>{
   await context.addInitScript(({key,session})=>{if(!sessionStorage.getItem('fixture-started')){if(session)localStorage.setItem(key,JSON.stringify(session));else localStorage.removeItem(key);sessionStorage.setItem('fixture-started','yes');}},{key,session:user?session(user):null});
   await context.routeWebSocket('**/*',ws=>{
+   // Next dev needs its local HMR socket before hydration; external sockets stay intercepted.
+   if(new URL(ws.url()).host===new URL(origin).host){ws.connectToServer();return;}
    if(new URL(ws.url()).hostname!==host){ws.close();return;}
    const client={ws,user,topics:new Map()};state.sockets.add(client);
    ws.onMessage(raw=>{let msg;try{msg=JSON.parse(String(raw));if(Array.isArray(msg)){client.v2=true;const[join_ref,ref,topic,event,payload]=msg;msg={join_ref,ref,topic,event,payload};}}catch{return;}

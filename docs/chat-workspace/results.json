@@ -1,0 +1,26 @@
+[
+  {
+    "name": "urgent cross-page delivery, opening exact message, acknowledgement and cooldown",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "first urgent message in a newly created direct conversation",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "failed urgent send preserves text, retry sends once, recipient can dismiss",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "normal messages stay normal, unrelated teammate gets no urgent alert",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "chat styling at desktop/mobile, reply actions, search and reduced-motion alert",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "conversation filters, recent-message navigation and keyboard reply",
+    "status": "PASS MOCK"
+  }
+]

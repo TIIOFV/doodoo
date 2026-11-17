@@ -1,6 +1,8 @@
 'use client';
 import { panelStyle } from '../components/ui';
 import { environment } from '../lib/environment';
+import { useTaskNotifications } from './useTaskNotifications';
+import ChatAttention from './ChatAttention';
 
 import type { Session } from '@supabase/supabase-js';
 import {
@@ -38,7 +40,7 @@ const LogoDooDoo = ({ className, style }: { className?: string; style?: React.CS
   </svg>
 );
 
-interface AppNotification { id: number; title: string; desc: string; time: string; unread: boolean; link?: string; }
+interface AppNotification { id: number; title: string; desc: string; time: string; unread: boolean; link?: string; eventKey?: string; }
 const getInitials = (name: string) => { if (!name) return '..'; const parts = name.trim().split(' ').filter(Boolean); if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase(); return name.slice(0, 2).toUpperCase(); };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -67,6 +69,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const sessionId = session?.user.id;
   const [accessVersion,setAccessVersion]=useState(0);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  useTaskNotifications(currentUser?.user_id === sessionId ? currentUser : null, allowedTabs.includes('tarefas'));
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
@@ -132,6 +135,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!currentUser || currentUser.user_id!==sessionId) return;
+    let listening=true;
     const globalListener = supabase.channel('doodoo_global_network')
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'doodoo_perfis',filter:'user_id=eq.'+currentUser.user_id},payload=>{
         if(['cargo','setor','status','nome'].some(field=>field in payload.new && payload.new[field] !== currentUser[field as keyof DBProfile])){setCurrentUser(null);setAccessVersion(v=>v+1);}
@@ -139,10 +143,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       })
       .on('postgres_changes',{event:'*',schema:'public',table:'doodoo_permissoes'},()=>{setAccessVersion(v=>v+1);});
     if(allowedTabs.includes('chat'))globalListener
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doodoo_mensagens' }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doodoo_mensagens' }, async (payload) => {
         const msg = payload.new;
+        if(msg.sender_id!==currentUser.user_id && msg.metadata?.urgent===true && !meusCanaisRef.current.includes(msg.canal_id)){
+          const {data}=await supabase.from('doodoo_canais').select('id,membros').eq('id',msg.canal_id).maybeSingle();
+          if(!listening)return;
+          if(data?.membros?.some((m:{user_id:string})=>m.user_id===currentUser.user_id))meusCanaisRef.current=[...new Set([...meusCanaisRef.current,data.id])];
+        }
         if (msg.sender_id !== currentUser.user_id && meusCanaisRef.current.includes(msg.canal_id)) {
-          if (!window.location.pathname.startsWith('/dashboard/conversas')) {
+          if (msg.metadata?.urgent === true && !msg.metadata?.deleted) {
+            window.dispatchEvent(new CustomEvent('doodoo:chat_attention',{detail:{id:msg.id,channelId:msg.canal_id,senderId:msg.sender_id,sender:msg.sender_nome,text:msg.texto}}));
+            window.dispatchEvent(new CustomEvent('doodoo:notify',{detail:{title:'Mensagem urgente de '+msg.sender_nome,desc:msg.texto,link:'/dashboard/conversas?chatId='+encodeURIComponent(msg.canal_id)+'&messageId='+encodeURIComponent(msg.id),eventKey:'chat-urgent:'+msg.id}}));
+          }
+          if (!window.location.pathname.startsWith('/dashboard/conversas') && msg.metadata?.urgent !== true) {
             setUnreadChatCount(prev => prev + 1);
             const titulo = `Mensagem de ${msg.sender_nome}`;
             const descricao = msg.tipo === 'image' ? 'Enviou uma imagem' : msg.tipo === 'file' ? 'Enviou um documento' : msg.texto;
@@ -151,26 +164,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
       })
       ;
-    if(allowedTabs.includes('tarefas'))globalListener.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doodoo_tarefas' }, (payload) => {
-        const task = payload.new;
-        if (task.responsavel === currentUser.nome && task.atribuido_por !== currentUser.nome) {
-           window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title: `Nova Tarefa`, desc: `"${task.titulo}" delegada por ${task.atribuido_por}`, link: '/dashboard/tarefas' } }));
-        }
-      })
-      ;
+    if(allowedTabs.includes('chat'))globalListener.on('postgres_changes',{event:'*',schema:'public',table:'doodoo_canais'},async()=>{
+      const {data}=await supabase.from('doodoo_canais').select('id,membros');
+      if(listening&&data)meusCanaisRef.current=data.filter(c=>c.membros?.some((m:{user_id:string})=>m.user_id===currentUser.user_id)).map(c=>c.id);
+    });
     globalListener.subscribe();
 
-    return () => { supabase.removeChannel(globalListener); };
+    return () => { listening=false;supabase.removeChannel(globalListener); };
   }, [currentUser,sessionId,allowedTabs]);
 
   const markAllAsRead = () => { setNotifications(prev => prev.map(n => ({ ...n, unread: false }))); };
 
   useEffect(() => {
     const handleNewNotif = (e: Event) => {
-      const { title, desc, link } = (e as CustomEvent<{title?:string;desc?:string;link?:string}>).detail;
-      setFeedback({ title: title || 'Alerta', desc: desc || '' });
+      const { title, desc, link, eventKey } = (e as CustomEvent<{title?:string;desc?:string;link?:string;eventKey?:string}>).detail;
+      if(!eventKey?.startsWith('chat-urgent:'))setFeedback({ title: title || 'Alerta', desc: desc || '' });
       const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      setNotifications(prev => [{ id: Date.now(), title: title || 'Alerta', desc: desc || '', time: timeStr, unread: true, link: link || '' }, ...prev].slice(0, 30));
+      setNotifications(prev => eventKey && prev.some(n => n.eventKey === eventKey) ? prev : [{ id: Date.now(), title: title || 'Alerta', desc: desc || '', time: timeStr, unread: true, link: link || '', eventKey }, ...prev].slice(0, 30));
     };
     window.addEventListener('doodoo:notify', handleNewNotif);
     return () => window.removeEventListener('doodoo:notify', handleNewNotif);
@@ -195,7 +205,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         const url=new URL(notif.link,window.location.origin);
         if(url.origin!==window.location.origin||!url.pathname.startsWith('/dashboard'))throw new Error('Destino inválido');
         router.push(url.pathname+url.search);setIsNotifOpen(false);
-        const chatId=url.searchParams.get('chatId');if(chatId&&pathname.startsWith('/dashboard/conversas'))window.dispatchEvent(new CustomEvent('doodoo:switch_chat',{detail:{chatId}}));
+        if (url.pathname === '/dashboard/tarefas' && pathname === '/dashboard/tarefas') window.dispatchEvent(new CustomEvent('doodoo:open_task', { detail: { taskId: url.searchParams.get('taskId'), tab: url.searchParams.get('tab') } }));
+        const chatId=url.searchParams.get('chatId');if(chatId&&pathname.startsWith('/dashboard/conversas'))window.dispatchEvent(new CustomEvent('doodoo:switch_chat',{detail:{chatId,messageId:url.searchParams.get('messageId')}}));
       }catch{setFeedback({title:'Destino indisponível',desc:'A notificação não aponta para uma página válida do portal.'});}
     }
   };
@@ -240,6 +251,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="app-shell flex h-[100dvh] overflow-hidden transition-colors duration-700 relative z-0" style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-main)' }}>
 
+      {currentUser && allowedTabs.includes('chat') && <ChatAttention key={currentUser.user_id} userId={currentUser.user_id}/>}
       {feedback && createPortal(<div data-modal-live role="status" aria-live="polite" className="pointer-events-none fixed top-[max(.75rem,env(safe-area-inset-top))] left-1/2 z-[1100] w-[min(90vw,380px)] -translate-x-1/2 rounded-2xl border p-4 shadow-sm" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderColor: 'var(--border-input)' }}><strong className="text-sm">{feedback.title}</strong><p className="mt-1 text-sm">{feedback.desc}</p></div>, document.body)}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[10%] -left-[5%] w-[45vw] h-[45vw] rounded-full bg-brand-panel opacity-10 hidden"></div>

@@ -1,0 +1,129 @@
+{
+  "browser": "157.0.8103.79",
+  "results": [
+    {
+      "area": "agenda",
+      "name": "two participants accept without updated_at using one RPC each",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_agenda",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_agenda",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_agenda",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_agenda",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_accept_event",
+          "method": "POST",
+          "mockRpc": true
+        },
+        {
+          "table": "doodoo_agenda",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_agenda",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_accept_event",
+          "method": "POST",
+          "mockRpc": true
+        },
+        {
+          "table": "doodoo_agenda",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "agenda",
+      "name": "day, week and month selection retain event identity",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_agenda",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_agenda",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    }
+  ]
+}

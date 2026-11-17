@@ -1,13 +1,14 @@
 'use client';
+import './chat-workspace.css';
 import { useSignOut } from '@/app/lib/useSignOut';
 
 import ModalShell from '../ModalShell';
 import { useDialogAction } from '../useDialogAction';
 
-import { messageOf,occurrenceId,requireResult } from '@/app/lib/domain';
+import { messageOf,occurrenceId,requireResult,searchKey } from '@/app/lib/domain';
 import {confirmOutgoing,pendingOutgoing,retainOutgoing} from '@/app/lib/chatOutbox';
 import type { ChannelRow,Member,MessageMetadata,MessageRow } from '@/app/lib/models';
-import { AlertTriangle,ArrowLeft,Calendar,Check,CheckCheck,Clock,Download,FileText,Image as ImageIcon,Loader2,LogOut,Megaphone,MessageSquare,Paperclip,Reply,Search,Send,Smile,Trash2,UserPlus,Users,X } from 'lucide-react';
+import { BellRing,ArrowDown,AlertTriangle,ArrowLeft,Calendar,Check,CheckCheck,Clock,Download,FileText,Image as ImageIcon,Loader2,LogOut,Megaphone,MessageSquare,Paperclip,Reply,Search,Send,Smile,Trash2,UserPlus,Users,X } from 'lucide-react';
 import { useCallback,useEffect,useMemo,useRef,useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRecordActions } from '../useRecordActions';
@@ -109,6 +110,8 @@ export default function ConversasPage() {
 
 
   const [currentUser, setCurrentUser] = useState<DBProfile | null>(null);
+  const [chatConnection,setChatConnection]=useState('Conectando…');
+  const focusedScroll=useRef<string|null>(null);
   const [userStatus, setUserStatus] = useState<UserStatusType>('online');
   const [teamMembers, setTeamMembers] = useState<DBProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,6 +140,7 @@ export default function ConversasPage() {
       const params = new URLSearchParams(window.location.search);
       const cId = params.get('chatId');
       if (cId) pendingChatIdRef.current = cId;
+      setFocusedMessageId(params.get('messageId'));
     }
   }, []);
 
@@ -148,6 +152,11 @@ export default function ConversasPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [messageSearch, setMessageSearch] = useState('');
+  const [chatFilter,setChatFilter]=useState<'all'|'unread'|'groups'>('all');
+  const [urgentChannelId,setUrgentChannelId]=useState<string|null>(null);
+  const urgentLocks=useRef(new Set<string>());
+  const [awayFromBottom,setAwayFromBottom]=useState(false);
+  const [focusedMessageId,setFocusedMessageId]=useState<string|null>(null);
 
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -163,7 +172,7 @@ export default function ConversasPage() {
   const [eventLocation, setEventLocation] = useState('');
   const setActiveChatId = (action: React.SetStateAction<string|null>) => {
     const next = typeof action==='function'?action(activeChatIdRef.current):action;
-    if(next!==activeChatIdRef.current){setReplyingTo(null);setShowEmojiPicker(false);setActiveMessages([]);setChatNotes([]);stickToBottom.current=true;}
+    if(next!==activeChatIdRef.current){setUrgentChannelId(null);setMessageSearch('');setAwayFromBottom(false);setReplyingTo(null);setShowEmojiPicker(false);setActiveMessages([]);setChatNotes([]);stickToBottom.current=true;}
     activeChatIdRef.current=next;setChatSelection(next);
   };
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; isDestructive?: boolean }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, isDestructive: false });
@@ -401,7 +410,9 @@ export default function ConversasPage() {
 
   useEffect(() => {
     const handleSwitchChat = async (event: Event) => {
-      const id = (event as CustomEvent<{chatId:string}>).detail.chatId;
+      const detail = (event as CustomEvent<{chatId:string;messageId?:string}>).detail;
+      const id=detail.chatId;
+      focusedScroll.current=null;setFocusedMessageId(detail.messageId || null);
       if (!id) return;
 
       if (channels.length > 0) {
@@ -420,7 +431,7 @@ export default function ConversasPage() {
                 foto_url: missingChannel.foto_url, unread: 0, members: missingChannel.membros, lastMessage: 'Nova conversa iniciada',
                 lastMessageTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), updatedAt: new Date().toISOString()
              };
-             setChannels(prev => [mapped, ...prev].sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()));
+             setChannels(prev => [mapped, ...prev.filter(c=>c.id!==mapped.id)].sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()));
              setActiveChatId(id);
              if (typeof window !== 'undefined') window.history.replaceState(null, '', `/dashboard/conversas?chatId=${id}`);
           }
@@ -612,7 +623,7 @@ export default function ConversasPage() {
           if (activeChatIdRef.current === deletedId) { setActiveChatId(null); setIsInfoDrawerOpen(false); }
         }
       })
-      .subscribe(status=>{const id=activeChatIdRef.current;if(status==='SUBSCRIBED'&&id&&!id.startsWith('temp_chat_'))void fetchMessagesForActiveChannel(id);});
+      .subscribe(status=>{setChatConnection(status==='SUBSCRIBED'?'Conectado':status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'?'Reconectando…':'Conectando…');const id=activeChatIdRef.current;if(status==='SUBSCRIBED'&&id&&!id.startsWith('temp_chat_'))void fetchMessagesForActiveChannel(id);});
 
     return () => { supabase.removeChannel(globalSub); };
   }, [currentUser, scrollToBottom, mergeMetadata, notifyBell, fetchMessagesForActiveChannel]);
@@ -631,7 +642,10 @@ export default function ConversasPage() {
       })());
       try {
         const saved=await directRequests.current.get(temporaryId)!;targetChannelId=saved.id;
-        setChannels(prev=>prev.map(c=>c.id===temporaryId?{...c,id:saved.id}:c));
+        setChannels(prev=>{
+          const hasTemporary=prev.some(c=>c.id===temporaryId);
+          return prev.filter(c=>!hasTemporary||c.id!==saved.id).map(c=>c.id===temporaryId?{...c,id:saved.id}:c);
+        });
         setDrafts(prev=>({...prev,[saved.id]:prev[temporaryId]||prev[saved.id]||''}));
         if(activeChatIdRef.current===temporaryId){setActiveChatId(saved.id);window.history.replaceState(null,'','/dashboard/conversas?chatId='+saved.id);}
       }catch{directRequests.current.delete(temporaryId);throw new Error('Não foi possível iniciar a conversa. Seu conteúdo foi preservado.');}
@@ -692,14 +706,42 @@ export default function ConversasPage() {
     }
   };
 
+  const acknowledgeUrgent = async (message:Message) => {
+    if(!currentUser || message.deleted || message.sender_id===currentUser.user_id)return;
+    const updated=await recordActions.run('ack:'+message.id,()=>mergeMetadata(message.id,value=>{
+      if(value.deleted || !value.urgent)throw new Error('Esta chamada não está mais disponível.');
+      return {...value,acknowledgedBy:[...new Set([...(value.acknowledgedBy||[]),currentUser.user_id])]};
+    }));
+    if(updated)setActiveMessages(prev=>prev.map(m=>m.id===updated.id?updated:m));
+  };
+  useEffect(()=>{
+    if(!focusedMessageId || focusedScroll.current===focusedMessageId || !activeMessages.some(m=>m.id===focusedMessageId))return;
+    focusedScroll.current=focusedMessageId;
+    document.getElementById('chat-message-'+focusedMessageId)?.scrollIntoView({block:'center',behavior:'auto'});
+  },[focusedMessageId,activeMessages]);
+
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputText.trim() || !activeChatId) return;
     const textToSend = inputText.trim();
+    const urgent=urgentChannelId===activeChatId;
+    const cooldownKey='doodoo:urgent:'+currentUser?.user_id+':'+activeChatId;
+    if(urgent){
+      let last=0;try{last=Number(sessionStorage.getItem(cooldownKey)||0);}catch{}
+      if(urgentLocks.current.has(activeChatId)||Date.now()-last<60000){notifyBell('Aguarde um momento','Você já chamou a atenção desta conversa. Aguarde um minuto para outra urgência.');return;}
+      urgentLocks.current.add(activeChatId);
+    }
     setInputText('');
     if (inputFieldRef.current) inputFieldRef.current.style.height = 'auto';
     const id=activeChatIdRef.current;
-    if(!await sendToDatabase('text',textToSend,{},undefined,id)&&id)setDrafts(prev=>({...prev,[id]:prev[id]?prev[id]+'\n'+textToSend:textToSend}));
+    try {
+      const sent=await sendToDatabase('text',textToSend,urgent?{urgent:true}: {},undefined,id);
+      if(!sent&&id)setDrafts(prev=>({...prev,[id]:prev[id]?prev[id]+'\n'+textToSend:textToSend}));
+      if(sent&&urgent){setUrgentChannelId(null);try{sessionStorage.setItem(cooldownKey,String(Date.now()));}catch{}}
+    } catch(error) {
+      if(id)setDrafts(prev=>({...prev,[id]:prev[id]?prev[id]+'\n'+textToSend:textToSend}));
+      notifyBell('Falha no envio',messageOf(error));
+    } finally {if(id)urgentLocks.current.delete(id);}
   };
 
   const handleInputResize = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -709,7 +751,7 @@ export default function ConversasPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       if (inputText.trim()) handleSendMessage();
     }
@@ -947,17 +989,17 @@ export default function ConversasPage() {
   }, [teamMembers, searchQuery, currentUser]);
 
   const filteredChannels = useMemo(() => {
-    const list = !searchQuery.trim() ? channels : channels.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    return [...list].sort((a, b) => {
+    const list = !searchQuery.trim() ? channels : channels.filter(c => searchKey(c.name).includes(searchKey(searchQuery)));
+    return list.filter(c=>chatFilter==='all'||chatFilter==='unread'&&c.unread>0||chatFilter==='groups'&&c.isGroup).sort((a, b) => {
        if (a.name === 'Geral') return -1;
        if (b.name === 'Geral') return 1;
        return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
     });
-  }, [channels, searchQuery]);
+  }, [channels, searchQuery,chatFilter]);
 
   const filteredMessages = useMemo(() => {
     if (!messageSearch.trim()) return activeMessages;
-    return activeMessages.filter(m => m.text.toLowerCase().includes(messageSearch.toLowerCase()) || m.sender.toLowerCase().includes(messageSearch.toLowerCase()));
+    return activeMessages.filter(m => searchKey(m.text).includes(searchKey(messageSearch)) || searchKey(m.sender).includes(searchKey(messageSearch)));
   }, [activeMessages, messageSearch]);
 
   if (isLoading) {
@@ -986,7 +1028,7 @@ export default function ConversasPage() {
   }
 
   return (
-    <div className="w-full h-full min-h-0 min-w-0 flex-1 flex flex-col animate-in fade-in duration-500 pb-0 relative z-0">
+    <div className="chat-workspace w-full h-full min-h-0 min-w-0 flex-1 flex flex-col animate-in fade-in duration-500 pb-0 relative z-0">
 
       <input type="file" ref={imageInputRef} onChange={(e) => handleFileUpload(e, 'image')} accept="image/*" className="hidden" />
       <input type="file" ref={fileInputRef} onChange={(e) => handleFileUpload(e, 'file')} accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" className="hidden" />
@@ -1002,7 +1044,7 @@ export default function ConversasPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-base md:text-lg tracking-tight">Chat Corporativo</h3>
-                  <p className="text-xs font-medium uppercase tracking-widest opacity-45 mt-0.5">Sincronizado</p>
+                  <p className="text-xs font-medium uppercase tracking-widest opacity-45 mt-0.5">{chatConnection}</p>
                 </div>
               </div>
 
@@ -1060,6 +1102,8 @@ export default function ConversasPage() {
               </div>
             )}
 
+            <div className="chat-list-filters" aria-label="Filtrar conversas">{[{id:'all',label:'Todas'},{id:'unread',label:'Não lidas'},{id:'groups',label:'Grupos'}].map(filter=><button key={filter.id} aria-pressed={chatFilter===filter.id} onClick={()=>setChatFilter(filter.id as typeof chatFilter)}>{filter.label}</button>)}</div>
+            {filteredChannels.length===0 && <p className="chat-filter-empty">Nenhuma conversa neste filtro.</p>}
             {filteredChannels.map(chat => {
               const isActive = chat.id === activeChatId;
               const isGeneralGroup = chat.name === 'Geral';
@@ -1068,7 +1112,7 @@ export default function ConversasPage() {
 
               return (
                 <button
-                  key={chat.id}
+                  key={chat.id} data-chat-row aria-pressed={isActive}
                   onClick={() => { setActiveChatId(chat.id); setIsInfoDrawerOpen(false); if (typeof window !== 'undefined') window.history.replaceState(null, '', `/dashboard/conversas?chatId=${chat.id}`); }}
                   className={`w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center space-x-3.5 ${isActive ? 'bg-brand-panel text-white shadow-sm border-transparent scale-[1.02]' : 'hover:bg-black/5 dark:hover:bg-white/5 shadow-sm'}`}
                   style={!isActive ? { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-input)' } : undefined}
@@ -1101,7 +1145,7 @@ export default function ConversasPage() {
           <div className={`min-h-0 min-w-0 flex-1 flex-col h-full overflow-hidden transition-all relative w-full ${!activeChatId ? 'hidden lg:flex' : isInfoDrawerOpen ? 'hidden xl:flex' : 'flex'}`} style={{ backgroundColor: 'var(--bg-card)' }}>
 
             {/* CABEÇALHO DO CHAT */}
-            <div role="button" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }} onClick={() => setIsInfoDrawerOpen(!isInfoDrawerOpen)} className="p-4 md:p-6 border-b flex items-center justify-between cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors shadow-sm z-10 flex-shrink-0" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
+            <div role="button" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }} onClick={() => setIsInfoDrawerOpen(!isInfoDrawerOpen)} className="chat-conversation-header p-4 md:p-6 border-b flex items-center justify-between cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors shadow-sm z-10 flex-shrink-0" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
               <div className="flex items-center space-x-3.5 overflow-hidden">
                 {/* 🚀 BOTÃO VOLTAR (LIMPA O CHAT ATIVO - MOBILE ONLY) */}
                 <button aria-label="Voltar" onClick={(e) => { e.stopPropagation(); setActiveChatId(null); if (typeof window !== 'undefined') window.history.replaceState(null, '', '/dashboard/conversas'); }} className="lg:hidden p-2 -ml-2 mr-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-brand-panel font-semibold text-sm transition-colors flex items-center">
@@ -1127,16 +1171,16 @@ export default function ConversasPage() {
               </div>
             </div>
 
-            <div onScroll={event=>{const el=event.currentTarget;stickToBottom.current=el.scrollHeight-el.scrollTop-el.clientHeight<80;}} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-2 custom-scrollbar" style={{ backgroundColor: 'var(--bg-input)' }}>
+            <div onScroll={event=>{const el=event.currentTarget;stickToBottom.current=el.scrollHeight-el.scrollTop-el.clientHeight<80;setAwayFromBottom(!stickToBottom.current);}} className="chat-message-list flex-1 overflow-y-auto p-4 md:p-6 space-y-2 custom-scrollbar" style={{ backgroundColor: 'var(--bg-input)' }}>
               {filteredMessages.map((msg, index) => {
-                const isMe = msg.sender_id === currentUser.user_id || msg.sender === currentUser.nome;
+                const isMe = msg.sender_id === currentUser.user_id;
                 const hasAccepted = msg.acceptedBy?.includes(currentUser.nome);
                 const isRead = (msg.lidoPor || []).some(nome => nome !== currentUser.nome);
                 const showDateChip = index === 0 || filteredMessages[index - 1].dateLabel !== msg.dateLabel;
                 const showTail = index === 0 || filteredMessages[index - 1].sender_id !== msg.sender_id || showDateChip;
 
                 return (
-                  <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} ${showDateChip ? 'mt-6' : 'mt-2'}`}>
+                  <div key={msg.id} id={'chat-message-'+msg.id} data-message-id={msg.id} data-highlighted={focusedMessageId===msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} ${showDateChip ? 'mt-6' : 'mt-2'}`}>
 
                     {showDateChip && <div className="flex justify-center w-full my-5"><span className="px-4 py-1.5 rounded-xl text-xs font-semibold shadow-sm opacity-90 uppercase tracking-widest border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)', color: 'var(--text-main)' }}>{msg.dateLabel}</span></div>}
 
@@ -1148,13 +1192,14 @@ export default function ConversasPage() {
                         </div>
                       ) : (
                         <>
-                          <div className={`absolute top-0 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ${isMe ? '-left-14' : '-right-14'}`}>
+                          <div className={`chat-message-actions absolute top-0 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ${isMe ? '-left-14' : '-right-14'}`}>
                             {isMe && <button aria-label="Apagar" type="button" onClick={() => confirmDeleteMessage(msg.id)} className="p-1.5 text-[var(--error-text)] hover:bg-red-500/10 rounded-full transition-colors cursor-pointer" title="Apagar"><Trash2 className="w-4 h-4" /></button>}
                             <button aria-label="Responder" type="button" onClick={() => { setReplyingTo({ id: msg.id, sender: msg.sender, text: msg.text }); inputFieldRef.current?.focus(); }} className="p-1.5 opacity-75 hover:opacity-100 hover:bg-black/5 rounded-full transition-colors cursor-pointer" title="Responder"><Reply className="w-4 h-4" /></button>
                           </div>
 
-                          <div className={`px-4 pt-3 pb-3.5 rounded-xl text-[15px] font-medium shadow-sm relative ${isMe ? 'bg-brand-panel text-white' : ''} ${showTail ? (isMe ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''}`} style={!isMe ? { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-input)' } : undefined}>
+                          <div data-urgent={msg.metadata?.urgent===true} className={`chat-bubble px-4 pt-3 pb-3.5 rounded-xl text-[15px] font-medium shadow-sm relative ${isMe ? 'bg-brand-panel text-white' : ''} ${showTail ? (isMe ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''}`} style={!isMe ? { backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-input)' } : undefined}>
                             {!isMe && !activeChat.isDirect && showTail && <span className="text-xs font-semibold text-brand-panel block mb-1 uppercase tracking-wider">{msg.sender}</span>}
+                            {msg.metadata?.urgent && <div className="chat-urgent-label"><BellRing size={14}/>Mensagem urgente</div>}
                             {msg.replyTo && <div className={`mb-2 p-3 rounded-xl border-l-4 text-sm shadow-sm ${isMe ? 'bg-black/20 border-white/60 text-white' : 'bg-black/5 border-brand-panel opacity-90'}`}><p className="font-semibold text-xs mb-0.5">{msg.replyTo.sender}</p><p className="truncate opacity-80">{msg.replyTo.text}</p></div>}
 
                             {msg.type === 'image' && !msg.mediaUrl && msg.metadata?.storagePath ? <a href="#" onClick={event=>{void openAttachment(event,msg);}} className="underline">Abrir imagem</a> : msg.type === 'image' && msg.mediaUrl ? (
@@ -1184,6 +1229,7 @@ export default function ConversasPage() {
                                <div className="whitespace-pre-wrap break-words">{formatLinks(msg.text)}</div>
                             )}
 
+                            {msg.metadata?.urgent && <div className="chat-acknowledgement">{!isMe && <button type="button" disabled={recordActions.pending>0 || msg.metadata.acknowledgedBy?.includes(currentUser.user_id)} onClick={()=>acknowledgeUrgent(msg)}>{msg.metadata.acknowledgedBy?.includes(currentUser.user_id)?'Você confirmou ciência':'Ciente'}</button>}<span>{msg.metadata.acknowledgedBy?.length ? msg.metadata.acknowledgedBy.length+' '+(msg.metadata.acknowledgedBy.length===1?'pessoa ciente':'pessoas cientes') : 'Aguardando confirmação'}</span></div>}
                             <div className={`float-right flex items-center space-x-1 ml-4 mt-2 text-xs font-semibold uppercase tracking-widest ${isMe ? 'text-white/70' : 'opacity-70'}`}><span className="pt-[1px]">{msg.time}</span>{msg.status==='error'&&<button type="button" aria-label="Reenviar mensagem" onClick={async()=>{if(await sendToDatabase(msg.type,msg.text,msg.metadata||{},msg.id,msg.canal_id)){setDrafts(prev=>prev[msg.canal_id]===msg.text?{...prev,[msg.canal_id]:''}:prev);}}}>Reenviar</button>}{isMe && (msg.status === 'sending' ? <Clock className="w-3 h-3 animate-spin" /> : msg.status === 'error' ? <AlertTriangle className="w-3 h-3 text-red-300" /> : <CheckCheck className={`w-3.5 h-3.5 ${isRead ? 'text-sky-300' : 'opacity-70'}`} />)}</div>
                             <div className="clear-both"></div>
                           </div>
@@ -1202,6 +1248,7 @@ export default function ConversasPage() {
               <div ref={messagesEndRef} />
             </div>
 
+            {awayFromBottom && <button className="chat-jump-latest" onClick={()=>{stickToBottom.current=true;setAwayFromBottom(false);scrollToBottom('auto');}}><ArrowDown size={15}/>Mensagens recentes</button>}
             {/* CAIXAS FLUTUANTES (RESPONDER E EMOJIS) */}
             <div className="relative">
 
@@ -1231,6 +1278,7 @@ export default function ConversasPage() {
               </div>
             ) : (
               <div className="chat-composer p-4 md:p-6 border-t flex flex-col flex-shrink-0 pb-safe" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}>
+                <div className="chat-compose-toolbar"><label className="chat-urgent-toggle" data-active={urgentChannelId===activeChatId}><input type="checkbox" checked={urgentChannelId===activeChatId} onChange={e=>setUrgentChannelId(e.target.checked?activeChatId:null)}/><BellRing size={14}/>Enviar como urgente</label><span>{urgentChannelId===activeChatId?'Destaca a mensagem e chama a atenção dos participantes.':'Enter para enviar · Shift + Enter para nova linha'}</span></div>
                 <form onSubmit={handleSendMessage} className="chat-compose-form flex flex-wrap items-end gap-2 sm:flex-nowrap">
                   <div className="flex items-center bg-black/5 dark:bg-white/5 rounded-full p-1 shadow-sm mb-0.5">
                      <button aria-label="Emojis" type="button" onClick={(e) => { e.preventDefault(); setShowEmojiPicker(!showEmojiPicker); }} className="p-2.5 rounded-full hover:bg-white dark:hover:bg-black/50 opacity-70 hover:opacity-100 transition-colors cursor-pointer" title="Emojis"><Smile className="w-5 h-5" /></button>

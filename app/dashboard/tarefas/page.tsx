@@ -9,10 +9,12 @@ import { useHydrated } from '@/app/lib/useHydrated';
 import ModalShell from '../ModalShell';
 import { useDialogAction } from '../useDialogAction';
 import { useRecordActions } from '../useRecordActions';
+import { useTaskMotion } from './useTaskMotion';
+import './task-workspace.css';
 
 import { useCallback,useEffect,useMemo,useRef,useState } from 'react';
 
-import { AlertTriangle,ArrowLeft,Bell,Calendar,CheckCircle2,CheckSquare,Clock,Edit2,Flame,Loader2,LogOut,Plus,Repeat,Search,Send,Shield,Star,Sun,Tag,Trash2,X } from 'lucide-react';
+import { AlertTriangle,ArrowLeft,Bell,Calendar,CheckCircle2,CheckSquare,Clock,Edit2,Flame,MessageSquare,ChevronRight,FileText,ListChecks,CircleDot,Loader2,LogOut,Plus,Repeat,Search,Send,Shield,Star,Sun,Tag,Trash2,X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 type RoleType = 'administrador' | 'gestor' | 'coordenador' | 'supervisor' | 'analista' | 'colaborador';
@@ -61,6 +63,7 @@ const formatLinks = (text: string) => {
 
 export default function TarefasPage() {
   const dialogAction = useDialogAction();
+  const taskMotion = useTaskMotion();
   const recordActions = useRecordActions();
   const isMounted = useHydrated();
 
@@ -79,6 +82,10 @@ export default function TarefasPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTaskId, setTaskSelection] = useState<string | null>(null);
 
+  const [detailTab, setDetailTab] = useState<'overview' | 'updates'>('overview');
+  const [isAddingStep, setIsAddingStep] = useState(false);
+  const detailHeadingRef = useRef<HTMLHeadingElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
@@ -109,7 +116,7 @@ export default function TarefasPage() {
   const taskChatEndRef = useRef<HTMLDivElement>(null);
   const inputFieldRef = useRef<HTMLTextAreaElement>(null);
 
-  const setSelectedTaskId = (id: React.SetStateAction<string|null>) => { setTaskSelection(id); setIsEditingTask(false); setEditingStepId(null); setEditingComment(null); setChatInput(''); };
+  const setSelectedTaskId = (id: React.SetStateAction<string|null>) => { setTaskSelection(id); setIsEditingTask(false); setEditingStepId(null); setEditingComment(null); setChatInput(''); setIsDifficultyAlert(false); setIsAddingStep(false); setStepInput(''); setStepNoteInput(''); setDetailTab('overview'); };
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   const glassContainerStyle = panelStyle;
@@ -151,6 +158,7 @@ export default function TarefasPage() {
           if (equipeRes.error || tarefasRes.error || categoriasRes.error) throw equipeRes.error || tarefasRes.error || categoriasRes.error;
           if (tarefasRes.data) setTasks(tarefasRes.data.map(mapDbToTask));
           setSelectedTaskId(new URLSearchParams(window.location.search).get('taskId'));
+          if (new URLSearchParams(window.location.search).get('tab') === 'updates') setDetailTab('updates');
           if (categoriasRes.data && categoriasRes.data.length > 0) {
             setTaskCategories(categoriasRes.data);
             setNewCategory(categoriasRes.data[0].nome);
@@ -178,9 +186,7 @@ export default function TarefasPage() {
           const incoming = mapDbToTask(payload.new as unknown as DbTask);
           if (incoming.sector !== currentUser.setor) return;
           setTasks(prev=>prev.some(t=>t.id===incoming.id)?prev.map(t=>t.id===incoming.id?incoming:t):[incoming,...prev]);
-          if (incoming.assignee === currentUser.nome && incoming.assignedBy !== currentUser.nome) {
-            notifyBell('📋 Nova Tarefa', `${incoming.assignedBy} atribuiu "${incoming.title}" para você.`);
-          }
+
         }
       )
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'doodoo_tarefas' }, (payload) => {
@@ -266,10 +272,38 @@ export default function TarefasPage() {
   const canEditTask = selectedTask && currentUser && (selectedTask.assignedBy === currentUser.nome || isManagerView);
 
   useEffect(() => {
-    const onBack = () => setSelectedTaskId(new URLSearchParams(window.location.search).get('taskId'));
-    window.addEventListener('popstate', onBack); return () => window.removeEventListener('popstate', onBack);
+    const openFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      setSelectedTaskId(params.get('taskId'));
+      if (params.get('tab') === 'updates') setDetailTab('updates');
+    };
+    const onOpen = (event: Event) => {
+      const { taskId, tab } = (event as CustomEvent<{ taskId: string | null; tab?: string }>).detail;
+      setSelectedTaskId(taskId);
+      if (tab === 'updates') setDetailTab('updates');
+    };
+    window.addEventListener('popstate', openFromUrl);
+    window.addEventListener('doodoo:open_task', onOpen);
+    return () => { window.removeEventListener('popstate', openFromUrl); window.removeEventListener('doodoo:open_task', onOpen); };
   }, []);
-  useEffect(() => { taskChatEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'nearest' }); }, [selectedTask?.id, selectedTask?.chat.length]);
+  useEffect(() => { if (selectedTask?.id) detailHeadingRef.current?.focus({ preventScroll: true }); }, [selectedTask?.id]);
+  const lastChat = useRef({ taskId: '', count: 0 });
+  useEffect(() => {
+    if (detailTab === 'updates' && lastChat.current.taskId === selectedTask?.id && selectedTask.chat.length > lastChat.current.count) taskChatEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+    lastChat.current = { taskId: selectedTask?.id || '', count: selectedTask?.chat.length || 0 };
+  }, [selectedTask?.id, selectedTask?.chat.length, detailTab]);
+  const openTask = (id: string) => { void taskMotion.switchView(() => setSelectedTaskId(id), 'open'); };
+  const closeTask = () => { void taskMotion.switchView(() => {
+    const id = selectedTaskId;
+    setSelectedTaskId(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('taskId'); url.searchParams.delete('tab');
+    window.history.replaceState(null, '', url.pathname + url.search);
+    requestAnimationFrame(() => {
+      const card = Array.from(listRef.current?.querySelectorAll<HTMLElement>('[data-task-id]') || []).find(el => el.dataset.taskId === id);
+      (card || listRef.current?.querySelector<HTMLInputElement>('input[type="text"]'))?.focus({ preventScroll: true });
+    });
+  }, 'close'); };
 
   const openCreateModal = () => {
     setNewTitle(''); setNewDesc(''); setNewCategory(taskCategories[0]?.nome || 'Geral'); setNewPriority('Normal');
@@ -408,7 +442,7 @@ export default function TarefasPage() {
   const handleAddStep = async (id: string) => {
     if (!stepInput.trim()) return;
     const step = { id: Date.now(), text: stepInput.trim(), note: stepNoteInput.trim(), done: false };
-    if (await mutateTask(id, live => ({ etapas: [...(live.etapas || []),step] }))) { setStepInput(''); setStepNoteInput(''); }
+    if (await mutateTask(id, live => ({ etapas: [...(live.etapas || []),step] }))) { setStepInput(''); setStepNoteInput(''); setIsAddingStep(false); }
   };
   const handleSaveStepEdit = async (id: string, stepId: number) => {
     if (editStepText.trim() && await mutateTask(id, live => ({ etapas: (live.etapas || []).map(step => step.id === stepId ? { ...step, text: editStepText.trim(), note: editStepNote.trim() } : step) }))) setEditingStepId(null);
@@ -423,7 +457,7 @@ export default function TarefasPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       if (chatInput.trim() && selectedTask) {
         handleSendChat(selectedTask.id);
@@ -432,7 +466,7 @@ export default function TarefasPage() {
   };
 
   const handleSendChat = async (taskId: string) => {
-    if (!chatInput.trim() || !currentUser || !isMounted) return;
+    if (!chatInput.trim() || !currentUser || !isMounted || recordActions.pending > 0) return;
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
@@ -514,7 +548,7 @@ export default function TarefasPage() {
   if (authError || !currentUser) return <div className="w-full h-full flex flex-col items-center justify-center"><button onClick={handleForceLogout} className="px-6 py-3 rounded-2xl bg-brand-panel text-white font-medium"><LogOut className="w-4 h-4 mr-2 inline" />Sair</button></div>;
 
   return (
-    <div aria-busy={recordActions.pending > 0} className="w-full h-full min-h-0 min-w-0 flex-1 flex flex-col animate-in fade-in duration-300 relative z-0">
+    <div ref={taskMotion.root} aria-busy={recordActions.pending > 0} className={`task-workspace w-full h-full min-h-0 min-w-0 flex-1 flex flex-col animate-in fade-in duration-300 relative z-0`}>
 
       <div className="w-full flex-1 flex flex-col lg:flex-row rounded-xl rounded-bl-none rounded-br-none md:rounded-xl md:rounded-xl border-t border-l-0 border-r-0 border-b-0 md:border overflow-hidden relative z-10" style={glassContainerStyle}>
 
@@ -588,23 +622,23 @@ export default function TarefasPage() {
 
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest opacity-70 px-2 mb-2">Filtros Inteligentes</p>
-              <button onClick={() => setSmartList('meu-dia')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${smartList === 'meu-dia' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
+              <button onClick={() => { setSelectedTaskId(null); setSmartList('meu-dia'); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${smartList === 'meu-dia' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
                 <div className="flex items-center space-x-3"><Sun className={`w-4 h-4 ${smartList === 'meu-dia' ? 'text-white' : 'text-[var(--warning)]'}`} /><span>Meu Dia</span></div>
                 <span className="text-xs font-semibold">{visibleTasks.filter(t => t.myDay && t.status !== 'concluida').length}</span>
               </button>
-              <button onClick={() => setSmartList('todas')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${smartList === 'todas' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
+              <button onClick={() => { setSelectedTaskId(null); setSmartList('todas'); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${smartList === 'todas' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
                 <div className="flex items-center space-x-3"><CheckSquare className="w-4 h-4" /><span>Todas em Aberto</span></div>
                 <span className="text-xs font-semibold">{visibleTasks.filter(t => t.status !== 'concluida').length}</span>
               </button>
-              <button onClick={() => setSmartList('importante')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${smartList === 'importante' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
+              <button onClick={() => { setSelectedTaskId(null); setSmartList('importante'); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${smartList === 'importante' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
                 <div className="flex items-center space-x-3"><Star className={`w-4 h-4 ${smartList === 'importante' ? 'text-white' : 'text-amber-400'}`} /><span>Urgentes & VIPs</span></div>
                 <span className="text-xs font-semibold">{visibleTasks.filter(t => (t.important || t.priority === 'Urgente') && t.status !== 'concluida').length}</span>
               </button>
-              <button onClick={() => setSmartList('rotinas')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${smartList === 'rotinas' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
+              <button onClick={() => { setSelectedTaskId(null); setSmartList('rotinas'); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${smartList === 'rotinas' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
                 <div className="flex items-center space-x-3"><Repeat className={`w-4 h-4 ${smartList === 'rotinas' ? 'text-white' : 'text-brand-panel'}`} /><span>Rotinas do Setor</span></div>
                 <span className="text-xs font-semibold">{visibleTasks.filter(t => t.isRoutine && t.status !== 'concluida').length}</span>
               </button>
-              <button onClick={() => setSmartList('concluidas')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${smartList === 'concluidas' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
+              <button onClick={() => { setSelectedTaskId(null); setSmartList('concluidas'); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${smartList === 'concluidas' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
                 <div className="flex items-center space-x-3"><CheckCircle2 className={`w-4 h-4 ${smartList === 'concluidas' ? 'text-white' : 'text-[var(--success)]'}`} /><span>Concluídas</span></div>
                 <span className="text-xs font-semibold">{visibleTasks.filter(t => t.status === 'concluida').length}</span>
               </button>
@@ -615,12 +649,12 @@ export default function TarefasPage() {
         {/* ==========================================================
             COLUNA 2: LISTA DE TAREFAS
             ========================================================== */}
-        <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${selectedTaskId ? 'hidden lg:flex lg:w-[350px] xl:w-[400px] lg:flex-none lg:border-r' : 'flex-1 w-full'}`} style={{ borderColor: 'var(--border-input)' }}>
+        <div ref={listRef} aria-label="Lista de tarefas" className={`${selectedTaskId ? 'hidden' : 'flex'} task-queue flex-col min-h-0 min-w-0 h-full flex-1 overflow-hidden`} style={{ borderColor: 'var(--border-input)' }}>
 
           <div className="p-4 md:p-6 border-b flex flex-col sm:flex-row items-center justify-between gap-3 flex-shrink-0" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}>
             <div className="relative w-full sm:flex-1">
               <Search className="w-4 h-4 md:w-5 md:h-5 absolute left-3.5 top-1/2 -translate-y-1/2 opacity-70" />
-              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Pesquisar tarefas..." className="w-full pl-10 pr-4 py-3.5 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors" style={solidInputStyle} />
+              <input aria-label="Pesquisar tarefas" type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Pesquisar tarefas..." className="w-full pl-10 pr-4 py-3.5 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors" style={solidInputStyle} />
             </div>
 
             {viewMode === 'delegadas' && delegatedPeopleList.length > 0 && (
@@ -645,7 +679,7 @@ export default function TarefasPage() {
               const catColor = taskCategories.find(c => c.nome === task.category)?.cor || '#3B82F6';
 
               return (
-                <div role="button" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }} key={task.id} onClick={() => setSelectedTaskId(task.id)} className={`p-5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected ? 'shadow-sm scale-[1.01]' : 'hover:brightness-95 shadow-sm'}`} style={{ backgroundColor: isSelected ? 'var(--bg-input)' : 'var(--bg-card)', borderColor: overdue ? 'rgba(239, 68, 68, 0.5)' : isBlocked ? 'rgba(245, 158, 11, 0.4)' : isSelected ? 'var(--tab-active)' : 'var(--border-input)' }}>
+                <div role="button" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }} key={task.id} data-task-id={task.id} onClick={() => openTask(task.id)} className={`p-5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected ? 'shadow-sm scale-[1.01]' : 'hover:brightness-95 shadow-sm'}`} style={{ backgroundColor: isSelected ? 'var(--bg-input)' : 'var(--bg-card)', borderColor: overdue ? 'rgba(239, 68, 68, 0.5)' : isBlocked ? 'rgba(245, 158, 11, 0.4)' : isSelected ? 'var(--tab-active)' : 'var(--border-input)' }}>
                   <div className="flex items-start space-x-4 overflow-hidden w-full">
                     <button aria-label={isDone ? 'Reabrir tarefa' : 'Concluir tarefa'} type="button" onClick={(e) => changeTaskStatus(task.id, isDone ? 'pendente' : 'concluida', e)} className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isDone ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'border-gray-400 hover:border-brand-panel bg-white/50'}`}>{isDone && <CheckCircle2 className="w-4 h-4" />}</button>
                     <div className="overflow-hidden flex-1">
@@ -682,211 +716,119 @@ export default function TarefasPage() {
         {/* ==========================================================
             COLUNA 3: EDITOR DETALHES
             ========================================================== */}
-        <div className={`${selectedTaskId ? 'flex' : 'hidden'} flex-col min-h-0 min-w-0 flex-1 h-full overflow-hidden`} style={{ backgroundColor: 'var(--bg-card)' }}>
-          {selectedTask && (
-            <>
-              <div className="p-5 md:p-8 border-b flex flex-col gap-3 flex-shrink-0" style={{ borderColor: 'var(--border-input)' }}>
-
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div className="flex items-center space-x-3">
-                    <button onClick={() => setSelectedTaskId(null)} className="lg:hidden p-2 -ml-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center text-brand-panel font-semibold text-sm transition-colors">
-                      <ArrowLeft className="w-4 h-4 mr-1.5" /> Voltar
-                    </button>
-                    <div className="flex flex-col">
-                      <span className="hidden lg:inline text-xs font-medium uppercase tracking-wider opacity-45">De: {selectedTask.assignedBy}</span>
-                      <span className="flex items-center text-xs md:text-xs font-medium uppercase tracking-wider opacity-45 lg:mt-0.5">
-                        <Calendar className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" />
-                        Criado em: {formatCreatedAt(selectedTask.createdAt)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-brand-panel/10 text-brand-panel flex items-center space-x-1.5 shadow-sm border border-brand-panel/20"><Tag className="w-3.5 h-3.5" /><span>{selectedTask.category}</span></span>
-                    {!isEditingTask && (
-                      <button aria-label="Fechar" onClick={() => setSelectedTaskId(null)} className="hidden lg:flex p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 opacity-70 hover:opacity-100 cursor-pointer flex-shrink-0 transition-colors"><X className="w-5 h-5" /></button>
-                    )}
-                  </div>
-                </div>
-
-                {isEditingTask ? (
-                  <div className="space-y-3 mt-1">
-                    <input aria-label="Editar título da tarefa" type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full p-3 rounded-2xl border text-base font-semibold outline-none focus:border-brand-panel transition-colors shadow-sm" style={solidInputStyle} />
-                  </div>
-                ) : (
-                  <h3 className="text-xl md:text-2xl font-semibold leading-tight break-words whitespace-normal flex items-start mt-2">
-                    <span className="flex-1 min-w-0">{selectedTask.title}</span>
-                    {canEditTask && (
-                      <button aria-label="Editar" onClick={() => { setIsEditingTask(true); setEditTitle(selectedTask.title); setEditDesc(selectedTask.description); }} className="ml-3 p-2 rounded-xl text-brand-panel hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer flex-shrink-0">
-                        <Edit2 className="w-5 h-5" />
-                      </button>
-                    )}
-                  </h3>
-                )}
+        <section aria-label="Detalhes da tarefa" className={`${selectedTaskId ? 'flex' : 'hidden'} task-detail flex-col min-h-0 min-w-0 flex-1 h-full overflow-hidden`}>
+          {selectedTask ? <>
+            <header className="task-detail-header">
+              <div className="task-header-toolbar">
+                <button type="button" onClick={closeTask} className="task-back"><ArrowLeft size={16}/>Voltar à lista</button>
+              <div className="task-header-badges">
+                <span className="task-badge text-brand-panel"><Tag size={13}/>{selectedTask.category}</span>
+                {isTaskOverdue(selectedTask.dueDate, selectedTask.dueTime, selectedTask.status) && <span className="task-badge task-badge-danger"><Clock size={13}/>Prazo vencido</span>}
+                {selectedTask.isRoutine && <span className="task-badge"><Repeat size={13}/>Rotina</span>}
+              </div>
+                <button type="button" onClick={closeTask} aria-label="Fechar tarefa" className="task-icon-button task-close"><X size={19}/></button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-5 md:p-8 space-y-6 md:space-y-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+              <div className="flex items-start justify-between gap-3">
+                <h2 ref={detailHeadingRef} tabIndex={-1} className="task-title">{isEditingTask ? 'Editar tarefa' : selectedTask.title}</h2>
+                {canEditTask && !isEditingTask && <button aria-label="Editar" onClick={() => { setIsEditingTask(true); setDetailTab('overview'); setEditTitle(selectedTask.title); setEditDesc(selectedTask.description); }} className="task-icon-button text-brand-panel"><Edit2 size={17}/></button>}
+              </div>
+              <p className="task-origin">Delegada por <strong>{selectedTask.assignedBy}</strong><span aria-hidden="true"> · </span>Criada em {formatCreatedAt(selectedTask.createdAt)}</p>
+            </header>
+            <div className="task-detail-scroll custom-scrollbar">
+              <div role="tablist" aria-label="Informações da tarefa" data-active-tab={detailTab} className="task-tabs">
+                <button id="task-overview-tab" role="tab" aria-selected={detailTab === 'overview'} aria-controls="task-overview" tabIndex={detailTab === 'overview' ? 0 : -1} onKeyDown={e => { if (e.key === 'ArrowRight' || e.key === 'End') { e.preventDefault(); setDetailTab('updates'); document.getElementById('task-updates-tab')?.focus(); } }} onClick={() => setDetailTab('overview')}><CheckSquare size={16}/>Visão geral</button>
+                <button id="task-updates-tab" role="tab" aria-selected={detailTab === 'updates'} aria-controls="task-updates" tabIndex={detailTab === 'updates' ? 0 : -1} onKeyDown={e => { if (e.key === 'ArrowLeft' || e.key === 'Home') { e.preventDefault(); setDetailTab('overview'); document.getElementById('task-overview-tab')?.focus(); } }} onClick={() => setDetailTab('updates')}><MessageSquare size={16}/>Diário e atualizações<span className="task-count">{selectedTask.chat.length}</span></button>
+              </div>
+              <div id="task-overview" role="tabpanel" aria-labelledby="task-overview-tab" hidden={detailTab !== 'overview'} className="task-tab-content">
+              <div className="task-overview-grid">
+                <section className="task-section task-description-card">
+                  <div className="task-section-heading"><span className="task-section-icon"><FileText size={18}/></span><div><span className="task-eyebrow">O que precisa ser feito</span><h3>Descrição da tarefa</h3></div></div>
+                  {isEditingTask ? <div className="space-y-3">
+                    <label className="block text-sm">Título<input aria-label="Editar título da tarefa" value={editTitle} onChange={e => setEditTitle(e.target.value)} className="task-field mt-2"/></label>
+                    <label className="block text-sm">Descrição<textarea aria-label="Editar descrição da tarefa" rows={4} value={editDesc} onChange={e => setEditDesc(e.target.value)} className="task-field mt-2"/></label>
+                    <div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" disabled={recordActions.pending > 0} onClick={() => setIsEditingTask(false)}>Cancelar</Button><Button disabled={recordActions.pending > 0 || !editTitle.trim()} onClick={handleSaveTaskInfo}>Salvar Alterações</Button></div>
+                  </div> : <p className="task-description">{selectedTask.description ? formatLinks(selectedTask.description) : 'Nenhuma orientação adicional para esta tarefa.'}</p>}
+                </section>
+                <aside className="task-overview-aside" aria-label="Acompanhamento da tarefa"><h3 className="task-aside-heading"><CircleDot size={16}/>Acompanhamento</h3>
+              <div className="task-summary">
+                <label><span>Status da tarefa</span><select disabled={recordActions.pending > 0} aria-label="Status da tarefa" value={selectedTask.status} onChange={e => changeTaskStatus(selectedTask.id, e.target.value as TaskItem['status'])}>
+                  <option value="pendente">Pendente</option><option value="andamento">Em andamento</option><option value="bloqueado">Bloqueada</option><option value="concluida">Concluída</option>
+                </select></label>
+                <label><span>Prioridade</span><select disabled={recordActions.pending > 0} aria-label="Prioridade da tarefa" value={selectedTask.priority} onChange={e => updateTaskMetadata(selectedTask.id, 'priority', e.target.value)}><option value="Normal">Normal</option><option value="Urgente">Urgente</option></select></label>
+                <div><span>Responsável</span>{canEditTask ? <select disabled={recordActions.pending > 0} aria-label="Responsável pela execução" value={selectedTask.assignee} onChange={e => updateTaskMetadata(selectedTask.id, 'assignee', e.target.value)}>
+                  {!teamMembers.some(m => m.nome === selectedTask.assignee) && <option value={selectedTask.assignee}>{selectedTask.assignee}</option>}
+                  {teamMembers.map(m => <option key={m.user_id} value={m.nome}>{m.nome}</option>)}
+                </select> : <strong>{selectedTask.assignee}</strong>}</div>
+                <div><span>Prazo de entrega</span><strong className={isTaskOverdue(selectedTask.dueDate, selectedTask.dueTime, selectedTask.status) ? 'text-[var(--error-text)]' : ''}><Calendar size={15}/>{selectedTask.dueDate || 'Sem prazo'}{selectedTask.dueDate && <small>às {selectedTask.dueTime}</small>}</strong></div>
+              </div>
+              <div className="task-flags" aria-label="Organização da tarefa">
+                <button disabled={recordActions.pending > 0} aria-pressed={selectedTask.myDay} onClick={() => toggleTaskFlag(selectedTask.id, 'myDay')}><Sun size={15}/>Meu Dia</button>
+                <button disabled={recordActions.pending > 0} aria-pressed={selectedTask.important} onClick={() => toggleTaskFlag(selectedTask.id, 'important')}><Star size={15} fill={selectedTask.important ? 'currentColor' : 'none'}/>Destacar</button>
+                <button disabled={recordActions.pending > 0} aria-pressed={selectedTask.isRoutine} onClick={() => toggleTaskFlag(selectedTask.id, 'isRoutine')}><Repeat size={15}/>Rotina</button>
+              </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <button type="button" onClick={() => toggleTaskFlag(selectedTask.id, 'myDay')} className={`py-3 px-2 rounded-2xl border text-xs font-medium flex items-center justify-center space-x-2 cursor-pointer transition-colors ${selectedTask.myDay ? 'bg-amber-500/10 text-[var(--warning)] border-amber-500/30 shadow-sm' : 'opacity-75 hover:bg-black/5 dark:hover:bg-white/5'}`} style={!selectedTask.myDay ? solidInputStyle : undefined}><Sun className="w-4 h-4" /><span>Meu Dia</span></button>
-                  <button type="button" onClick={() => toggleTaskFlag(selectedTask.id, 'important')} className={`py-3 px-2 rounded-2xl border text-xs font-medium flex items-center justify-center space-x-2 cursor-pointer transition-colors ${selectedTask.important ? 'bg-amber-500/10 text-[var(--warning)] border-amber-500/30 shadow-sm' : 'opacity-75 hover:bg-black/5 dark:hover:bg-white/5'}`} style={!selectedTask.important ? solidInputStyle : undefined}><Star className={`w-4 h-4 ${selectedTask.important ? 'fill-amber-400 drop-shadow-sm' : ''}`} /><span>Destacar</span></button>
-                  <button type="button" onClick={() => toggleTaskFlag(selectedTask.id, 'isRoutine')} className={`py-3 px-2 rounded-2xl border text-xs font-medium flex items-center justify-center space-x-2 cursor-pointer transition-colors ${selectedTask.isRoutine ? 'bg-brand-panel/10 text-brand-panel border-brand-panel/30 shadow-sm' : 'opacity-75 hover:bg-black/5 dark:hover:bg-white/5'}`} style={!selectedTask.isRoutine ? solidInputStyle : undefined}><Repeat className={`w-4 h-4 ${selectedTask.isRoutine ? 'animate-spin-slow' : ''}`} /><span>Rotina</span></button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-3xl border" style={solidInputStyle}>
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-widest opacity-70 block mb-2">Status da Tarefa</span>
-                    <select disabled={recordActions.pending>0} aria-label="Status da tarefa" value={selectedTask.status} onChange={(e) => changeTaskStatus(selectedTask.id, e.target.value as TaskItem['status'])} className="w-full p-3.5 rounded-xl border text-sm font-medium outline-none cursor-pointer focus:border-brand-panel transition-colors shadow-sm" style={solidCardStyle}>
-                      <option value="pendente">⏳ Pendente</option><option value="andamento">▶️ Em andamento</option><option value="bloqueado">⚠️ Bloqueada</option><option value="concluida">✅ Concluída</option>
-                    </select>
+                </aside>
+                <section className="task-section task-checklist-card">
+                  <div className="flex items-center justify-between gap-3 mb-4"><div><h3 className="!mb-1 flex items-center gap-2"><ListChecks size={17} className="text-brand-panel"/>Etapas da tarefa</h3><p className="task-muted text-xs">{selectedTask.steps.filter(step => step.done).length} de {selectedTask.steps.length} concluídas</p></div><Button variant="secondary" onClick={() => setIsAddingStep(v => !v)} aria-expanded={isAddingStep}><Plus size={16}/>Nova etapa</Button></div>
+                  {selectedTask.steps.length > 0 && <div role="progressbar" aria-label="Progresso das etapas" aria-valuemin={0} aria-valuemax={selectedTask.steps.length} aria-valuenow={selectedTask.steps.filter(step => step.done).length} className="task-progress"><div style={{width: `${selectedTask.steps.filter(step => step.done).length / selectedTask.steps.length * 100}%`}}/></div>}
+                  <div className="space-y-2">
+                    {selectedTask.steps.map(step => <div key={step.id}>
+                      {editingStepId === step.id ? <div className="task-step-editor space-y-3">
+                        <input aria-label="Título da etapa" value={editStepText} onChange={e => setEditStepText(e.target.value)} className="task-field"/>
+                        <textarea aria-label="Observações da etapa" rows={2} value={editStepNote} onChange={e => setEditStepNote(e.target.value)} className="task-field"/>
+                        <div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" onClick={() => setEditingStepId(null)}>Cancelar</Button><Button disabled={recordActions.pending > 0 || !editStepText.trim()} onClick={() => handleSaveStepEdit(selectedTask.id, step.id)}>Salvar Etapa</Button></div>
+                      </div> : <div className="task-step group">
+                        <div className="flex items-start gap-3 flex-1 min-w-0"><input aria-label={step.text} type="checkbox" checked={step.done} disabled={recordActions.pending > 0} onChange={() => toggleSubStep(selectedTask.id, step.id)} className="mt-1 w-4 h-4 shrink-0 accent-brand-panel"/><div className="min-w-0"><span className={step.done ? 'line-through task-muted' : 'font-medium'}>{step.text}</span>{step.note && <p className="task-muted text-sm whitespace-pre-wrap mt-1 break-words">{formatLinks(step.note)}</p>}</div></div>
+                        <div className="task-step-actions"><button aria-label="Editar etapa" disabled={recordActions.pending > 0} onClick={() => { setEditingStepId(step.id); setEditStepText(step.text); setEditStepNote(step.note || ''); }} className="task-icon-button"><Edit2 size={15}/></button><button aria-label="Excluir etapa" disabled={recordActions.pending > 0} onClick={() => handleDeleteStep(selectedTask.id, step.id)} className="task-icon-button text-[var(--error-text)]"><X size={16}/></button></div>
+                      </div>}
+                    </div>)}
                   </div>
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-widest opacity-70 block mb-2">Nível de Prioridade</span>
-                    <select value={selectedTask.priority} onChange={(e) => updateTaskMetadata(selectedTask.id, 'priority', e.target.value)} className="w-full p-3.5 rounded-xl border text-sm font-medium outline-none cursor-pointer focus:border-brand-panel transition-colors shadow-sm" style={solidCardStyle}>
-                      <option value="Normal">Normal</option><option value="Urgente">🔥 Urgente</option>
-                    </select>
+                  {!selectedTask.steps.length && !isAddingStep && <p className="task-empty">Divida a tarefa em etapas para acompanhar o progresso.</p>}
+                  {isAddingStep && <form className="task-step-editor space-y-3 mt-4" onSubmit={e => { e.preventDefault(); void handleAddStep(selectedTask.id); }}>
+                    <input autoFocus aria-label="Nova etapa" value={stepInput} onChange={e => setStepInput(e.target.value)} placeholder="Nova etapa (título)..." className="task-field"/>
+                    <textarea aria-label="Observações da nova etapa" rows={2} value={stepNoteInput} onChange={e => setStepNoteInput(e.target.value)} placeholder="Observações da etapa (opcional)" className="task-field"/>
+                    <div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" onClick={() => setIsAddingStep(false)}>Cancelar</Button><Button type="submit" disabled={recordActions.pending > 0 || !stepInput.trim()}>+ Adicionar Etapa</Button></div>
+                  </form>}
+                </section>
+                <button className="task-journal-preview" onClick={() => setDetailTab('updates')}><span className="task-journal-icon"><MessageSquare size={20}/></span><span className="flex-1 min-w-0 text-left"><strong className="block text-sm">Acompanhe a conversa</strong><span className="task-muted block text-sm mt-1 truncate">{selectedTask.chat.length ? `${selectedTask.chat.at(-1)?.author}: ${selectedTask.chat.at(-1)?.text}` : 'Compartilhe avanços, dúvidas e dificuldades no diário.'}</span></span><ChevronRight size={18}/></button>
+              </div>
+              </div>
+              <div id="task-updates" role="tabpanel" aria-labelledby="task-updates-tab" hidden={detailTab !== 'updates'} className="task-tab-content">
+                <section className="task-section">
+                  <div className="flex flex-wrap justify-between items-start gap-3 mb-6"><div><h3 className="!mb-1">Diário e atualizações</h3><p className="task-muted text-sm">Um espaço para acompanhar a evolução da tarefa.</p></div>
+                    {selectedTask.assignee !== currentUser.nome && selectedTask.status !== 'concluida' && <Button variant="secondary" disabled={recordActions.pending > 0} onClick={() => handleSendReminder(selectedTask)}><Bell size={15}/>Solicitar atualização</Button>}
                   </div>
-                  <div className="col-span-1 sm:col-span-2 pt-2">
-                    <span className="text-xs font-semibold uppercase tracking-widest opacity-70 block mb-2">Responsável pela Execução</span>
-                    {canEditTask ? (
-                      <select value={selectedTask.assignee} onChange={(e) => updateTaskMetadata(selectedTask.id, 'assignee', e.target.value)} className="w-full p-3.5 rounded-xl border text-sm font-medium text-brand-panel outline-none cursor-pointer focus:border-brand-panel transition-colors shadow-sm" style={solidCardStyle}>
-                        {teamMembers.map(m => ( <option key={m.user_id} value={m.nome}>{m.nome} ({m.cargo})</option> ))}
-                      </select>
-                    ) : ( <div className="p-3.5 rounded-xl border text-sm font-medium text-brand-panel shadow-sm" style={solidCardStyle}>{selectedTask.assignee}</div> )}
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-xs font-semibold uppercase tracking-widest opacity-70 block mb-3">Instruções e Observações</span>
-                  {isEditingTask ? (
-                    <div className="space-y-3">
-                      <textarea rows={4} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="w-full p-4 rounded-2xl border text-sm leading-relaxed outline-none focus:border-brand-panel resize-none font-medium shadow-sm transition-colors" style={solidCardStyle} />
-                      <div className="flex justify-end space-x-3">
-                        <button onClick={() => setIsEditingTask(false)} className="px-5 py-2.5 rounded-xl border text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
-                        <button disabled={recordActions.pending>0} onClick={handleSaveTaskInfo} className="px-6 py-2.5 rounded-xl bg-brand-panel text-white text-sm font-semibold shadow-sm cursor-pointer hover:opacity-90 active:scale-95 transition-transform">Salvar Alterações</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-sm opacity-80 leading-relaxed whitespace-pre-wrap p-5 rounded-3xl border font-medium" style={solidInputStyle}>{formatLinks(selectedTask.description)}</div>
-                  )}
-                </div>
-
-                {selectedTask.assignee !== currentUser.nome && selectedTask.status !== 'concluida' && (
-                  <button onClick={() => handleSendReminder(selectedTask)} className="w-full py-4 px-4 rounded-2xl border border-amber-500/40 text-[var(--warning)] bg-amber-500/5 text-sm font-semibold flex items-center justify-center space-x-2 hover:bg-amber-500/10 cursor-pointer transition-colors shadow-sm">
-                    <Bell className="w-4 h-4" /><span>Cobrar Atualização de Status</span>
-                  </button>
-                )}
-
-                <div className="space-y-4 pt-4 border-t" style={{ borderColor: 'var(--border-input)' }}>
-                  <div className="flex items-center justify-between text-sm font-semibold"><span className="opacity-70 uppercase tracking-widest text-xs">Checklist ({selectedTask.steps.filter(s => s.done).length}/{selectedTask.steps.length})</span></div>
-                  {selectedTask.steps.length > 0 && (
-                    <div className="w-full h-2 rounded-full overflow-hidden shadow-inner" style={{ backgroundColor: 'var(--border-input)' }}>
-                      <div className="h-full bg-emerald-500 transition-all duration-500 ease-out" style={{ width: `${Math.round((selectedTask.steps.filter(s => s.done).length / selectedTask.steps.length) * 100)}%` }} />
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    {selectedTask.steps.map(step => (
-                      <div key={step.id}>
-                        {editingStepId === step.id ? (
-                          <div className="p-4 rounded-2xl border space-y-3 shadow-sm" style={solidCardStyle}>
-                            <input type="text" value={editStepText} onChange={e => setEditStepText(e.target.value)} placeholder="Título da etapa" className="w-full p-3 rounded-xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors" style={solidInputStyle} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveStepEdit(selectedTask.id, step.id); } }} />
-                            <textarea rows={2} value={editStepNote} onChange={e => setEditStepNote(e.target.value)} placeholder="Detalhes, links ou o que foi feito..." className="w-full p-3 rounded-xl border text-[12px] outline-none focus:border-brand-panel resize-none font-medium transition-colors" style={solidInputStyle} />
-                            <div className="flex justify-end space-x-3 pt-1">
-                              <button onClick={() => setEditingStepId(null)} className="px-4 py-2 rounded-xl border text-[12px] font-medium hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
-                              <button onClick={() => handleSaveStepEdit(selectedTask.id, step.id)} className="px-5 py-2 rounded-xl bg-brand-panel text-white text-[12px] font-medium cursor-pointer shadow-sm">Salvar Etapa</button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="group flex items-start justify-between p-3.5 md:p-4 rounded-2xl border transition-colors hover:bg-black/5 dark:hover:bg-white/5" style={solidInputStyle}>
-                            <label className="flex items-start space-x-3.5 cursor-pointer flex-1 overflow-hidden mt-0.5">
-                              <input type="checkbox" checked={step.done} onChange={() => toggleSubStep(selectedTask.id, step.id)} className="w-5 h-5 rounded border-gray-300 accent-brand-panel cursor-pointer flex-shrink-0 shadow-sm" />
-                              <div className="flex flex-col">
-                                <span className={`break-words text-sm md:text-sm ${step.done ? 'line-through opacity-45' : 'font-semibold'}`}>{step.text}</span>
-                                {step.note && <span className="text-xs opacity-75 mt-1 leading-relaxed whitespace-pre-wrap font-medium">{formatLinks(step.note)}</span>}
-                              </div>
-                            </label>
-                            <div className="flex items-center space-x-1.5 ml-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button aria-label="Editar" onClick={() => { setEditingStepId(step.id); setEditStepText(step.text); setEditStepNote(step.note || ''); }} className="p-2 text-brand-panel hover:bg-black/5 dark:hover:bg-white/5 rounded-xl cursor-pointer transition-colors"><Edit2 className="w-4 h-4" /></button>
-                              <button aria-label="Fechar" onClick={() => handleDeleteStep(selectedTask.id, step.id)} className="p-2 text-[var(--error-text)] hover:bg-red-500/10 rounded-xl cursor-pointer transition-colors"><X className="w-4 h-4" /></button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="p-4 rounded-2xl border space-y-3" style={solidInputStyle}>
-                    <input type="text" value={stepInput} onChange={(e) => setStepInput(e.target.value)} placeholder="Nova etapa (título)..." className="w-full px-4 py-3 rounded-xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors shadow-sm" style={solidCardStyle} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddStep(selectedTask.id); } }} />
-                    <textarea rows={1} value={stepNoteInput} onChange={(e) => setStepNoteInput(e.target.value)} placeholder="Observações da etapa (opcional)" className="w-full px-4 py-3 rounded-xl border text-[12px] outline-none resize-none focus:border-brand-panel font-medium transition-colors shadow-sm" style={solidCardStyle} />
-                    <button type="button" onClick={() => handleAddStep(selectedTask.id)} className="w-full py-3 rounded-xl bg-brand-panel text-white text-sm font-semibold shadow-sm cursor-pointer hover:opacity-90 active:scale-95 transition-transform">+ Adicionar Etapa</button>
-                  </div>
-                </div>
-
-                {/* 🚀 CHAT DA TAREFA APRIMORADO */}
-                <div className="space-y-4 pt-4 border-t" style={{ borderColor: 'var(--border-input)' }}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-widest opacity-70 block">Diário & Atualizações</span>
-                    <label className="flex items-center space-x-2 text-xs font-semibold cursor-pointer text-[var(--warning)] hover:opacity-80 transition-opacity">
-                      <input type="checkbox" checked={isDifficultyAlert} onChange={(e) => setIsDifficultyAlert(e.target.checked)} className="w-4 h-4 rounded accent-amber-500 cursor-pointer shadow-sm" /><span>Sinalizar Dificuldade</span>
-                    </label>
-                  </div>
-
-                  <div className="space-y-3 pr-2">
-                    {selectedTask.chat.map(c => (
-                      <div key={c.id} data-comment-id={c.id} className={`p-4 rounded-2xl border space-y-2 shadow-sm ${c.isAlert ? 'border-amber-500/40 bg-amber-500/5' : ''}`} style={!c.isAlert ? solidInputStyle : undefined}>
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-65 font-medium uppercase tracking-wider">
-                          <span className={c.isAlert ? 'text-[var(--warning)]' : ''}>{c.author} {c.isAlert ? '• ⚠️ Alerta' : ''}</span>
-                          <span className="flex items-center"><Clock className="w-3 h-3 mr-1"/>{c.time}</span>
-                        </div>
+                  <div className="task-timeline">
+                    {selectedTask.chat.map(c => <article key={c.id} data-comment-id={c.id} className={`task-comment ${c.isAlert ? 'task-comment-alert' : ''}`}>
+                      <div className="task-comment-avatar" aria-hidden="true">{c.isAlert ? <AlertTriangle size={17}/> : getInitials(c.author)}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-2"><strong className="text-sm">{c.author}{c.authorId === currentUser.user_id && <span className="task-muted font-normal"> · você</span>}</strong><span className="task-muted text-xs">{c.time}{c.editedAt && ' · editada'}</span></div>
+                        {c.isAlert && <span className="task-alert-label">Sinalização de atenção</span>}
                         {editingComment?.taskId === selectedTask.id && editingComment.id === c.id ? <div className="space-y-3">
-                          <textarea aria-label="Editar atualização" rows={3} value={editingComment.text} onChange={event=>setEditingComment({...editingComment,text:event.target.value})} className="w-full rounded-xl p-3 text-sm" style={inputStyle}/>
-                          <div className="flex flex-wrap gap-2"><Button disabled={recordActions.pending>0 || !editingComment.text.trim()} onClick={saveCommentEdit}>Salvar atualização</Button><Button variant="secondary" disabled={recordActions.pending>0} onClick={()=>setEditingComment(null)}>Cancelar edição</Button></div>
-                        </div> : <div className="leading-relaxed break-words text-sm font-medium whitespace-pre-wrap">{formatLinks(c.text)}</div>}
-                        {c.editedAt && <span className="block text-xs text-[var(--text-muted)]">Editada</span>}
-                        {c.authorId === currentUser?.user_id && !editingComment && <div className="flex gap-2">
-                          <button type="button" disabled={recordActions.pending>0} onClick={()=>setEditingComment({taskId:selectedTask.id,id:c.id,text:c.text,original:c.text})} className="min-h-10 inline-flex items-center gap-2 rounded-lg px-3 text-xs text-brand-panel hover:bg-black/5 dark:hover:bg-white/5"><Edit2 size={14}/>Editar mensagem</button>
-                          <button type="button" disabled={recordActions.pending>0} onClick={()=>deleteComment(selectedTask.id,c)} className="min-h-10 inline-flex items-center gap-2 rounded-lg px-3 text-xs text-[var(--error-text)] hover:bg-red-500/10"><Trash2 size={14}/>Excluir mensagem</button>
-                        </div>}
-                        {!c.authorId && <span className="block text-xs text-[var(--text-muted)]">Registro antigo: autoria não verificada para edição.</span>}
+                          <textarea aria-label="Editar atualização" rows={3} value={editingComment.text} onChange={e => setEditingComment({...editingComment, text: e.target.value})} className="task-field"/>
+                          <div className="flex flex-wrap gap-2"><Button disabled={recordActions.pending > 0 || !editingComment.text.trim()} onClick={saveCommentEdit}>Salvar atualização</Button><Button variant="secondary" onClick={() => setEditingComment(null)}>Cancelar edição</Button></div>
+                        </div> : <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{formatLinks(c.text)}</p>}
+                        {c.authorId === currentUser.user_id && !editingComment && <div className="flex gap-3 mt-2"><button disabled={recordActions.pending > 0} onClick={() => setEditingComment({taskId:selectedTask.id, id:c.id, text:c.text, original:c.text})} className="task-comment-action">Editar mensagem</button><button disabled={recordActions.pending > 0} onClick={() => deleteComment(selectedTask.id, c)} className="task-comment-action">Excluir mensagem</button></div>}
+                        {!c.authorId && <span className="sr-only">Registro antigo: autoria não verificada para edição.</span>}
                       </div>
-                    ))}
-                    {selectedTask.chat.length === 0 && <p className="text-[12px] opacity-70 py-4 text-center font-medium">Nenhuma atualização registrada nesta tarefa.</p>}
-                    <div ref={taskChatEndRef} />
+                    </article>)}
+                    {!selectedTask.chat.length && <div className="task-empty"><MessageSquare size={26} className="mx-auto mb-3"/><p>Nenhuma atualização ainda.</p><p className="text-xs mt-1">Registre o primeiro avanço desta tarefa.</p></div>}
+                    <div ref={taskChatEndRef}/>
                   </div>
-
-                  {/* INPUT ELÁSTICO COMO NO CHAT CORPORATIVO */}
-                  <form className="flex items-end space-x-3" onSubmit={(e) => { e.preventDefault(); handleSendChat(selectedTask.id); }}>
-                    <textarea
-                      aria-label="Nova atualização"
-                      ref={inputFieldRef}
-                      value={chatInput}
-                      onChange={handleInputResize}
-                      onKeyDown={handleKeyDown}
-                      rows={1}
-                      placeholder={isDifficultyAlert ? 'Descreva o que o impede de avançar...' : 'Registar andamento da demanda...'}
-                      className="flex-1 px-5 py-3.5 rounded-3xl border text-[14px] font-medium outline-none focus:border-brand-panel transition-colors shadow-sm resize-none overflow-y-auto custom-scrollbar leading-tight"
-                      style={{ minHeight: '52px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-input)', color: 'var(--text-main)' }}
-                    />
-                    <button aria-label="Enviar" type="submit" disabled={recordActions.pending>0 || !chatInput.trim()} className="p-4 rounded-full bg-brand-panel text-white cursor-pointer shadow-sm hover:opacity-90 active:scale-95 transition-transform flex items-center justify-center flex-shrink-0 mb-0.5">
-                      <Send className="w-5 h-5 ml-0.5" />
-                    </button>
+                  <form className="task-compose" onSubmit={e => { e.preventDefault(); void handleSendChat(selectedTask.id); }}>
+                    <label htmlFor="task-update-input" className="text-sm font-semibold">Adicionar atualização</label>
+                    <textarea id="task-update-input" ref={inputFieldRef} aria-label="Nova atualização" value={chatInput} onChange={handleInputResize} onKeyDown={handleKeyDown} rows={3} placeholder={isDifficultyAlert ? 'Descreva o que impede você de avançar…' : 'O que avançou? Compartilhe com os participantes…'} className="task-field mt-3"/>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mt-3"><label className="flex items-center gap-2 text-sm text-[var(--warning)]"><input type="checkbox" checked={isDifficultyAlert} onChange={e => setIsDifficultyAlert(e.target.checked)} className="accent-brand-panel"/>Sinalizar dificuldade</label><Button type="submit" disabled={recordActions.pending > 0 || !chatInput.trim()}><Send size={16}/>{recordActions.pending > 0 ? 'Salvando…' : 'Publicar atualização'}</Button></div>
+                    <p className="task-muted text-xs mt-3">Enter para publicar · Shift + Enter para uma nova linha.</p>
                   </form>
-                </div>
+                </section>
               </div>
+              <footer className="task-detail-footer"><span className="task-muted text-xs">{selectedTask.steps.length > 0 ? `${selectedTask.steps.filter(step => step.done).length}/${selectedTask.steps.length} etapas concluídas` : 'Organize, acompanhe e compartilhe o progresso.'}</span>{canEditTask && <div className="flex flex-wrap gap-2">{selectedTask.isRoutine && selectedTask.status === 'concluida' && <Button variant="secondary" onClick={() => completeTaskAndCloneRoutine(selectedTask.id)}>Verificar próxima ocorrência</Button>}<button onClick={() => confirmDeleteTask(selectedTask.id, selectedTask.title)} aria-label="Excluir tarefa permanentemente" className="task-delete"><Trash2 size={14}/>Excluir tarefa</button></div>}</footer>
+            </div>
+          </> : <div className="ui-state"><CheckSquare size={32}/><strong>Tarefa indisponível</strong><p>A tarefa pode ter sido removida ou estar fora do seu acesso.</p><Button variant="secondary" onClick={closeTask}>Voltar à lista</Button></div>}
+        </section>
 
-              <div className="p-5 md:p-6 pb-6 border-t flex flex-col sm:flex-row items-center justify-between text-xs gap-3 sm:gap-0 flex-shrink-0" style={{ borderColor: 'var(--border-input)' }}>
-                <span className="opacity-75 text-xs font-semibold uppercase tracking-widest text-center sm:text-left w-full sm:w-auto">Prazo: {selectedTask.dueDate} às {selectedTask.dueTime}</span>
-                {canEditTask && (
-                  <><button onClick={() => confirmDeleteTask(selectedTask.id, selectedTask.title)} className="w-full sm:w-auto px-5 py-3 rounded-xl text-[var(--error-text)] hover:text-red-600 hover:bg-red-500/10 font-medium flex items-center justify-center space-x-1.5 cursor-pointer transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                    <span>Excluir tarefa permanentemente</span>
-                  </button>{selectedTask.isRoutine && selectedTask.status === 'concluida' && <Button variant="secondary" onClick={() => completeTaskAndCloneRoutine(selectedTask.id)}>Verificar próxima ocorrência</Button>}</>
-                )}
-              </div>
-            </>
-          )}
-        </div>
       </div>
 
       {/* Modal em portal: fora do stacking context do dashboard e acima do header. */}

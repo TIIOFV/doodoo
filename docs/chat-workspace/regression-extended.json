@@ -1,0 +1,1030 @@
+{
+  "browser": "157.0.8103.79",
+  "results": [
+    {
+      "area": "chat",
+      "name": "failed outbox survives reload and retries the same ID once",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "POST"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "POST"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "chat",
+      "name": "lost acknowledgement reconciles confirmed row on reload",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "POST"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "chat",
+      "name": "emoji, reply, message search and delete preserve other messages",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "POST"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "PATCH"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "chat",
+      "name": "image and attachment failures recover without deleting referenced objects",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "storage",
+          "method": "POST"
+        },
+        {
+          "table": "storage",
+          "method": "POST"
+        },
+        {
+          "table": "storage",
+          "method": "POST"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "POST"
+        },
+        {
+          "table": "storage",
+          "method": "POST"
+        },
+        {
+          "table": "storage",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "chat",
+      "name": "member mutations merge latest state and retain last administrator",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "chat",
+      "name": "reconnection fetches messages missed while socket was disconnected",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "PATCH"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "chat",
+      "name": "delayed response from prior channel cannot contaminate current thread",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "chat",
+      "name": "concurrent group invitations preserve both added members",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "chat",
+      "name": "image upload persists media path and file message retry reuses upload",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "storage",
+          "method": "POST"
+        },
+        {
+          "table": "storage",
+          "method": "POST"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "POST"
+        },
+        {
+          "table": "storage",
+          "method": "GET"
+        },
+        {
+          "table": "storage",
+          "method": "POST"
+        },
+        {
+          "table": "storage",
+          "method": "POST"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "POST"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_chat_notas",
+          "method": "GET"
+        },
+        {
+          "table": "storage",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_mensagens",
+          "method": "POST"
+        }
+      ],
+      "externalForwarded": 0
+    }
+  ]
+}

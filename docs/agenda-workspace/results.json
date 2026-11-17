@@ -1,0 +1,34 @@
+[
+  {
+    "name": "day/week/month navigation, January rollover and return to Today",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "chronological ordering, accent-insensitive search and visibility filters",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "cancelled form date does not navigate, overlap warning and confirmed creation",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "month opens correct event and realtime deletion closes stale details",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "accept invitation from detail and realtime confirmation",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "failed creation retains form and retry persists the event once",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "sector invitation posts to chat and chat failure retains the saved event",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "responsive day/week/month, nature/dark themes and reduced motion",
+    "status": "PASS MOCK"
+  }
+]

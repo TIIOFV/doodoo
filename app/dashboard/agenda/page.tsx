@@ -1,14 +1,15 @@
 'use client';
-import { inputStyle,panelStyle,sidebarStyle } from '../../components/ui';
+import './agenda-workspace.css';
+import { inputStyle } from '../../components/ui';
 
 import { useHydrated } from '@/app/lib/useHydrated';
 import ModalShell from '../ModalShell';
 import { useDialogAction } from '../useDialogAction';
 
 import { Button } from '@/app/components/ui';
-import { notify,requireResult } from '@/app/lib/domain';
+import { notify,requireResult,localISO,searchKey } from '@/app/lib/domain';
 import { atomicWrites } from '@/app/lib/environment';
-import { AlertCircle,Calendar as CalendarIcon,Check,ChevronLeft,ChevronRight,Clock,Loader2,Plus,Send,Shield,Trash2,Users } from 'lucide-react';
+import { MapPin,Search,X,CheckCircle2,ArrowUpRight,AlertCircle,Calendar as CalendarIcon,Check,ChevronLeft,ChevronRight,Clock,Loader2,Plus,Send,Trash2,Users } from 'lucide-react';
 import { useEffect,useMemo,useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRecordActions } from '../useRecordActions';
@@ -33,13 +34,9 @@ export default function AgendaPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [viewMode, setViewMode] = useState<'dia' | 'semana'>('semana');
-  // 🚀 Inicializa a data como null ou define via useEffect para evitar erro de prerender do Next.js
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date()); // Data segura de fallback
+  const [viewMode, setViewMode] = useState<'dia' | 'semana' | 'mes'>('semana');
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
 
-  const glassContainerStyle = panelStyle;
-  const glassSidebarStyle = sidebarStyle;
-  const glassItemStyle = panelStyle;
   const solidInputStyle = inputStyle;
 
 
@@ -49,6 +46,9 @@ export default function AgendaPage() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
 
   // States do Formulário
+  const [formDate,setFormDate]=useState('');
+  const [search,setSearch]=useState('');
+  const [scope,setScope]=useState<'todos'|'pessoal'|'setor'|'geral'|'pendentes'>('todos');
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newStartTime, setNewStartTime] = useState('09:00');
@@ -56,6 +56,10 @@ export default function AgendaPage() {
   const [newLocation, setNewLocation] = useState('');
   const [newVisibility, setNewVisibility] = useState<'pessoal' | 'setor' | 'geral'>('pessoal');
   const [shareToChat, setShareToChat] = useState(false);
+  const [shareChannelId,setShareChannelId]=useState('');
+  const [chatChannels,setChatChannels]=useState<{id:string;nome:string;setor:string;membros:{user_id:string}[]}[]>([]);
+  const invitationChannels=useMemo(()=>chatChannels.filter(c=>newVisibility==='geral'?c.nome==='Geral':newVisibility==='setor'&&c.setor===currentUser?.setor&&c.nome!=='Geral'),[chatChannels,newVisibility,currentUser]);
+  const effectiveChannelId=shareChannelId||(invitationChannels.length===1?invitationChannels[0].id:'');
 
   useEffect(() => {
     const fetchAgendaData = async () => {
@@ -70,6 +74,8 @@ export default function AgendaPage() {
           const { data: agendaDb, error: agendaError } = await supabase.from('doodoo_agenda').select('*').order('data', { ascending: true });
           if (agendaError) throw agendaError;
           if (agendaDb) setEvents(agendaDb.map(mapDbToEvent));
+          const {data:channels}=await supabase.from('doodoo_canais').select('id,nome,setor,membros').eq('is_group',true);
+          setChatChannels((channels||[]).filter(c=>c.membros?.some((m:{user_id:string})=>m.user_id===perfilAtual.user_id)));
         }
       } catch { notify('Erro na agenda','Não foi possível carregar os compromissos. Atualize para tentar novamente.'); } finally { setIsLoading(false); }
     };
@@ -99,37 +105,43 @@ export default function AgendaPage() {
     return result;
   }, [currentDate]);
 
-  const changeWeek = (direction: 'next' | 'prev') => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));
-    setCurrentDate(newDate);
+  const changeWeek = (direction:'next'|'prev') => {
+    const delta=direction==='next'?1:-1;
+    if(viewMode==='mes'){setCurrentDate(new Date(currentDate.getFullYear(),currentDate.getMonth()+delta,1,12));return;}
+    const date=new Date(currentDate);date.setDate(date.getDate()+delta*(viewMode==='dia'?1:7));setCurrentDate(date);
   };
+  const monthDays=useMemo(()=>{
+    const first=new Date(currentDate.getFullYear(),currentDate.getMonth(),1,12);
+    first.setDate(first.getDate()-(first.getDay()+6)%7);
+    return Array.from({length:42},(_,i)=>{const date=new Date(first);date.setDate(first.getDate()+i);return {date,dateStr:localISO(date)};});
+  },[currentDate]);
 
   const notifyBell = (title: string, desc: string) => { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('doodoo:notify', { detail: { title, desc } })); };
 
   const isManagerOrHR = currentUser ? ['administrador', 'gestor', 'coordenador'].includes(currentUser.cargo) || currentUser.setor === 'RH' : false;
 
-  const visibleEvents = useMemo(() => {
-    if (!currentUser) return [];
-    return events.filter(ev => {
-      const isMine = ev.organizer_id === currentUser.user_id;
-      const isMySector = ev.visibility === 'setor' && ev.sector === currentUser.setor;
-      const isGeneral = ev.visibility === 'geral';
-      const amIInvited = ev.acceptedBy.includes(currentUser.nome);
-      const canSee = isMine || isMySector || isGeneral || amIInvited;
-      if (!canSee) return false;
+  const accessibleEvents=useMemo(()=>events.filter(ev=>currentUser&&(ev.organizer_id===currentUser.user_id||ev.visibility==='geral'||ev.visibility==='setor'&&ev.sector===currentUser.setor||ev.acceptedBy.includes(currentUser.nome))).sort((a,b)=>(a.date+a.startTime).localeCompare(b.date+b.startTime)||a.title.localeCompare(b.title)),[events,currentUser]);
+  const filteredEvents=useMemo(()=>accessibleEvents.filter(ev=>{
+    const matches=scope==='todos'||scope==='pendentes'&&ev.visibility!=='pessoal'&&!ev.acceptedBy.includes(currentUser?.nome||'')||ev.visibility===scope;
+    return matches&&(!search.trim()||searchKey([ev.title,ev.description,ev.location,ev.organizer].join(' ')).includes(searchKey(search)));
+  }),[accessibleEvents,scope,search,currentUser]);
+  const visibleEvents=useMemo(()=>filteredEvents.filter(ev=>viewMode==='dia'?ev.date===currentDateStr:viewMode==='mes'?monthDays.some(day=>day.dateStr===ev.date):weekDays.some(day=>day.dateStr===ev.date)),[filteredEvents,viewMode,currentDateStr,monthDays,weekDays]);
+  const eventGroups=useMemo(()=>Array.from(new Set(visibleEvents.map(ev=>ev.date))).map(date=>({date,events:visibleEvents.filter(ev=>ev.date===date)})),[visibleEvents]);
+  const pendingEvents=visibleEvents.filter(ev=>ev.visibility!=='pessoal'&&!ev.acceptedBy.includes(currentUser?.nome||''));
+  const nextEvent=accessibleEvents.find(ev=>new Date(ev.date+'T'+ev.endTime).getTime()>=Date.now());
+  const conflictingEvents=accessibleEvents.filter(ev=>ev.id!==editingEventId&&ev.date===formDate&&ev.startTime<newEndTime&&ev.endTime>newStartTime);
+  const friendlyDate=(date:string)=>new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  const visibilityLabel=(ev:EventItem)=>ev.visibility==='pessoal'?'Pessoal':ev.visibility==='geral'?'Empresa':ev.sector;
+  useEffect(()=>{setSelectedEvent(previous=>previous?events.find(ev=>ev.id===previous.id)||null:null);},[events]);
 
-      if (viewMode === 'dia') return ev.date === currentDateStr;
-      return weekDays.some(wd => wd.dateStr === ev.date);
-    });
-  }, [events, currentUser, viewMode, currentDateStr, weekDays]);
-
-  const openCreateModal = () => { setEditingEventId(null); setNewTitle(''); setNewDesc(''); setNewStartTime('09:00'); setNewEndTime('10:00'); setNewLocation(''); setNewVisibility('pessoal'); setShareToChat(false); setIsModalOpen(true); };
+  const openCreateModal = () => { setEditingEventId(null);setFormDate(currentDateStr); setNewTitle(''); setNewDesc(''); setNewStartTime('09:00'); setNewEndTime('10:00'); setNewLocation(''); setNewVisibility('pessoal'); setShareToChat(false);setShareChannelId(''); setIsModalOpen(true); };
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !currentUser || isSaving) return;
+    if(!formDate||!newStartTime||!newEndTime)return notifyBell('Preencha os horários','Informe a data, o início e o fim do compromisso.');
     if (newEndTime <= newStartTime) return notifyBell('Horário inválido', 'O fim deve ser posterior ao início.');
+    if(shareToChat&&newVisibility!=='pessoal'&&!invitationChannels.some(c=>c.id===effectiveChannelId))return notifyBell('Escolha um canal','Selecione onde o convite deve ser publicado.');
     setIsSaving(true);
     try {
 
@@ -137,7 +149,7 @@ export default function AgendaPage() {
     const insertData = {
       titulo: newTitle.trim(),
       descricao: newDesc.trim() || 'Sem pauta informada.',
-      data: currentDateStr, // Grava na data que está selecionada no momento
+      data: formDate,
       hora_inicio: newStartTime,
       hora_fim: newEndTime,
       local: newLocation.trim(),
@@ -156,15 +168,11 @@ export default function AgendaPage() {
       const newEv = mapDbToEvent(data);
       setEvents(prev => [...prev.filter(e=>e.id!==newEv.id), newEv]);
       setIsModalOpen(false);
+      const [savedYear,savedMonth,savedDay]=newEv.date.split('-').map(Number);setCurrentDate(new Date(savedYear,savedMonth-1,savedDay,12));
 
       if (shareToChat && finalVisibility !== 'pessoal') {
-         const isGeral = finalVisibility === 'geral';
 
-         let channelQuery = supabase.from('doodoo_canais').select('id').eq('is_group', true);
-         if (isGeral) channelQuery = channelQuery.eq('nome', 'Geral');
-         else channelQuery = channelQuery.eq('setor', currentUser.setor);
-
-         const { data: channelData } = await channelQuery.maybeSingle();
+         const channelData=invitationChannels.find(c=>c.id===effectiveChannelId);
 
          if (channelData) {
             const invitation = await supabase.from('doodoo_mensagens').insert([{
@@ -180,12 +188,12 @@ export default function AgendaPage() {
                }
             }]);
             if (invitation.error) { notifyBell('Convite não enviado', 'O evento foi salvo, mas o convite falhou.'); return; }
-            notifyBell('🎯 Convite Enviado', `Convite postado no canal ${isGeral ? 'Geral' : currentUser.setor}.`);
+            notifyBell('🎯 Convite Enviado', `Convite postado no canal ${channelData.nome}.`);
          } else {
             notifyBell('Aviso', 'Compromisso salvo, mas não conseguimos encontrar o canal de Chat para publicar.');
          }
       } else {
-         notifyBell('Compromisso Adicionado', `"${newEv.title}" salvo com sucesso.`);
+         notifyBell(editingEventId?'Compromisso Atualizado':'Compromisso Adicionado', `"${newEv.title}" salvo com sucesso.`);
       }
     } else {
       notifyBell('Erro', 'Não foi possível salvar o compromisso.');
@@ -240,214 +248,45 @@ export default function AgendaPage() {
   }
 
   return (
-    <div className="w-full h-full min-h-0 min-w-0 flex-1 flex flex-col animate-in fade-in duration-500 pb-0 relative z-0">
-
-      <div className="flex-1 flex flex-col lg:flex-row rounded-xl rounded-bl-none rounded-br-none md:rounded-xl border-t border-l-0 border-r-0 border-b-0 md:border overflow-hidden relative z-10" style={glassContainerStyle}>
-
-        {/* ==========================================================
-            COLUNA 1: MENU LATERAL (Apenas Desktop - App Like)
-            ========================================================== */}
-        <div className="hidden lg:flex flex-col w-[320px] flex-shrink-0" style={glassSidebarStyle}>
-          <div className="p-6 md:p-8 space-y-8 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-
-            <div className="pb-5 border-b" style={{ borderColor: 'var(--border-input)' }}>
-              <h3 className="font-semibold text-base tracking-tight">Agenda Corporativa</h3>
-              <p className="text-xs font-medium uppercase tracking-widest text-brand-panel mt-1">Setor {currentUser?.setor}</p>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-2xl bg-brand-panel flex items-center justify-center text-white shadow-sm flex-shrink-0">
-                <Shield className="w-6 h-6" />
-              </div>
-              <div className="overflow-hidden">
-                <h3 className="font-semibold text-[15px] tracking-tight truncate">{currentUser?.nome}</h3>
-                <p className="text-xs font-medium uppercase tracking-widest opacity-75 truncate mt-0.5">{currentUser?.cargo}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 p-5 rounded-3xl" style={glassItemStyle}>
-              <div className="flex items-center space-x-2.5 text-xs font-semibold">
-                <CalendarIcon className="w-5 h-5 text-brand-panel" />
-                <span>Planejamento Ativo</span>
-              </div>
-              <p className="text-xs opacity-70 leading-relaxed font-medium">
-                A sua agenda mostra compromissos privados, compartilhados pelo gestor de {currentUser?.setor}, e os eventos gerais da empresa.
-              </p>
-            </div>
-
-            <div className="space-y-4 p-5 rounded-3xl" style={glassItemStyle}>
-              <div className="flex items-center space-x-2.5 text-xs font-semibold">
-                <Clock className="w-5 h-5 text-[var(--warning)]" />
-                <span>Horário Comercial</span>
-              </div>
-              <p className="text-xs opacity-70 leading-relaxed font-medium">
-                O seu expediente decorre das <strong>08:00 às 18:00</strong>. Certifique-se de manter os compromissos neste intervalo.
-              </p>
-            </div>
+    <div className="agenda-workspace">
+      <div className="agenda-shell">
+        <aside className="agenda-sidebar">
+          <div className="agenda-brand"><span className="agenda-icon"><CalendarIcon size={21}/></span><div><h2>Minha agenda</h2><p>Seu tempo, bem organizado</p></div></div>
+          <Button onClick={openCreateModal}><Plus size={16}/>Novo Evento</Button>
+          <div className="agenda-sidebar-section"><span className="agenda-eyebrow">Neste período</span><div className="agenda-stat"><strong>{visibleEvents.length}</strong><span>compromissos</span></div><div className="agenda-stat"><strong>{pendingEvents.length}</strong><span>aguardando sua confirmação</span></div></div>
+          <div className="agenda-sidebar-section"><span className="agenda-eyebrow">Próximo compromisso</span>{nextEvent?<button className="agenda-next" onClick={()=>setSelectedEvent(nextEvent)}><span>{nextEvent.date.split('-').reverse().join('/')} · {nextEvent.startTime}</span><strong>{nextEvent.title}</strong><span>{nextEvent.location||'Local não informado'}<ArrowUpRight size={14}/></span></button>:<p className="agenda-muted">Você está em dia. Nenhum compromisso futuro.</p>}</div>
+          <div className="agenda-legend"><span><i data-kind="pessoal"/>Pessoal</span><span><i data-kind="setor"/>Setor {currentUser?.setor}</span><span><i data-kind="geral"/>Empresa</span></div>
+        </aside>
+        <main className="agenda-main">
+          <header className="agenda-header">
+            <div><span className="agenda-eyebrow">Planeje com clareza</span><h2>{currentDate.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</h2><p>{viewMode==='dia'?friendlyDate(currentDateStr):viewMode==='mes'?'Uma visão dos compromissos do mês':`${weekDays[0].dateStr.split('-').reverse().join('/')} a ${weekDays[6].dateStr.split('-').reverse().join('/')}`}</p></div>
+            <div className="agenda-header-actions"><div className="agenda-mode" aria-label="Visualização da agenda">{([{id:'dia',label:'Dia'},{id:'semana',label:'Semana'},{id:'mes',label:'Mês'}] as const).map(mode=><button key={mode.id} aria-pressed={viewMode===mode.id} onClick={()=>setViewMode(mode.id)}>{mode.label}</button>)}</div><button className="agenda-mobile-create" aria-label="Novo Evento" onClick={openCreateModal}><Plus size={18}/></button></div>
+          </header>
+          <div className="agenda-controls">
+            <div className="agenda-navigation"><button aria-label="Anterior" onClick={()=>changeWeek('prev')}><ChevronLeft size={18}/></button><button onClick={()=>setCurrentDate(new Date())}>Hoje</button><button aria-label="Próximo" onClick={()=>changeWeek('next')}><ChevronRight size={18}/></button><input aria-label="Data da agenda" type="date" value={currentDateStr} onChange={e=>{if(e.target.value){const [y,m,d]=e.target.value.split('-').map(Number);setCurrentDate(new Date(y,m-1,d,12));setViewMode('dia');}}}/></div>
+            <label className="agenda-search"><Search size={16}/><input aria-label="Pesquisar compromissos" placeholder="Pesquisar compromissos…" value={search} onChange={e=>setSearch(e.target.value)}/>{search&&<button aria-label="Limpar pesquisa" onClick={()=>setSearch('')}><X size={14}/></button>}</label>
           </div>
-        </div>
-
-        {/* ==========================================================
-            COLUNA 2: ÁREA DO CALENDÁRIO E EVENTOS
-            ========================================================== */}
-        <div className="min-h-0 min-w-0 flex-1 flex flex-col h-full overflow-hidden">
-
-          <div className="p-5 md:p-8 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-0 flex-shrink-0" style={{ borderColor: 'var(--border-input)' }}>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-brand-panel mb-1">Doo Doo Workspace</p>
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">A sua Agenda</h2>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <input
-                aria-label="Data da agenda"
-                type="date"
-                value={currentDateStr}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    const [year, month, day] = e.target.value.split('-').map(Number);
-                    setCurrentDate(new Date(year, month - 1, day));
-                    setViewMode('dia'); // Se escolher a data fixa, salta para o modo Dia
-                  }
-                }}
-                className="w-full sm:w-auto sm:flex-none px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none cursor-pointer focus:border-brand-panel transition-colors"
-                style={solidInputStyle}
-              />
-              <div className="flex p-1.5 rounded-2xl border" style={solidInputStyle}>
-                <button
-                  onClick={() => setViewMode('dia')}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${viewMode === 'dia' ? 'bg-brand-panel text-white shadow-sm' : 'opacity-75 hover:opacity-100'}`}
-                >
-                  Dia
-                </button>
-                <button
-                  onClick={() => setViewMode('semana')}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${viewMode === 'semana' ? 'bg-brand-panel text-white shadow-sm' : 'opacity-75 hover:opacity-100'}`}
-                >
-                  Semana
-                </button>
-              </div>
-              <button
-                onClick={openCreateModal}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-brand-panel text-white text-sm font-semibold shadow-sm hover:opacity-90 active:scale-95 transition-all flex items-center justify-center space-x-2 cursor-pointer"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Novo Evento</span>
-              </button>
-            </div>
+          <div className="agenda-filters" aria-label="Filtrar compromissos">{([{id:'todos',label:'Todos'},{id:'pessoal',label:'Pessoais'},{id:'setor',label:'Do setor'},{id:'geral',label:'Da empresa'},{id:'pendentes',label:'A confirmar'}] as const).map(filter=><button key={filter.id} aria-pressed={scope===filter.id} onClick={()=>setScope(filter.id)}>{filter.label}</button>)}</div>
+          <div className="agenda-scroll custom-scrollbar">
+            {viewMode!=='mes'&&<div className="agenda-week" aria-label="Dias da semana">{weekDays.map(day=><button key={day.dateStr} aria-label={friendlyDate(day.dateStr)} aria-pressed={day.dateStr===currentDateStr} aria-current={day.dateStr===localISO()?'date':undefined} onClick={()=>{setCurrentDate(day.dateObj);setViewMode('dia');}}><span>{day.dayName}</span><strong>{day.dayNum}</strong><span className="agenda-day-count">{filteredEvents.filter(ev=>ev.date===day.dateStr).length||'—'}</span></button>)}</div>}
+            {viewMode==='mes'?<div className="agenda-month" role="group" aria-label="Calendário mensal">
+              {['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(day=><div className="agenda-month-label" key={day}>{day}</div>)}
+              {monthDays.map(day=>{const items=visibleEvents.filter(ev=>ev.date===day.dateStr);return <div key={day.dateStr} className="agenda-month-day" data-outside={day.date.getMonth()!==currentDate.getMonth()} data-today={day.dateStr===localISO()}>
+                <button id={'agenda-day-'+day.dateStr} className="agenda-month-date" aria-label={friendlyDate(day.dateStr)+(items.length?' · '+items.length+' compromissos':'')} aria-current={day.dateStr===localISO()?'date':undefined} tabIndex={day.dateStr===currentDateStr?0:-1} onKeyDown={e=>{const offset=({ArrowLeft:-1,ArrowRight:1,ArrowUp:-7,ArrowDown:7} as Record<string,number>)[e.key];if(offset){e.preventDefault();const next=new Date(day.date);next.setDate(next.getDate()+offset);setCurrentDate(next);requestAnimationFrame(()=>document.getElementById('agenda-day-'+localISO(next))?.focus());}}} onClick={()=>{setCurrentDate(day.date);setViewMode('dia');}}>{day.date.getDate()}<span>{items.length>0?items.length:''}</span></button>
+                <div className="agenda-month-items">{items.slice(0,2).map(ev=><button key={ev.id} data-kind={ev.visibility} data-event-id={ev.id} onClick={()=>setSelectedEvent(ev)} aria-label={ev.title+' às '+ev.startTime} title={ev.startTime+' · '+ev.title}><time>{ev.startTime}</time><span>{ev.title}</span></button>)}{items.length>2&&<button className="agenda-month-more" onClick={()=>{setCurrentDate(day.date);setViewMode('dia');}}>+{items.length-2} eventos</button>}</div>
+              </div>;})}
+            </div>:<div key={viewMode+currentDateStr+scope+search} className="agenda-event-list">
+              {eventGroups.map(group=><section key={group.date} className="agenda-day-group"><div className="agenda-group-heading"><h3>{friendlyDate(group.date)}</h3><span>{group.events.length} {group.events.length===1?'compromisso':'compromissos'}</span></div>
+                {group.events.map(ev=>{const accepted=ev.acceptedBy.includes(currentUser?.nome||'');return <article key={ev.id} data-event-id={ev.id} data-kind={ev.visibility} className="agenda-event" role="button" tabIndex={0} onClick={()=>setSelectedEvent(ev)} onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setSelectedEvent(ev);}}}>
+                  <div className="agenda-event-time"><strong>{ev.startTime}</strong><span>{ev.endTime}</span></div>
+                  <div className="agenda-event-content"><div className="agenda-event-tags"><span className="agenda-kind" data-kind={ev.visibility}>{visibilityLabel(ev)}</span>{accepted&&ev.visibility!=='pessoal'&&<span className="agenda-confirmed"><CheckCircle2 size={12}/>Você confirmou</span>}</div><h4>{ev.title}</h4>{ev.description&&<p>{ev.description}</p>}<div className="agenda-event-meta">{ev.location&&<span><MapPin size={13}/>{ev.location}</span>}<span><Users size={13}/>{ev.acceptedBy.length} {ev.acceptedBy.length===1?'pessoa confirmada':'pessoas confirmadas'}</span><span>Por {ev.organizer}</span></div></div>
+                  {ev.visibility!=='pessoal'&&!accepted?<button className="agenda-accept" disabled={recordActions.pending>0} onClick={e=>handleAcceptEvent(ev,e)}><Check size={14}/>Aceitar Convite</button>:<ChevronRight className="agenda-event-arrow" size={17}/>}
+                </article>;})}
+              </section>)}
+              {visibleEvents.length===0&&<div className="agenda-empty"><span><CalendarIcon size={30}/></span><h3>{search||scope!=='todos'?'Nenhum compromisso neste filtro':'Seu tempo está livre por aqui'}</h3><p>{search||scope!=='todos'?'Experimente outra pesquisa ou altere os filtros.':'Organize uma reunião, reserve um horário ou planeje seu próximo encontro.'}</p><Button variant="secondary" onClick={openCreateModal}><Plus size={15}/>Novo Evento</Button></div>}
+            </div>}
           </div>
-
-          <div className="flex-1 overflow-y-auto p-5 md:p-8 space-y-6 md:space-y-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-
-            {/* 🚀 BARRA DE DIAS DA SEMANA (Navegável e Clickável) */}
-            <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center mb-6">
-               <button aria-label="Anterior" onClick={() => changeWeek('prev')} className="min-h-11 p-2 sm:min-h-11 p-2 sm:p-3 rounded-2xl border transition-colors cursor-pointer hover:bg-black/5 dark:hover:bg-white/5" style={solidInputStyle}>
-                  <ChevronLeft className="w-5 h-5" />
-               </button>
-
-               <div className="order-first col-span-2 min-w-0 flex-1 grid grid-cols-7 gap-1 sm:order-none md:gap-3">
-                  {weekDays.map((wd) => {
-                     const isSelected = wd.dateStr === currentDateStr && viewMode === 'dia';
-                     const isToday = wd.dateStr === formatDateString(new Date());
-
-                     return (
-                     <button
-                        key={wd.dateStr}
-                        onClick={() => { setCurrentDate(wd.dateObj); setViewMode('dia'); }}
-                        className={`py-3 md:py-4 rounded-xl md:rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
-                           isSelected ? 'bg-brand-panel text-white shadow-sm border-transparent scale-105' : 'hover:scale-[1.02]'
-                        }`}
-                        style={!isSelected ? glassItemStyle : undefined}
-                     >
-                        <span className={`text-xs md:text-xs font-semibold uppercase tracking-normal md:tracking-widest ${isToday && !isSelected ? 'text-brand-panel' : ''}`}>{wd.dayName}</span>
-                        <span className={`text-base md:text-xl font-semibold mt-0.5 ${isToday && !isSelected ? 'text-brand-panel' : ''}`}>{wd.dayNum}</span>
-                        {/* Pontinho Azul se houver eventos neste dia */}
-                        {events.some(e => e.date === wd.dateStr) && (
-                           <span className={`w-1.5 h-1.5 rounded-full mt-1.5 ${isSelected ? 'bg-white' : 'bg-brand-panel'}`}></span>
-                        )}
-                     </button>
-                     );
-                  })}
-               </div>
-
-               <button aria-label="Próximo" onClick={() => changeWeek('next')} className="p-3 rounded-2xl border transition-colors cursor-pointer hover:bg-black/5 dark:hover:bg-white/5" style={solidInputStyle}>
-                  <ChevronRight className="w-5 h-5" />
-               </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border-input)' }}>
-                <div>
-                  <h3 className="font-semibold text-sm md:text-base">{viewMode === 'dia' ? `Agenda de ${currentDateStr.split('-').reverse().join('/')}` : 'Eventos da Semana'}</h3>
-                  <p className="text-xs font-semibold opacity-70 mt-1">
-                    {viewMode === 'dia' ? 'Exibindo 1 dia' : `De ${weekDays[0].dateStr.split('-').reverse().join('/')} a ${weekDays[6].dateStr.split('-').reverse().join('/')}`}
-                  </p>
-                </div>
-                <span className="text-xs font-semibold px-3.5 py-1.5 rounded-xl border shadow-sm" style={glassItemStyle}>
-                  {visibleEvents.length} eventos
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {visibleEvents.map(ev => {
-                  const hasAccepted = ev.acceptedBy.includes(currentUser?.nome || '');
-                  return (
-                    <div role="button" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }}
-                      key={ev.id}
-                      onClick={() => setSelectedEvent(ev)}
-                      className="p-5 md:p-6 rounded-3xl border transition-all hover:shadow-sm cursor-pointer group"
-                      style={glassItemStyle}
-                    >
-                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-2.5">
-                            <span className={`text-xs font-semibold uppercase px-2.5 py-1 rounded-lg shadow-sm ${ev.visibility === 'geral' ? 'bg-blue-500/10 text-brand-panel' : ev.visibility === 'setor' ? 'bg-amber-500/10 text-[var(--warning)]' : 'bg-purple-500/10 text-purple-500'}`}>
-                              {ev.visibility === 'geral' ? '🚀 Geral' : ev.visibility === 'setor' ? `👥 ${ev.sector}` : '👤 Pessoal'}
-                            </span>
-                            <span className="text-xs md:text-xs font-medium opacity-75 flex items-center">
-                              <CalendarIcon className="w-3.5 h-3.5 mr-1.5" /> {ev.date.split('-').reverse().join('/')}
-                            </span>
-                            <span className="text-xs md:text-xs font-medium opacity-75 flex items-center">
-                              <Clock className="w-3.5 h-3.5 mr-1.5" /> {ev.startTime} - {ev.endTime}
-                            </span>
-                          </div>
-
-                          <h4 className="text-[15px] md:text-lg font-semibold leading-snug group-hover:text-brand-panel transition-colors break-words whitespace-normal">{ev.title}</h4>
-                          <p className="text-sm opacity-70 leading-relaxed mt-2 line-clamp-2 font-medium">{ev.description}</p>
-                        </div>
-
-                        {ev.visibility !== 'pessoal' && (
-                          <button
-                            onClick={(e) => handleAcceptEvent(ev, e)}
-                            disabled={hasAccepted}
-                            className={`px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center space-x-1.5 cursor-pointer flex-shrink-0 ${hasAccepted ? 'bg-emerald-500/10 text-[var(--success)] border-emerald-500/30 shadow-sm cursor-default' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
-                            style={!hasAccepted ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' } : undefined}
-                          >
-                            <Check className="w-4 h-4" />
-                            <span>{hasAccepted ? 'Presença Confirmada' : 'Aceitar Convite'}</span>
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center justify-between pt-4 mt-4 border-t text-xs opacity-75 font-medium" style={{ borderColor: 'var(--border-input)' }}>
-                        <span className="flex items-center"><Shield className="w-3.5 h-3.5 mr-1.5" /> Org: {ev.organizer}</span>
-                        <span className="flex items-center mt-2 sm:mt-0"><Users className="w-3.5 h-3.5 mr-1.5" /> {ev.acceptedBy.length} Confirmado(s)</span>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {visibleEvents.length === 0 && (
-                  <div className="py-20 text-center opacity-70 space-y-4">
-                    <CalendarIcon className="w-12 h-12 mx-auto stroke-1" />
-                    <p className="text-sm font-medium">Nenhum compromisso agendado.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
+        </main>
       </div>
 
       {/* MODAL DETALHES Z-[999] */}
@@ -460,8 +299,8 @@ export default function AgendaPage() {
               <div className="flex items-center space-x-3 w-full sm:w-auto">
                 {selectedEvent.organizer_id === currentUser?.user_id && (
                   <><Button variant="secondary" onClick={()=>{
-                    setEditingEventId(selectedEvent.id);setNewTitle(selectedEvent.title);setNewDesc(selectedEvent.description);setNewStartTime(selectedEvent.startTime);setNewEndTime(selectedEvent.endTime);setNewLocation(selectedEvent.location || '');setNewVisibility(selectedEvent.visibility);setShareToChat(false);
-                    const [year,month,day]=selectedEvent.date.split('-').map(Number);setCurrentDate(new Date(year,month-1,day));setSelectedEvent(null);setIsModalOpen(true);
+                    setEditingEventId(selectedEvent.id);setFormDate(selectedEvent.date);setNewTitle(selectedEvent.title);setNewDesc(selectedEvent.description);setNewStartTime(selectedEvent.startTime);setNewEndTime(selectedEvent.endTime);setNewLocation(selectedEvent.location || '');setNewVisibility(selectedEvent.visibility);setShareToChat(false);
+                    setSelectedEvent(null);setIsModalOpen(true);
                   }}>Editar evento</Button><button
                     onClick={() => handleDeleteEvent(selectedEvent.id)}
                     className="flex-1 sm:flex-none justify-center px-5 py-3.5 rounded-xl text-[var(--error-text)] hover:bg-red-500/10 font-medium flex items-center space-x-1.5 cursor-pointer transition-colors"
@@ -474,11 +313,11 @@ export default function AgendaPage() {
                   onClick={() => setSelectedEvent(null)}
                   className="flex-1 sm:flex-none justify-center px-6 py-3.5 rounded-xl bg-brand-panel text-white font-semibold shadow-sm cursor-pointer hover:opacity-90 active:scale-95 transition-transform"
                 >
-                  Fechar Menu
+                  Fechar detalhes
                 </button>
               </div>
             </div>}>
-<div className="p-6 md:p-8 space-y-6 overflow-y-auto max-h-[60vh] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+<div className="agenda-event-details p-6 md:p-8 space-y-6 overflow-y-auto max-h-[60vh] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
               <div className="grid grid-cols-2 gap-4 p-5 rounded-3xl border text-xs" style={solidInputStyle}>
                 <div>
                   <span className="opacity-70 font-semibold uppercase tracking-widest block mb-2 text-xs">Horário</span>
@@ -493,11 +332,12 @@ export default function AgendaPage() {
 
               <div className="space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-widest opacity-70 block">Descrição da Pauta</span>
-                <p className="text-sm opacity-80 leading-relaxed p-5 rounded-3xl border whitespace-pre-wrap font-medium" style={solidInputStyle}>
-                  {selectedEvent.description}
+                <p className="agenda-detail-description text-sm leading-relaxed p-5 rounded-2xl border whitespace-pre-wrap" style={solidInputStyle}>
+                  {selectedEvent.description || 'Nenhuma pauta adicional.'}
                 </p>
               </div>
 
+              {selectedEvent.visibility!=='pessoal' && !selectedEvent.acceptedBy.includes(currentUser?.nome||'') && <Button disabled={recordActions.pending>0} onClick={()=>handleAcceptEvent(selectedEvent)}>Aceitar Convite</Button>}
               <div className="space-y-3 pt-4 border-t" style={{ borderColor: 'var(--border-input)' }}>
                 <span className="text-xs font-semibold uppercase tracking-widest opacity-70 block">Presenças ({selectedEvent.acceptedBy.length})</span>
                 <div className="flex flex-wrap gap-2">
@@ -533,7 +373,7 @@ export default function AgendaPage() {
                   <span>{isSaving ? 'Salvando...' : editingEventId ? 'Salvar alterações' : 'Agendar Reunião'}</span>
                 </button>
               </div>}>
-<form id="modal-form-1" onSubmit={event => { event.preventDefault(); void dialogAction.run(() => handleCreateEvent(event)); }} className="p-6 md:p-8 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] space-y-5">
+<form id="modal-form-1" onSubmit={event => { event.preventDefault(); void dialogAction.run(() => handleCreateEvent(event)); }} className="agenda-event-form p-6 md:p-8 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] space-y-5">
 
               <div>
                 <label htmlFor="field-1" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Título do Evento *</label>
@@ -564,14 +404,9 @@ export default function AgendaPage() {
                 <div>
                   <label htmlFor="field-3" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Data</label>
                   <input id="field-3"
-                    type="date"
-                    value={currentDateStr}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        const [year, month, day] = e.target.value.split('-').map(Number);
-                        setCurrentDate(new Date(year, month - 1, day));
-                      }
-                    }}
+                    type="date" required
+                    value={formDate}
+                    onChange={e=>setFormDate(e.target.value)}
                     className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none cursor-pointer focus:border-brand-panel transition-colors"
                     style={solidInputStyle}
                   />
@@ -579,7 +414,7 @@ export default function AgendaPage() {
                 <div>
                   <label htmlFor="field-4" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Início</label>
                   <input id="field-4"
-                    type="time"
+                    type="time" required
                     value={newStartTime}
                     onChange={(e) => setNewStartTime(e.target.value)}
                     className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors"
@@ -598,6 +433,7 @@ export default function AgendaPage() {
                 </div>
               </div>
 
+              {conflictingEvents.length>0 && <div className="agenda-overlap" role="status"><AlertCircle size={17}/><div><strong>Há um compromisso visível neste horário</strong><p>{conflictingEvents.map(ev=>ev.title).join(', ')}. Você pode manter a sobreposição se for intencional.</p></div></div>}
               <div>
                 <label htmlFor="field-6" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Local / Sala</label>
                 <input id="field-6"
@@ -614,7 +450,7 @@ export default function AgendaPage() {
                 <label htmlFor="field-7" className="text-xs font-semibold uppercase tracking-widest opacity-75 block">Visibilidade</label>
                 <select id="field-7"
                   value={newVisibility}
-                  onChange={e => setNewVisibility(e.target.value as EventItem['visibility'])}
+                  onChange={e => {setNewVisibility(e.target.value as EventItem['visibility']);setShareChannelId('');setShareToChat(false);}}
                   className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none cursor-pointer focus:border-brand-panel transition-colors"
                   style={solidInputStyle}
                 >
@@ -641,13 +477,15 @@ export default function AgendaPage() {
                 </div>
                 <input
                   type="checkbox"
+                  aria-label="Notificar equipe no chat"
                   checked={shareToChat}
                   onChange={(e) => setShareToChat(e.target.checked)}
-                  disabled={newVisibility === 'pessoal'}
+                  disabled={newVisibility === 'pessoal'||invitationChannels.length===0}
                   className="w-5 h-5 rounded border-gray-300 accent-blue-600 cursor-pointer disabled:opacity-30"
                 />
               </div>
-
+              {shareToChat&&newVisibility!=='pessoal'&&<div><label htmlFor="agenda-chat-channel" className="block mb-2 text-sm">Canal do convite</label><select id="agenda-chat-channel" required value={effectiveChannelId} onChange={e=>setShareChannelId(e.target.value)} className="w-full border rounded-xl p-3" style={solidInputStyle}><option value="">Selecione o canal…</option>{invitationChannels.map(channel=><option key={channel.id} value={channel.id}>{channel.nome}</option>)}</select></div>}
+              {newVisibility!=='pessoal'&&invitationChannels.length===0&&<p className="text-xs text-[var(--text-muted)]">Nenhum canal compatível está disponível para compartilhar este convite.</p>}
 
             </form>
 </ModalShell>

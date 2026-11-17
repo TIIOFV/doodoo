@@ -1,0 +1,34 @@
+[
+  {
+    "name": "expanded detail, list restoration, keyboard tabs and checklist persistence",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "bidirectional diary notices, no self notices, edit/delete replay and same-page deep link",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "difficulty and reminder notify the opposite participant once",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "failed comment retains draft and produces no recipient notice",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "offline return recovers new comments once in same browser",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "assignment emits one recipient notice and none for unrelated teammate",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "view transitions run on open/close and respect reduced motion",
+    "status": "PASS MOCK"
+  },
+  {
+    "name": "desktop and mobile layouts in nature/dark themes, no horizontal overflow",
+    "status": "PASS MOCK"
+  }
+]

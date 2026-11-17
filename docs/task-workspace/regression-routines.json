@@ -1,0 +1,155 @@
+{
+  "browser": "157.0.8103.79",
+  "results": [
+    {
+      "area": "tasks",
+      "name": "atomic routine failure rolls back completion and retry preserves original creator",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_complete_routine",
+          "method": "POST",
+          "mockRpc": true
+        },
+        {
+          "table": "doodoo_complete_routine",
+          "method": "POST",
+          "mockRpc": true
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "tasks",
+      "name": "missing RPC fails closed without legacy writes",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_complete_routine",
+          "method": "POST",
+          "mockRpc": true
+        }
+      ],
+      "externalForwarded": 0
+    },
+    {
+      "area": "tasks",
+      "name": "reminder appends once and network-aborted status does not persist",
+      "status": "PASSOU MOCK",
+      "pageErrors": [],
+      "requests": [
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_permissoes",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_canais",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_perfis",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas_categorias",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "PATCH"
+        },
+        {
+          "table": "doodoo_tarefas",
+          "method": "GET"
+        }
+      ],
+      "externalForwarded": 0
+    }
+  ]
+}
