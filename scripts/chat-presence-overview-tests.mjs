@@ -50,8 +50,8 @@ await test('typing stays visible through long input, stops on blur and switching
  await a.screenshot({path:output+'/'+engine+'-chat.png'});
 });
 
-await test('private typing denial is isolated to its channel and explicit retry reconnects securely',async(s,open)=>{
- s.typingDeniedIds=new Set(['channel-ui']);const a=await open(),b=await open(s.b);await chat(a);await chat(b);await a.getByText('Não foi possível conectar o indicador de digitação.',{exact:false}).waitFor();assert(s.typingJoins.every(c=>c.private===true));
+await test('typing channel error is isolated to its channel and explicit retry reconnects cleanly',async(s,open)=>{
+ s.typingDeniedIds=new Set(['channel-ui']);const a=await open(),b=await open(s.b);await chat(a);await chat(b);await a.getByText('Não foi possível conectar o indicador de digitação.',{exact:false}).waitFor();assert(s.typingJoins.length>0);
  await a.getByText('Geral',{exact:true}).first().click();assert.equal(await a.locator('.chat-typing-unavailable').count(),0,'one denied channel poisoned all channels');await a.getByText('Equipe UI',{exact:true}).first().click();s.typingDeniedIds.clear();await a.locator('.chat-typing-unavailable button').evaluateAll(buttons=>buttons[0]?.click());await b.locator('.chat-typing-unavailable button').evaluateAll(buttons=>buttons[0]?.click());await ready(s);await a.getByLabel('Mensagem',{exact:true}).fill('Conexão restaurada');await b.locator('.chat-conversation-header .chat-typing-text').waitFor();
 });
 

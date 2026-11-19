@@ -39,7 +39,7 @@ export function useTaskNotifications(user: { user_id: string; nome: string; seto
     const sync = async () => {
       if (syncing || !active) return;
       syncing = true;
-      const { data, error } = await supabase.from('doodoo_tarefas').select('id,titulo,setor,responsavel,atribuido_por,chat').eq('setor', sector);
+      const { data, error } = await supabase.from('doodoo_tarefas').select('id,titulo,setor,responsavel,atribuido_por,status,updated_at,chat').eq('setor', sector);
       if (!active) return;
       if (!error && data) {
         const ids = new Set(data.map(task => task.id));

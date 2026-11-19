@@ -7,7 +7,8 @@ import ModalShell from '../ModalShell';
 import { useDialogAction } from '../useDialogAction';
 import {useRecordActions} from '../useRecordActions';
 
-import { inputStyle,Notice,panelStyle,sidebarStyle } from '@/app/components/ui';
+import { heroGridStyle, HeroOrbitalArt, heroSurfaceStyle, primaryActionStyle } from '@/app/components/BrandMark';
+import { inputStyle, Notice, panelStyle } from '@/app/components/ui';
 import { messageOf,notify,requireResult } from '@/app/lib/domain';
 import type { ChannelRow,MessageRow,PermissionRow } from '@/app/lib/models';
 import JSZip from 'jszip';
@@ -188,9 +189,9 @@ export default function ConfiguracoesPage() {
     isOpen: boolean; title: string; message: string; onConfirm: () => void; isDestructive?: boolean;
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, isDestructive: false });
 
-  const glassContainerStyle = panelStyle;
-  const glassSidebarStyle = sidebarStyle;
-  const solidCardStyle = panelStyle;
+  const glassContainerStyle = { ...panelStyle, boxShadow: 'var(--shadow-card, 0 1px 2px rgb(15 23 42 / 0.04))' };
+  const glassSidebarStyle = { backgroundColor: 'var(--bg-card)', borderRight: '1px solid var(--border-input)' };
+  const solidCardStyle = { ...panelStyle, boxShadow: 'var(--shadow-card, 0 1px 2px rgb(15 23 42 / 0.04))' };
   const solidInputStyle = inputStyle;
 
   const notifyBell = useCallback((title: string, desc: string) => {
@@ -760,9 +761,11 @@ export default function ConfiguracoesPage() {
     for (let i = start; i <= end; i++) {
       pages.push(
         <button
-          key={i} onClick={() => setPage(i)}
-          className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors shadow-sm cursor-pointer ${current === i ? 'bg-brand-panel text-white border-transparent' : 'border hover:bg-black/5 dark:hover:bg-white/5'}`}
-          style={current !== i ? { borderColor: 'var(--border-input)' } : {}}
+          key={i}
+          type="button"
+          onClick={() => setPage(i)}
+          className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer ${current === i ? 'text-white border-transparent' : 'border hover:bg-[var(--surface-hover)]'}`}
+          style={current === i ? primaryActionStyle : { borderColor: 'var(--border-input)' }}
         >
           {i}
         </button>
@@ -778,21 +781,35 @@ export default function ConfiguracoesPage() {
 
   if (isLoading || !isMounted) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center">
-        <div className="w-16 h-16 rounded-xl flex items-center justify-center animate-pulse" style={{ backgroundColor: 'var(--bg-card)' }}>
-          <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--tab-active)' }} />
-        </div>
+      <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-panel" />
+        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+          Carregando configurações...
+        </span>
       </div>
     );
   }
 
   if (authError || !currentUser) return <Notice>Não foi possível carregar as configurações. Atualize a página para tentar novamente.</Notice>;
 
+  const activeTabSubtitle =
+    activeTab === 'geral'
+      ? 'Personalize sua aparência, foto de perfil e consulte seus dados corporativos.'
+      : activeTab === 'notificacoes'
+        ? 'Gerencie alertas no Windows, som do portal, digitação e privacidade no chat.'
+        : activeTab === 'usuarios'
+          ? 'Cadastre colaboradores, ajuste cargos, setores e controle o acesso à plataforma.'
+          : activeTab === 'permissoes'
+            ? 'Configure a matriz de acesso por cargo e conceda exceções individuais.'
+            : activeTab === 'categorias'
+              ? 'Padronize as etiquetas e cores utilizadas para classificar tarefas do setor.'
+              : 'Consulte a trilha de auditoria, exporte backups e gerencie a retenção do chat.';
+
   return (
-    <div className="settings-workspace w-full h-full min-h-0 min-w-0 flex-1 flex flex-col animate-in fade-in duration-500 pb-0 relative z-0">
+    <div className="settings-workspace w-full h-full min-h-0 min-w-0 flex-1 flex flex-col pb-0 relative z-0">
 
       {isPurgingGlobal && (
-         <ModalShell open busy title="Limpeza em andamento" onClose={() => {}}>
+        <ModalShell open busy title="Limpeza em andamento" onClose={() => {}}>
           <div className="flex flex-col items-center p-6 text-center">
             <Database className="w-12 h-12 mb-4 text-brand-panel animate-pulse" />
             <h2 className="text-xl font-semibold mb-2">A Executar Limpeza Profunda...</h2>
@@ -801,84 +818,171 @@ export default function ConfiguracoesPage() {
           </div>
         </ModalShell>
       )}
-      <div className="w-full min-h-0 min-w-0 flex-1 flex flex-col lg:flex-row rounded-xl border overflow-hidden" style={glassContainerStyle}>
-        <div className="hidden lg:flex flex-col w-[248px] xl:w-[272px] shrink-0" style={glassSidebarStyle}>
-          <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
-            <div className="pb-4 border-b" style={{borderColor:'var(--border-input)'}}><h3 className="font-semibold text-base">Painel de Ajustes</h3><p className="mt-1 text-xs text-[var(--text-muted)]">Doo Doo Workspace</p></div>
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-2xl bg-brand-panel flex items-center justify-center text-white shadow-sm flex-shrink-0">
-                <Settings className="w-6 h-6" />
-              </div>
-              <div className="overflow-hidden">
-                <h3 className="font-semibold text-[15px] tracking-tight truncate">{currentUser.nome}</h3>
-                <p className="text-xs font-medium uppercase tracking-widest opacity-75 truncate mt-0.5">{currentUser.cargo} • {currentUser.setor}</p>
+
+      <div className="settings-shell w-full min-h-0 min-w-0 flex-1 flex flex-col lg:flex-row rounded-none md:rounded-2xl border-t md:border overflow-hidden" style={glassContainerStyle}>
+        {/* SIDEBAR DE CONFIGURAÇÕES V2 */}
+        <aside className="settings-sidebar hidden lg:flex flex-col w-[256px] shrink-0" style={glassSidebarStyle}>
+          <div className="p-5 space-y-5 flex-1 overflow-y-auto custom-scrollbar">
+            <div className="flex items-center gap-3 pb-4 border-b" style={{ borderColor: 'var(--border-input)' }}>
+              <span className="settings-brand-icon">
+                <Settings className="w-[18px] h-[18px]" />
+              </span>
+              <div className="min-w-0">
+                <h3 className="font-bold text-[15px] tracking-tight truncate">Painel de Ajustes</h3>
+                <p className="text-[11px] font-medium truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  Doo Doo Workspace
+                </p>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest opacity-70 px-2 mb-2">Pessoal</p>
-              <button onClick={() => setActiveTab('geral')} className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${activeTab === 'geral' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
-                <Settings className="w-4 h-4" /><span>Meu Perfil</span>
+            {/* Cartão compacto do usuário */}
+            <div
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl border"
+              style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)' }}
+            >
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0"
+                style={primaryActionStyle}
+              >
+                {getInitials(currentUser.nome)}
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-[13px] tracking-tight truncate">{currentUser.nome}</p>
+                <p className="text-[10.5px] font-medium uppercase tracking-wider truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  {currentUser.cargo} · {currentUser.setor}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="settings-nav-label">
+                <span className="settings-accent-bar" aria-hidden="true" />
+                <span>Pessoal</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('geral')}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[13px] transition-all cursor-pointer ${
+                  activeTab === 'geral' ? 'text-white font-semibold' : 'font-medium hover:bg-[var(--surface-hover)]'
+                }`}
+                style={activeTab === 'geral' ? primaryActionStyle : { color: 'var(--text-muted)' }}
+              >
+                <Settings className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">Meu Perfil</span>
               </button>
-              <button onClick={() => setActiveTab('notificacoes')} className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${activeTab === 'notificacoes' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
-                <Bell className="w-4 h-4" /><span>Privacidade</span>
+              <button
+                type="button"
+                onClick={() => setActiveTab('notificacoes')}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[13px] transition-all cursor-pointer ${
+                  activeTab === 'notificacoes' ? 'text-white font-semibold' : 'font-medium hover:bg-[var(--surface-hover)]'
+                }`}
+                style={activeTab === 'notificacoes' ? primaryActionStyle : { color: 'var(--text-muted)' }}
+              >
+                <Bell className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">Privacidade</span>
               </button>
 
               {isManager && (
                 <>
-                  <div className="pt-4 pb-1"><p className="text-xs font-semibold uppercase tracking-widest opacity-70 px-2">Gestão</p></div>
-                  <button onClick={() => setActiveTab('usuarios')} className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${activeTab === 'usuarios' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
-                    <Users className="w-4 h-4" /><span>Equipe & Colaboradores</span>
+                  <div className="settings-nav-label pt-3">
+                    <span className="settings-accent-bar" aria-hidden="true" />
+                    <span>Gestão</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('usuarios')}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[13px] transition-all cursor-pointer ${
+                      activeTab === 'usuarios' ? 'text-white font-semibold' : 'font-medium hover:bg-[var(--surface-hover)]'
+                    }`}
+                    style={activeTab === 'usuarios' ? primaryActionStyle : { color: 'var(--text-muted)' }}
+                  >
+                    <Users className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">Equipe &amp; Colaboradores</span>
                   </button>
-                  <button onClick={() => setActiveTab('permissoes')} className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${activeTab === 'permissoes' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
-                    <Shield className="w-4 h-4" /><span>Permissões de Abas</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('permissoes')}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[13px] transition-all cursor-pointer ${
+                      activeTab === 'permissoes' ? 'text-white font-semibold' : 'font-medium hover:bg-[var(--surface-hover)]'
+                    }`}
+                    style={activeTab === 'permissoes' ? primaryActionStyle : { color: 'var(--text-muted)' }}
+                  >
+                    <Shield className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">Permissões de Abas</span>
                   </button>
-                  <button onClick={() => setActiveTab('categorias')} className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${activeTab === 'categorias' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
-                    <Tags className="w-4 h-4" /><span>Categorias de Tarefas</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('categorias')}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[13px] transition-all cursor-pointer ${
+                      activeTab === 'categorias' ? 'text-white font-semibold' : 'font-medium hover:bg-[var(--surface-hover)]'
+                    }`}
+                    style={activeTab === 'categorias' ? primaryActionStyle : { color: 'var(--text-muted)' }}
+                  >
+                    <Tags className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">Categorias de Tarefas</span>
                   </button>
                 </>
               )}
 
               {isAdmin && (
                 <>
-                  <div className="pt-4 pb-1"><p className="text-xs font-semibold uppercase tracking-widest opacity-70 px-2">Sistema</p></div>
-                  <button onClick={() => setActiveTab('logs')} className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${activeTab === 'logs' ? 'bg-brand-panel text-white shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75'}`}>
-                    <Activity className="w-4 h-4" /><span>Auditoria & Dados</span>
+                  <div className="settings-nav-label pt-3">
+                    <span className="settings-accent-bar" aria-hidden="true" />
+                    <span>Sistema</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('logs')}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[13px] transition-all cursor-pointer ${
+                      activeTab === 'logs' ? 'text-white font-semibold' : 'font-medium hover:bg-[var(--surface-hover)]'
+                    }`}
+                    style={activeTab === 'logs' ? primaryActionStyle : { color: 'var(--text-muted)' }}
+                  >
+                    <Activity className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">Auditoria &amp; Dados</span>
                   </button>
                 </>
               )}
             </div>
           </div>
 
-          <div className="p-6 border-t flex flex-col items-center justify-center flex-shrink-0" style={{ borderColor: 'var(--border-input)' }}>
-            <span className="text-xs font-medium opacity-70 uppercase tracking-widest mb-3">Tema da Interface</span>
-
+          <div className="p-4 border-t flex flex-col items-center justify-center flex-shrink-0" style={{ borderColor: 'var(--border-input)' }}>
+            <span className="text-[10px] font-bold uppercase tracking-[0.12em] mb-3" style={{ color: 'var(--text-muted)' }}>
+              Tema da Interface
+            </span>
             <div className="grid grid-cols-5 gap-2.5">
               {themes.map((t) => (
                 <button
                   key={t.id}
+                  type="button"
                   onClick={() => changeTheme(t.id)}
                   style={{
-                    width: '24px', height: '24px',
+                    width: '20px',
+                    height: '20px',
                     backgroundColor: t.color,
                     border: `1px solid ${t.border}`,
-                    boxShadow: theme === t.id ? `0 0 0 2px var(--bg-card), 0 0 0 4px ${t.border}` : '0 2px 4px rgba(0,0,0,0.15)'
+                    boxShadow: theme === t.id ? `0 0 0 2px var(--bg-card), 0 0 0 4px ${t.border}` : '0 1px 3px rgba(0,0,0,0.14)',
                   }}
-                  className={`rounded-full transition-all duration-300 cursor-pointer ${theme === t.id ? 'scale-110' : 'opacity-80 hover:opacity-100 hover:scale-110'}`}
+                  className={`rounded-full transition-transform duration-200 cursor-pointer ${theme === t.id ? 'scale-110' : 'opacity-80 hover:opacity-100 hover:scale-110'}`}
                   title={t.name}
+                  aria-label={`Tema ${t.name}`}
                 />
               ))}
             </div>
           </div>
-        </div>
+        </aside>
 
-        {/* ÁREA DE CONTEÚDO PRINCIPAL (100% de largura) */}
+        {/* ÁREA DE CONTEÚDO PRINCIPAL */}
         <div className="settings-main min-h-0 min-w-0 flex-1 flex flex-col h-full overflow-hidden" style={{ backgroundColor: 'var(--bg-card)' }}>
-
-          <div className="settings-header p-5 md:p-8 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-0 flex-shrink-0" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-brand-panel mb-1">Painel de Controlo</p>
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+          {/* HERO HEADER EXECUTIVO V2 */}
+          <header className="settings-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 flex-shrink-0" style={heroSurfaceStyle}>
+            <div className="settings-header-grid" style={heroGridStyle} aria-hidden="true" />
+            <div className="settings-header-art" aria-hidden="true">
+              <HeroOrbitalArt className="w-full h-full" />
+            </div>
+            <div className="relative z-10 min-w-0">
+              <p className="settings-header-eyebrow">Painel de Controle</p>
+              <h2 className="font-bold tracking-tight text-white">
                 {activeTab === 'geral' && 'Meu Perfil'}
                 {activeTab === 'usuarios' && 'Controle de Colaboradores'}
                 {activeTab === 'permissoes' && 'Permissões e Exceções VIP'}
@@ -886,128 +990,208 @@ export default function ConfiguracoesPage() {
                 {activeTab === 'notificacoes' && 'Notificações e privacidade'}
                 {activeTab === 'logs' && 'Auditoria de Sistema & Dados'}
               </h2>
+              <p className="settings-header-sub">{activeTabSubtitle}</p>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="relative z-10 flex items-center gap-3 flex-shrink-0">
               {activeTab === 'geral' && (
-                <button onClick={handleSaveProfile} disabled={isSaving} className="px-6 py-3.5 rounded-2xl bg-brand-panel text-white text-sm font-semibold shadow-sm hover:opacity-90 active:scale-95 transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-70">
-                  {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <Save className="w-4 h-4" /><span>Salvar Alterações</span>
+                <button
+                  type="button"
+                  onClick={handleSaveProfile}
+                  disabled={isSaving}
+                  className="settings-save-btn px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+                >
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Salvar Alterações</span>
                 </button>
               )}
             </div>
-          </div>
+          </header>
 
-          <div className="settings-mobile-tabs lg:hidden flex overflow-x-auto p-4 border-b space-x-3 flex-shrink-0 custom-scrollbar" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
+          {/* ABAS MOBILE */}
+          <div
+            className="settings-mobile-tabs lg:hidden flex overflow-x-auto px-4 py-3 border-b gap-2 flex-shrink-0 custom-scrollbar"
+            style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}
+          >
             {[
               { id: 'geral', label: 'Meu Perfil' },
               { id: 'notificacoes', label: 'Privacidade' },
-              ...(isManager ? [
-                { id: 'usuarios', label: 'Colaboradores' },
-                { id: 'permissoes', label: 'Permissões' },
-                { id: 'categorias', label: 'Categorias' }
-              ] : []),
-              ...(isAdmin ? [{ id: 'logs', label: 'Auditoria' }] : [])
-            ].map(tab => (
+              ...(isManager
+                ? [
+                    { id: 'usuarios', label: 'Colaboradores' },
+                    { id: 'permissoes', label: 'Permissões' },
+                    { id: 'categorias', label: 'Categorias' },
+                  ]
+                : []),
+              ...(isAdmin ? [{ id: 'logs', label: 'Auditoria' }] : []),
+            ].map((tab) => (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-transform active:scale-95 shadow-sm ${activeTab === tab.id ? 'bg-brand-panel text-white' : 'border border-[var(--border-input)] opacity-70 hover:opacity-100'}`}
-                style={activeTab !== tab.id ? { backgroundColor: 'var(--bg-card)' } : {}}
+                className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                  activeTab === tab.id ? 'text-white' : 'border'
+                }`}
+                style={
+                  activeTab === tab.id
+                    ? primaryActionStyle
+                    : { backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-muted)' }
+                }
               >
                 {tab.label}
               </button>
             ))}
           </div>
 
-          <div className="settings-content min-h-0 min-w-0 flex-1 overflow-y-auto p-5 md:p-8 space-y-6 custom-scrollbar">
-
+          <div className="settings-content min-h-0 min-w-0 flex-1 overflow-y-auto space-y-5 custom-scrollbar">
+            {/* MEU PERFIL */}
             {activeTab === 'geral' && (
-              <form onSubmit={handleSaveProfile} className="space-y-6 max-w-3xl">
-                <section className="settings-appearance"><h3>Aparência do portal</h3><p>Escolha o tema que deixa sua rotina mais confortável.</p><label>Tema<select aria-label="Tema das configurações" value={theme} onChange={e=>changeTheme(e.target.value)}>{themes.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label></section>
-                <div className="p-6 md:p-8 rounded-3xl border space-y-6 shadow-sm" style={solidInputStyle}>
-                  <h3 className="text-sm font-semibold uppercase tracking-wider opacity-75">Foto de Perfil (Avatar)</h3>
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
+              <form onSubmit={handleSaveProfile} className="space-y-5 max-w-3xl">
+                <section className="settings-appearance">
+                  <div className="settings-section-title">
+                    <span>
+                      <Settings size={19} />
+                    </span>
+                    <div>
+                      <h3>Aparência do portal</h3>
+                      <p>Escolha o tema que deixa sua rotina mais confortável.</p>
+                    </div>
+                  </div>
+                  <label>
+                    <span>Tema</span>
+                    <select aria-label="Tema das configurações" value={theme} onChange={(e) => changeTheme(e.target.value)}>
+                      {themes.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </section>
+
+                <div className="settings-card p-6 rounded-2xl border space-y-5" style={solidCardStyle}>
+                  <div className="settings-card-head">
+                    <span className="settings-accent-bar" aria-hidden="true" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                      Foto de Perfil (Avatar)
+                    </h3>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
                     <div className="relative flex-shrink-0 w-20 h-20">
                       {currentUser.avatar_url ? (
                         <>
                           <img
                             src={currentUser.avatar_url}
                             alt="Avatar"
-                            className="w-20 h-20 rounded-2xl object-cover border-2 shadow-sm relative z-10"
+                            className="w-20 h-20 rounded-2xl object-cover border relative z-10"
                             style={{ borderColor: 'var(--border-input)' }}
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
                             }}
                           />
-                          <div className="w-20 h-20 rounded-2xl bg-brand-panel text-white font-semibold flex items-center justify-center text-xl shadow-sm absolute inset-0 z-0 hidden">
+                          <div
+                            className="w-20 h-20 rounded-2xl text-white font-bold flex items-center justify-center text-xl absolute inset-0 z-0 hidden"
+                            style={primaryActionStyle}
+                          >
                             {getInitials(currentUser.nome)}
                           </div>
                         </>
                       ) : (
-                        <div className="w-20 h-20 rounded-2xl bg-brand-panel text-white font-semibold flex items-center justify-center text-xl shadow-sm">
+                        <div
+                          className="w-20 h-20 rounded-2xl text-white font-bold flex items-center justify-center text-xl"
+                          style={primaryActionStyle}
+                        >
                           {getInitials(currentUser.nome)}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 w-full">
-                      <label htmlFor="field-1" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">URL da Imagem</label>
-                      <input id="field-1"
+                      <label htmlFor="field-1" className="text-xs font-semibold block mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                        URL da Imagem
+                      </label>
+                      <input
+                        id="field-1"
                         type="url"
                         value={currentUser.avatar_url || ''}
-                        onChange={(e) => setCurrentUser(prev => prev ? { ...prev, avatar_url: e.target.value } : null)}
+                        onChange={(e) => setCurrentUser((prev) => (prev ? { ...prev, avatar_url: e.target.value } : null))}
                         placeholder="https://exemplo.com/foto.jpg"
-                        className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors shadow-sm"
-                        style={solidCardStyle}
+                        className="w-full px-3.5 py-3 rounded-xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors"
+                        style={solidInputStyle}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="p-6 md:p-8 rounded-3xl border space-y-6 shadow-sm" style={solidInputStyle}>
-                  <div className="flex items-center justify-between">
-                     <h3 className="text-sm font-semibold uppercase tracking-wider opacity-75">Dados Profissionais Básicos</h3>
-                     <span className="text-xs font-semibold bg-brand-panel/10 text-brand-panel px-2 py-1 rounded-md border border-brand-panel/20 uppercase tracking-widest">Leitura Apenas</span>
+                <div className="settings-card p-6 rounded-2xl border space-y-5" style={solidCardStyle}>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="settings-card-head">
+                      <span className="settings-accent-bar" aria-hidden="true" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                        Dados Profissionais Básicos
+                      </h3>
+                    </div>
+                    <span
+                      className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider"
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--tab-active) 10%, var(--bg-card))',
+                        color: 'var(--tab-active)',
+                      }}
+                    >
+                      Leitura Apenas
+                    </span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
-                      <label htmlFor="field-2" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Nome Completo</label>
-                      <input id="field-2"
+                      <label htmlFor="field-2" className="text-xs font-semibold block mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                        Nome Completo
+                      </label>
+                      <input
+                        id="field-2"
                         type="text"
-                        value={currentUser.nome} readOnly
-                        className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors shadow-sm"
-                        style={solidCardStyle}
+                        value={currentUser.nome}
+                        readOnly
+                        className="w-full px-3.5 py-3 rounded-xl border text-sm font-medium outline-none"
+                        style={solidInputStyle}
                       />
                     </div>
                     <div>
-                      <label htmlFor="field-3" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">E-mail Corporativo</label>
-                      <input id="field-3"
+                      <label htmlFor="field-3" className="text-xs font-semibold block mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                        E-mail Corporativo
+                      </label>
+                      <input
+                        id="field-3"
                         type="email"
                         value={currentUser.email}
                         disabled
-                        className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none opacity-70 cursor-not-allowed shadow-inner"
-                        style={solidCardStyle}
+                        className="w-full px-3.5 py-3 rounded-xl border text-sm font-medium outline-none opacity-75 cursor-not-allowed"
+                        style={solidInputStyle}
                       />
                     </div>
                     <div>
-                      <label htmlFor="field-4" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Cargo e Acesso</label>
-                      <input id="field-4"
+                      <label htmlFor="field-4" className="text-xs font-semibold block mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                        Cargo e Acesso
+                      </label>
+                      <input
+                        id="field-4"
                         type="text"
                         value={currentUser.cargo.toUpperCase()}
                         disabled
-                        className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none opacity-70 cursor-not-allowed shadow-inner"
-                        style={solidCardStyle}
+                        className="w-full px-3.5 py-3 rounded-xl border text-sm font-medium outline-none opacity-75 cursor-not-allowed"
+                        style={solidInputStyle}
                       />
                     </div>
                     <div>
-                      <label htmlFor="field-5" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Setor Atribuído</label>
-                      <input id="field-5"
+                      <label htmlFor="field-5" className="text-xs font-semibold block mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                        Setor Atribuído
+                      </label>
+                      <input
+                        id="field-5"
                         type="text"
                         value={currentUser.setor}
                         disabled
                         title="Para alterar o seu setor, um gestor deve fazê-lo na aba Colaboradores."
-                        className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none opacity-70 cursor-not-allowed shadow-inner"
-                        style={solidCardStyle}
+                        className="w-full px-3.5 py-3 rounded-xl border text-sm font-medium outline-none opacity-75 cursor-not-allowed"
+                        style={solidInputStyle}
                       />
                     </div>
                   </div>
@@ -1017,72 +1201,99 @@ export default function ConfiguracoesPage() {
 
             {/* GESTÃO DE EQUIPE */}
             {activeTab === 'usuarios' && isManager && (
-              <div className="space-y-6 w-full">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="space-y-5 w-full">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="relative w-full sm:w-80">
-                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 opacity-70" />
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
                     <input
                       type="text"
                       value={userSearch}
-                      onChange={e => { setUserSearch(e.target.value); setCurrentPage(1); }}
+                      onChange={(e) => {
+                        setUserSearch(e.target.value);
+                        setCurrentPage(1);
+                      }}
                       placeholder="Pesquisar colaborador..."
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors shadow-sm"
-                      style={solidInputStyle}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors"
+                      style={solidCardStyle}
                     />
                   </div>
-                  <button onClick={() => setIsUserModalOpen(true)} className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-brand-panel text-white text-sm font-semibold shadow-sm flex items-center justify-center cursor-pointer hover:opacity-95 active:scale-95 transition-transform">
-                    <UserPlus className="w-4 h-4 mr-2" />Novo Colaborador
+                  <button
+                    type="button"
+                    onClick={() => setIsUserModalOpen(true)}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer hover:brightness-105 transition-all"
+                    style={primaryActionStyle}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Novo Colaborador</span>
                   </button>
                 </div>
 
-                <div className="rounded-3xl border overflow-hidden shadow-sm w-full" style={solidInputStyle}>
+                <div className="rounded-2xl border overflow-hidden w-full" style={solidCardStyle}>
                   <div className="overflow-x-auto w-full custom-scrollbar">
                     <table className="w-full text-left text-xs whitespace-nowrap min-w-[600px]">
                       <thead>
-                        <tr className="border-b opacity-75 font-semibold uppercase text-xs tracking-wider" style={{ borderColor: 'var(--border-input)' }}>
-                          <th className="p-4 md:p-5">Colaborador</th>
-                          <th className="p-4 md:p-5">Cargo</th>
-                          <th className="p-4 md:p-5">Setor</th>
-                          <th className="p-4 md:p-5 text-right">Ações</th>
+                        <tr
+                          className="border-b font-bold uppercase text-[10.5px] tracking-wider"
+                          style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)', color: 'var(--text-muted)' }}
+                        >
+                          <th className="px-5 py-3.5">Colaborador</th>
+                          <th className="px-5 py-3.5">Cargo</th>
+                          <th className="px-5 py-3.5">Setor</th>
+                          <th className="px-5 py-3.5 text-right">Ações</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y" style={{ borderColor: 'var(--border-input)' }}>
-                        {currentUsers.map(user => {
+                      <tbody className="divide-y divide-[var(--border-input)]">
+                        {currentUsers.map((user) => {
                           const isUpdatingThis = updatingUserId === user.id;
                           return (
-                            <tr key={user.id} className={`transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${user.status === 'bloqueado' ? 'opacity-70' : ''}`}>
-                              <td className="p-4 md:p-5 font-medium flex items-center space-x-3.5">
+                            <tr key={user.id} className={`transition-colors hover:bg-[var(--surface-hover)] ${user.status === 'bloqueado' ? 'opacity-65' : ''}`}>
+                              <td className="px-5 py-3.5 font-medium flex items-center gap-3">
                                 {isUpdatingThis ? (
-                                   <div className="w-9 h-9 rounded-xl flex items-center justify-center border shadow-sm bg-brand-panel/10 border-brand-panel/30">
-                                      <Loader2 className="w-5 h-5 text-brand-panel animate-spin" />
-                                   </div>
+                                  <div className="w-9 h-9 rounded-xl flex items-center justify-center border bg-brand-panel/10 border-brand-panel/30">
+                                    <Loader2 className="w-4 h-4 text-brand-panel animate-spin" />
+                                  </div>
                                 ) : user.avatar_url ? (
                                   <div className="relative w-9 h-9">
                                     <img
                                       src={user.avatar_url}
                                       alt=""
-                                      className="w-9 h-9 rounded-xl object-cover border shadow-sm relative z-10"
+                                      className="w-9 h-9 rounded-xl object-cover border relative z-10"
                                       style={{ borderColor: 'var(--border-input)' }}
-                                      onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                      }}
                                     />
-                                    <div className="w-9 h-9 rounded-xl bg-brand-panel text-white font-semibold flex items-center justify-center text-xs shadow-sm absolute inset-0 z-0 hidden">
+                                    <div
+                                      className="w-9 h-9 rounded-xl text-white font-semibold flex items-center justify-center text-xs absolute inset-0 z-0 hidden"
+                                      style={primaryActionStyle}
+                                    >
                                       {getInitials(user.nome)}
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="w-9 h-9 rounded-xl bg-brand-panel text-white font-semibold flex items-center justify-center text-xs shadow-sm">
+                                  <div
+                                    className="w-9 h-9 rounded-xl text-white font-semibold flex items-center justify-center text-xs"
+                                    style={primaryActionStyle}
+                                  >
                                     {getInitials(user.nome)}
                                   </div>
                                 )}
-                                <span className="text-sm">{user.nome}</span>
+                                <div className="min-w-0">
+                                  <span className="text-sm font-semibold block">{user.nome}</span>
+                                  <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                                    {user.email}
+                                  </span>
+                                </div>
                               </td>
-                              <td className="p-4 md:p-5 w-[150px]">
+                              <td className="px-5 py-3.5 w-[160px]">
                                 <select
-                                  aria-label={'Cargo de '+user.nome} value={user.cargo}
-                                  disabled={user.status === 'bloqueado' || isUpdatingThis || user.id===currentUser.id || (!isAdmin&&user.cargo==='administrador')}
+                                  aria-label={'Cargo de ' + user.nome}
+                                  value={user.cargo}
+                                  disabled={user.status === 'bloqueado' || isUpdatingThis || user.id === currentUser.id || (!isAdmin && user.cargo === 'administrador')}
                                   onChange={(e) => handleUpdateUserRoleAndSector(user.id, 'cargo', e.target.value)}
-                                  className="w-full p-2 rounded-xl border font-medium text-xs uppercase outline-none cursor-pointer shadow-sm disabled:opacity-70"
-                                  style={solidCardStyle}
+                                  className="w-full px-2.5 py-2 rounded-xl border font-semibold text-xs uppercase outline-none cursor-pointer disabled:opacity-65"
+                                  style={solidInputStyle}
                                 >
                                   <option value="administrador">Admin</option>
                                   <option value="gestor">Gestor</option>
@@ -1092,41 +1303,84 @@ export default function ConfiguracoesPage() {
                                   <option value="colaborador">Colaborador</option>
                                 </select>
                               </td>
-                              <td className="p-4 md:p-5 w-[150px]">
+                              <td className="px-5 py-3.5 w-[170px]">
                                 <select
-                                  aria-label={'Setor de '+user.nome} value={user.setor}
-                                  disabled={user.status === 'bloqueado' || isUpdatingThis || user.id===currentUser.id || (!isAdmin&&user.cargo==='administrador')}
+                                  aria-label={'Setor de ' + user.nome}
+                                  value={user.setor}
+                                  disabled={user.status === 'bloqueado' || isUpdatingThis || user.id === currentUser.id || (!isAdmin && user.cargo === 'administrador')}
                                   onChange={(e) => handleUpdateUserRoleAndSector(user.id, 'setor', e.target.value)}
-                                  className="w-full p-2 rounded-xl border font-medium text-xs outline-none cursor-pointer shadow-sm disabled:opacity-70"
-                                  style={solidCardStyle}
+                                  className="w-full px-2.5 py-2 rounded-xl border font-medium text-xs outline-none cursor-pointer disabled:opacity-65"
+                                  style={solidInputStyle}
                                 >
-                                  {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                                  {SECTORS.map((s) => (
+                                    <option key={s} value={s}>
+                                      {s}
+                                    </option>
+                                  ))}
                                 </select>
                               </td>
-                              <td className="p-4 md:p-5 text-right space-x-1">
-                                <button onClick={() => handleToggleUserStatus(user.id, user.nome, user.status)} disabled={isUpdatingThis} className="p-2.5 text-brand-panel hover:bg-black/5 dark:hover:bg-white/5 rounded-xl cursor-pointer transition-colors disabled:opacity-70" aria-label={user.status === 'bloqueado' ? 'Desbloquear Acesso' : 'Bloquear Acesso'} title={user.status === 'bloqueado' ? 'Desbloquear Acesso' : 'Bloquear Acesso'}>
-                                  {user.status === 'bloqueado' ? <Unlock className="w-4 h-4"/> : <Lock className="w-4 h-4"/>}
+                              <td className="px-5 py-3.5 text-right space-x-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleUserStatus(user.id, user.nome, user.status)}
+                                  disabled={isUpdatingThis}
+                                  className="p-2 text-brand-panel hover:bg-[var(--surface-hover)] rounded-xl cursor-pointer transition-colors disabled:opacity-70"
+                                  aria-label={user.status === 'bloqueado' ? 'Desbloquear Acesso' : 'Bloquear Acesso'}
+                                  title={user.status === 'bloqueado' ? 'Desbloquear Acesso' : 'Bloquear Acesso'}
+                                >
+                                  {user.status === 'bloqueado' ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                                 </button>
-                                <button onClick={() => handleDeleteUser(user.id, user.nome)} disabled={isUpdatingThis} className="p-2.5 text-[var(--error-text)] hover:bg-red-500/10 rounded-xl cursor-pointer transition-colors disabled:opacity-70" aria-label="Excluir Colaborador" title="Excluir Colaborador">
-                                  <Trash2 className="w-4 h-4"/>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteUser(user.id, user.nome)}
+                                  disabled={isUpdatingThis}
+                                  className="p-2 text-[var(--error-text)] hover:bg-red-500/10 rounded-xl cursor-pointer transition-colors disabled:opacity-70"
+                                  aria-label="Excluir Colaborador"
+                                  title="Excluir Colaborador"
+                                >
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
                               </td>
                             </tr>
                           );
                         })}
                         {currentUsers.length === 0 && (
-                          <tr><td colSpan={4} className="p-6 text-center opacity-70 font-medium text-xs">Nenhum colaborador encontrado.</td></tr>
+                          <tr>
+                            <td colSpan={4} className="p-8 text-center font-medium text-xs" style={{ color: 'var(--text-muted)' }}>
+                              Nenhum colaborador encontrado.
+                            </td>
+                          </tr>
                         )}
                       </tbody>
                     </table>
                   </div>
 
                   {totalPages > 1 && (
-                    <div className="p-4 border-t flex items-center justify-between" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}>
-                      <span className="text-xs font-medium opacity-75">Página {currentPage} de {totalPages}</span>
-                      <div className="flex space-x-2">
-                        <button aria-label="Anterior" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-xl border hover:bg-black/10 disabled:opacity-30 cursor-pointer transition-colors shadow-sm" style={{ borderColor: 'var(--border-input)' }}><ChevronLeft className="w-4 h-4" /></button>
-                        <button aria-label="Próximo" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-xl border hover:bg-black/10 disabled:opacity-30 cursor-pointer transition-colors shadow-sm" style={{ borderColor: 'var(--border-input)' }}><ChevronRight className="w-4 h-4" /></button>
+                    <div className="px-5 py-3.5 border-t flex items-center justify-between" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
+                      <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                        Página {currentPage} de {totalPages}
+                      </span>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          aria-label="Anterior"
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="p-2 rounded-lg border hover:bg-[var(--surface-hover)] disabled:opacity-35 cursor-pointer transition-colors"
+                          style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Próximo"
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="p-2 rounded-lg border hover:bg-[var(--surface-hover)] disabled:opacity-35 cursor-pointer transition-colors"
+                          style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   )}
@@ -1136,38 +1390,69 @@ export default function ConfiguracoesPage() {
 
             {/* CATEGORIAS */}
             {activeTab === 'categorias' && isManager && (
-              <div className="space-y-6 max-w-4xl">
-                <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row items-end gap-3 p-6 rounded-3xl border shadow-sm" style={solidInputStyle}>
+              <div className="space-y-5 max-w-4xl">
+                <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row items-end gap-3 p-5 rounded-2xl border" style={solidCardStyle}>
                   <div className="flex-1 w-full">
-                    <label htmlFor="field-6" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Nome da Categoria</label>
-                    <input id="field-6" type="text" required value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Ex: Infraestrutura, Urgente..." className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors shadow-sm" style={solidCardStyle} />
+                    <label htmlFor="field-6" className="text-xs font-semibold block mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                      Nome da Categoria
+                    </label>
+                    <input
+                      id="field-6"
+                      type="text"
+                      required
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="Ex: Infraestrutura, Urgente..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors"
+                      style={solidInputStyle}
+                    />
                   </div>
                   <div className="w-full sm:w-auto">
-                    <label htmlFor="field-7" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Cor da Tag</label>
-                    <input id="field-7" type="color" value={newCategoryColor} onChange={e => setNewCategoryColor(e.target.value)} className="w-full sm:w-16 h-[50px] p-1.5 rounded-2xl border cursor-pointer shadow-sm" style={solidCardStyle} />
+                    <label htmlFor="field-7" className="text-xs font-semibold block mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                      Cor da Tag
+                    </label>
+                    <input
+                      id="field-7"
+                      type="color"
+                      value={newCategoryColor}
+                      onChange={(e) => setNewCategoryColor(e.target.value)}
+                      className="w-full sm:w-14 h-[42px] p-1 rounded-xl border cursor-pointer"
+                      style={solidInputStyle}
+                    />
                   </div>
-                  <button type="submit" disabled={isSavingCategory} className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-brand-panel text-white text-sm font-semibold flex items-center justify-center cursor-pointer hover:opacity-90 active:scale-95 transition-transform shadow-sm disabled:opacity-70">
-                    {isSavingCategory ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Plus className="w-4 h-4 mr-1.5" />}
-                    Adicionar
+                  <button
+                    type="submit"
+                    disabled={isSavingCategory}
+                    className="w-full sm:w-auto h-[42px] px-5 rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer hover:brightness-105 transition-all disabled:opacity-70"
+                    style={primaryActionStyle}
+                  >
+                    {isSavingCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    <span>Adicionar</span>
                   </button>
                 </form>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {taskCategories.map(cat => (
-                    <div key={cat.id} className="p-4 rounded-2xl border flex items-center justify-between shadow-sm" style={solidCardStyle}>
-                      <div className="flex items-center space-x-3 overflow-hidden">
-                        <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: cat.cor }}></span>
+                  {taskCategories.map((cat) => (
+                    <div key={cat.id} className="p-4 rounded-xl border flex items-center justify-between gap-2" style={solidCardStyle}>
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 ring-2 ring-offset-2" style={{ backgroundColor: cat.cor, '--tw-ring-color': cat.cor, '--tw-ring-offset-color': 'var(--bg-card)' } as React.CSSProperties} />
                         <span className="text-xs font-semibold truncate">{cat.nome}</span>
                       </div>
-                      <button onClick={() => handleDeleteCategory(cat.id, cat.nome)} className="p-2 text-[var(--error-text)] hover:bg-red-500/10 rounded-xl cursor-pointer transition-colors" aria-label="Excluir Categoria" title="Excluir Categoria">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCategory(cat.id, cat.nome)}
+                        className="p-2 text-[var(--error-text)] hover:bg-red-500/10 rounded-lg cursor-pointer transition-colors"
+                        aria-label="Excluir Categoria"
+                        title="Excluir Categoria"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
                   {taskCategories.length === 0 && (
-                     <div className="col-span-full p-6 text-center opacity-70 font-medium text-xs">
-                        Nenhuma categoria encontrada ou acesso bloqueado por RLS.
-                     </div>
+                    <div className="col-span-full p-8 text-center font-medium text-xs rounded-2xl border border-dashed" style={{ color: 'var(--text-muted)', borderColor: 'var(--border-input)' }}>
+                      Nenhuma categoria encontrada ou acesso bloqueado por RLS.
+                    </div>
                   )}
                 </div>
               </div>
@@ -1175,34 +1460,56 @@ export default function ConfiguracoesPage() {
 
             {/* PERMISSÕES E VIPs */}
             {activeTab === 'permissoes' && isManager && (
-              <div className="space-y-8 w-full">
-                <div className="space-y-4">
+              <div className="space-y-7 w-full">
+                <div className="space-y-3.5">
                   <div>
-                    <h3 className="text-sm font-semibold flex items-center"><Users className="w-4 h-4 mr-2 text-brand-panel"/> Matriz de Acesso por Cargo</h3>
-                    <p className="text-xs opacity-75 mt-1">Defina as permissões nativas. Todos os colaboradores do cargo selecionado terão acesso imediato à aba correspondente.</p>
+                    <div className="settings-card-head">
+                      <span className="settings-accent-bar" aria-hidden="true" />
+                      <h3 className="text-sm font-bold flex items-center gap-2">
+                        <Users className="w-4 h-4 text-brand-panel" />
+                        Matriz de Acesso por Cargo
+                      </h3>
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                      Defina as permissões nativas. Todos os colaboradores do cargo selecionado terão acesso imediato à aba correspondente.
+                    </p>
                   </div>
-                  <div className="rounded-3xl border overflow-hidden shadow-sm w-full" style={solidInputStyle}>
+                  <div className="rounded-2xl border overflow-hidden w-full" style={solidCardStyle}>
                     <div className="overflow-x-auto w-full custom-scrollbar">
                       <table className="w-full text-left border-collapse text-xs whitespace-nowrap min-w-[700px]">
                         <thead>
-                          <tr className="border-b opacity-75 font-semibold uppercase text-xs tracking-wider" style={{ borderColor: 'var(--border-input)' }}>
-                            <th className="p-4 md:p-5">Funcionalidade / Aba</th>
-                            <th className="p-4 md:p-5 text-center">Gestor</th>
-                            <th className="p-4 md:p-5 text-center">Coordenador</th>
-                            <th className="p-4 md:p-5 text-center">Supervisor</th>
-                            <th className="p-4 md:p-5 text-center">Analista</th>
-                            <th className="p-4 md:p-5 text-center">Colaborador</th>
+                          <tr
+                            className="border-b font-bold uppercase text-[10.5px] tracking-wider"
+                            style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)', color: 'var(--text-muted)' }}
+                          >
+                            <th className="px-5 py-3.5">Funcionalidade / Aba</th>
+                            <th className="px-4 py-3.5 text-center">Gestor</th>
+                            <th className="px-4 py-3.5 text-center">Coordenador</th>
+                            <th className="px-4 py-3.5 text-center">Supervisor</th>
+                            <th className="px-4 py-3.5 text-center">Analista</th>
+                            <th className="px-4 py-3.5 text-center">Colaborador</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y" style={{ borderColor: 'var(--border-input)' }}>
-                          {tabPermissions.map(tab => (
-                            <tr key={tab.tabKey} className="transition-colors hover:bg-black/5 dark:hover:bg-white/5">
-                              <td className="p-4 md:p-5 font-semibold text-sm">{tab.tabName}</td>
-                              {(['gestor', 'coordenador', 'supervisor', 'analista', 'colaborador'] as RoleType[]).map(role => {
+                        <tbody className="divide-y divide-[var(--border-input)]">
+                          {tabPermissions.map((tab) => (
+                            <tr key={tab.tabKey} className="transition-colors hover:bg-[var(--surface-hover)]">
+                              <td className="px-5 py-3.5 font-semibold text-sm">{tab.tabName}</td>
+                              {(['gestor', 'coordenador', 'supervisor', 'analista', 'colaborador'] as RoleType[]).map((role) => {
                                 const hasAccess = tab.allowedRoles.includes(role);
                                 return (
-                                  <td key={role} className="p-4 md:p-5 text-center w-[120px]">
-                                    <button disabled={!isAdmin||permissionActions.pending>0} aria-label={tab.tabName+': '+role} onClick={() => toggleRolePermission(tab.tabKey, role)} className={`w-full py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-sm ${hasAccess ? 'bg-emerald-500/10 text-[var(--success)] border-emerald-500/30' : 'opacity-70 hover:opacity-100'}`} style={!hasAccess ? solidCardStyle : undefined}>
+                                  <td key={role} className="px-3.5 py-3.5 text-center w-[120px]">
+                                    <button
+                                      type="button"
+                                      disabled={!isAdmin || permissionActions.pending > 0}
+                                      aria-label={tab.tabName + ': ' + role}
+                                      onClick={() => toggleRolePermission(tab.tabKey, role)}
+                                      className={`w-full py-1.5 px-2.5 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
+                                        hasAccess
+                                          ? 'bg-emerald-500/12 text-[var(--success)] border-emerald-500/30'
+                                          : 'opacity-75 hover:opacity-100'
+                                      }`}
+                                      style={!hasAccess ? solidInputStyle : undefined}
+                                    >
                                       {hasAccess ? 'Liberado' : 'Bloqueado'}
                                     </button>
                                   </td>
@@ -1210,88 +1517,139 @@ export default function ConfiguracoesPage() {
                               })}
                             </tr>
                           ))}
-                          {tabPermissions.length === 0 && <tr><td colSpan={6} className="p-6 text-center opacity-70 font-medium">As permissões estão protegidas por regras do servidor e não puderam ser carregadas.</td></tr>}
+                          {tabPermissions.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="p-8 text-center font-medium text-xs" style={{ color: 'var(--text-muted)' }}>
+                                As permissões estão protegidas por regras do servidor e não puderam ser carregadas.
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-5 pt-6 border-t" style={{ borderColor: 'var(--border-input)' }}>
+                <div className="space-y-4 pt-6 border-t" style={{ borderColor: 'var(--border-input)' }}>
                   <div>
-                    <h3 className="text-sm font-semibold flex items-center text-brand-panel"><Shield className="w-4 h-4 mr-2"/> Acessos Individuais (Exceções VIP)</h3>
-                    <p className="text-xs opacity-75 mt-1">
+                    <div className="settings-card-head">
+                      <span className="settings-accent-bar" aria-hidden="true" />
+                      <h3 className="text-sm font-bold flex items-center gap-2 text-brand-panel">
+                        <Shield className="w-4 h-4" />
+                        Acessos Individuais (Exceções VIP)
+                      </h3>
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                       Selecione um colaborador para dar ou retirar acesso a funcionalidades independentemente do seu cargo base.
                     </p>
                   </div>
 
                   {usersWithExceptions.length > 0 && (
                     <div className="flex flex-wrap gap-2 items-center">
-                      <span className="text-xs font-semibold opacity-70 mr-1 uppercase tracking-wider">VIPs Ativos:</span>
-                      {usersWithExceptions.map(u => (
-                         <button
-                           key={u.user_id}
-                           onClick={() => setSelectedExceptionUserId(u.user_id)}
-                           className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer shadow-sm ${selectedExceptionUserId === u.user_id ? 'bg-brand-panel text-white border-brand-panel shadow-sm' : 'bg-brand-panel/10 text-brand-panel border-brand-panel/30 hover:bg-brand-panel/20'}`}
-                         >
-                            {u.nome.split(' ')[0]}
-                         </button>
+                      <span className="text-[11px] font-bold uppercase tracking-wider mr-1" style={{ color: 'var(--text-muted)' }}>
+                        VIPs Ativos:
+                      </span>
+                      {usersWithExceptions.map((u) => (
+                        <button
+                          key={u.user_id}
+                          type="button"
+                          onClick={() => setSelectedExceptionUserId(u.user_id)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                            selectedExceptionUserId === u.user_id
+                              ? 'text-white border-transparent'
+                              : 'bg-brand-panel/10 text-brand-panel border-brand-panel/25 hover:bg-brand-panel/15'
+                          }`}
+                          style={selectedExceptionUserId === u.user_id ? primaryActionStyle : undefined}
+                        >
+                          {u.nome.split(' ')[0]}
+                        </button>
                       ))}
                     </div>
                   )}
 
                   <div className="max-w-md relative">
-                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 opacity-70" />
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
                     <select
-                       value={selectedExceptionUserId || ''}
-                       onChange={(e) => setSelectedExceptionUserId(e.target.value)}
-                       className="w-full pl-10 pr-4 py-3.5 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel shadow-sm appearance-none cursor-pointer"
-                       style={solidInputStyle}
+                      value={selectedExceptionUserId || ''}
+                      onChange={(e) => setSelectedExceptionUserId(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border text-sm font-medium outline-none focus:border-brand-panel cursor-pointer"
+                      style={solidCardStyle}
                     >
-                       <option value="" disabled>Selecione um colaborador da lista...</option>
-                       {companyUsers.map(u => (
-                         <option key={u.user_id} value={u.user_id}>{u.nome} ({u.cargo})</option>
-                       ))}
+                      <option value="" disabled>
+                        Selecione um colaborador da lista...
+                      </option>
+                      {companyUsers.map((u) => (
+                        <option key={u.user_id} value={u.user_id}>
+                          {u.nome} ({u.cargo})
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   {selectedExceptionUserId && (
-                     <div className="p-6 md:p-8 rounded-3xl border shadow-sm animate-in fade-in slide-in-from-bottom-4 w-full" style={solidInputStyle}>
-                        <div className="flex items-center space-x-4 mb-6 pb-6 border-b" style={{ borderColor: 'var(--border-input)' }}>
-                           <div className="w-12 h-12 rounded-2xl bg-brand-panel text-white font-semibold flex items-center justify-center text-sm shadow-sm">
-                             {getInitials(companyUsers.find(u => u.user_id === selectedExceptionUserId)?.nome || '')}
-                           </div>
-                           <div>
-                             <p className="font-semibold text-base">{companyUsers.find(u => u.user_id === selectedExceptionUserId)?.nome}</p>
-                             <p className="text-xs uppercase font-medium opacity-70 tracking-wider mt-0.5">{companyUsers.find(u => u.user_id === selectedExceptionUserId)?.cargo}</p>
-                           </div>
+                    <div className="p-6 rounded-2xl border w-full" style={solidCardStyle}>
+                      <div className="flex items-center gap-3.5 mb-5 pb-5 border-b" style={{ borderColor: 'var(--border-input)' }}>
+                        <div
+                          className="w-11 h-11 rounded-xl text-white font-bold flex items-center justify-center text-sm"
+                          style={primaryActionStyle}
+                        >
+                          {getInitials(companyUsers.find((u) => u.user_id === selectedExceptionUserId)?.nome || '')}
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                           {tabPermissions.map(tab => {
-                              const user = companyUsers.find(u => u.user_id === selectedExceptionUserId);
-                              const userRole = (user?.cargo || '').toLowerCase();
-                              const hasRoleAccess = tab.allowedRoles.some(r => r.toLowerCase() === userRole);
-                              const isVip = tab.allowedUsers.includes(selectedExceptionUserId);
-
-                              return (
-                                 <div key={tab.tabKey} className={`p-5 rounded-2xl border flex flex-col justify-between space-y-4 transition-colors shadow-sm ${isVip ? 'border-brand-panel bg-brand-panel/5' : ''}`} style={{ backgroundColor: 'var(--bg-card)', borderColor: isVip ? '' : 'var(--border-input)' }}>
-                                    <span className="font-semibold text-xs">{tab.tabName}</span>
-                                    <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: 'var(--border-input)' }}>
-                                       {hasRoleAccess ? (
-                                          <span className="text-xs font-semibold text-[var(--success)] bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">Acesso Nativo do Cargo</span>
-                                       ) : (
-                                          <label className="flex items-center space-x-2.5 cursor-pointer w-full justify-between group">
-                                             <span className={`text-xs font-semibold transition-opacity ${isVip ? 'text-brand-panel' : 'opacity-70 group-hover:opacity-80'}`}>{isVip ? 'Exceção Concedida' : 'Sem Acesso'}</span>
-                                             <input type="checkbox" disabled={!isAdmin||permissionActions.pending>0} aria-label={'Exceção: '+tab.tabName} checked={isVip} onChange={() => toggleUserException(selectedExceptionUserId, tab.tabKey)} className="w-4 h-4 rounded accent-brand-panel cursor-pointer shadow-sm" />
-                                          </label>
-                                       )}
-                                    </div>
-                                 </div>
-                              );
-                           })}
+                        <div>
+                          <p className="font-bold text-base">{companyUsers.find((u) => u.user_id === selectedExceptionUserId)?.nome}</p>
+                          <p className="text-[11px] uppercase font-semibold tracking-wider mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                            {companyUsers.find((u) => u.user_id === selectedExceptionUserId)?.cargo}
+                          </p>
                         </div>
-                     </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                        {tabPermissions.map((tab) => {
+                          const user = companyUsers.find((u) => u.user_id === selectedExceptionUserId);
+                          const userRole = (user?.cargo || '').toLowerCase();
+                          const hasRoleAccess = tab.allowedRoles.some((r) => r.toLowerCase() === userRole);
+                          const isVip = tab.allowedUsers.includes(selectedExceptionUserId);
+
+                          return (
+                            <div
+                              key={tab.tabKey}
+                              className="p-4 rounded-xl border flex flex-col justify-between gap-3 transition-colors"
+                              style={{
+                                backgroundColor: isVip
+                                  ? 'color-mix(in srgb, var(--tab-active) 6%, var(--bg-card))'
+                                  : 'var(--bg-input)',
+                                borderColor: isVip
+                                  ? 'color-mix(in srgb, var(--tab-active) 40%, var(--border-input))'
+                                  : 'var(--border-input)',
+                              }}
+                            >
+                              <span className="font-semibold text-xs">{tab.tabName}</span>
+                              <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: 'var(--border-input)' }}>
+                                {hasRoleAccess ? (
+                                  <span className="text-[11px] font-semibold text-[var(--success)] bg-emerald-500/12 px-2.5 py-1 rounded-full">
+                                    Acesso Nativo do Cargo
+                                  </span>
+                                ) : (
+                                  <label className="flex items-center gap-2.5 cursor-pointer w-full justify-between group">
+                                    <span className={`text-xs font-semibold ${isVip ? 'text-brand-panel' : ''}`} style={!isVip ? { color: 'var(--text-muted)' } : undefined}>
+                                      {isVip ? 'Exceção Concedida' : 'Sem Acesso'}
+                                    </span>
+                                    <input
+                                      type="checkbox"
+                                      disabled={!isAdmin || permissionActions.pending > 0}
+                                      aria-label={'Exceção: ' + tab.tabName}
+                                      checked={isVip}
+                                      onChange={() => toggleUserException(selectedExceptionUserId, tab.tabKey)}
+                                      className="w-4 h-4 rounded accent-brand-panel cursor-pointer"
+                                    />
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1299,146 +1657,285 @@ export default function ConfiguracoesPage() {
 
             {/* AUDITORIA E DADOS */}
             {activeTab === 'logs' && isAdmin && (
-              <div className="space-y-6 w-full">
-
-                <div className="flex space-x-2 border-b pb-4 mb-2" style={{ borderColor: 'var(--border-input)' }}>
-                  <button onClick={() => setLogTab('sistema')} className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-sm ${logTab === 'sistema' ? 'bg-brand-panel text-white' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75 hover:opacity-100'}`}>Auditoria de Ações</button>
-                  <button onClick={() => setLogTab('retencao')} className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center cursor-pointer shadow-sm ${logTab === 'retencao' ? 'bg-brand-panel text-white' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-75 hover:opacity-100'}`}><Database className="w-4 h-4 mr-1.5" /> Retenção do Chat</button>
+              <div className="space-y-5 w-full">
+                <div className="settings-subtabs inline-flex p-1 rounded-xl border gap-1" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-input)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setLogTab('sistema')}
+                    className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      logTab === 'sistema' ? 'text-white' : 'hover:bg-[var(--surface-hover)]'
+                    }`}
+                    style={logTab === 'sistema' ? primaryActionStyle : { color: 'var(--text-muted)' }}
+                  >
+                    Auditoria de Ações
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLogTab('retencao')}
+                    className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      logTab === 'retencao' ? 'text-white' : 'hover:bg-[var(--surface-hover)]'
+                    }`}
+                    style={logTab === 'retencao' ? primaryActionStyle : { color: 'var(--text-muted)' }}
+                  >
+                    <Database className="w-3.5 h-3.5" />
+                    <span>Retenção do Chat</span>
+                  </button>
                 </div>
 
                 {logTab === 'sistema' ? (
                   <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                       <div className="relative w-full sm:w-96">
-                        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 opacity-70" />
+                        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
                         <input
                           type="text"
                           value={logSearch}
-                          onChange={e => { setLogSearch(e.target.value); setLogPage(1); }}
+                          onChange={(e) => {
+                            setLogSearch(e.target.value);
+                            setLogPage(1);
+                          }}
                           placeholder="Filtrar por autor, ação ou detalhes do registo..."
-                          className="w-full pl-10 pr-4 py-3 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors shadow-sm"
-                          style={solidInputStyle}
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors"
+                          style={solidCardStyle}
                         />
                       </div>
-                      <span className="text-xs font-semibold opacity-70 px-3 py-1.5 rounded-lg border shadow-sm" style={solidCardStyle}>
+                      <span className="text-xs font-semibold px-3 py-1.5 rounded-full border" style={{ ...solidCardStyle, color: 'var(--text-muted)' }}>
                         Total: {filteredLogs.length} Registos
                       </span>
                     </div>
 
-                    <div className="rounded-3xl border overflow-hidden shadow-sm w-full" style={solidInputStyle}>
+                    <div className="rounded-2xl border overflow-hidden w-full" style={solidCardStyle}>
                       <div className="overflow-x-auto w-full custom-scrollbar">
                         <table className="w-full text-left border-collapse text-xs whitespace-nowrap min-w-[800px]">
                           <thead>
-                            <tr className="border-b opacity-75 font-semibold uppercase text-xs tracking-wider" style={{ borderColor: 'var(--border-input)' }}>
-                              <th className="p-4 md:p-5">Data / Hora</th>
-                              <th className="p-4 md:p-5">Autor</th>
-                              <th className="p-4 md:p-5">Ação Executada</th>
-                              <th className="p-4 md:p-5 w-1/2">Detalhes da Auditoria</th>
+                            <tr
+                              className="border-b font-bold uppercase text-[10.5px] tracking-wider"
+                              style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)', color: 'var(--text-muted)' }}
+                            >
+                              <th className="px-5 py-3.5">Data / Hora</th>
+                              <th className="px-5 py-3.5">Autor</th>
+                              <th className="px-5 py-3.5">Ação Executada</th>
+                              <th className="px-5 py-3.5 w-1/2">Detalhes da Auditoria</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y" style={{ borderColor: 'var(--border-input)' }}>
-                            {currentLogs.map(log => (
-                              <tr key={log.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                <td className="p-4 md:p-5 opacity-70 font-medium">
-                                  {new Date(log.created_at).toLocaleDateString('pt-BR')} às {new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' })}
+                          <tbody className="divide-y divide-[var(--border-input)]">
+                            {currentLogs.map((log) => (
+                              <tr key={log.id} className="hover:bg-[var(--surface-hover)] transition-colors">
+                                <td className="px-5 py-3.5 font-medium" style={{ color: 'var(--text-muted)' }}>
+                                  {new Date(log.created_at).toLocaleDateString('pt-BR')} às{' '}
+                                  {new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                 </td>
-                                <td className="p-4 md:p-5 font-semibold">{log.autor_nome}</td>
-                                <td className="p-4 md:p-5 font-medium text-brand-panel">{log.acao}</td>
-                                <td className="p-4 md:p-5 opacity-80 font-medium truncate max-w-xs xl:max-w-md" title={log.detalhes}>{log.detalhes}</td>
+                                <td className="px-5 py-3.5 font-semibold">{log.autor_nome}</td>
+                                <td className="px-5 py-3.5">
+                                  <span
+                                    className="px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                                    style={{
+                                      backgroundColor: 'color-mix(in srgb, var(--tab-active) 10%, var(--bg-card))',
+                                      color: 'var(--tab-active)',
+                                    }}
+                                  >
+                                    {log.acao}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-3.5 font-medium truncate max-w-xs xl:max-w-md" style={{ color: 'var(--text-muted)' }} title={log.detalhes}>
+                                  {log.detalhes}
+                                </td>
                               </tr>
                             ))}
                             {currentLogs.length === 0 && (
                               <tr>
-                                <td colSpan={4} className="p-8 text-center opacity-70 font-medium text-xs">Nenhum registo de auditoria corresponde à sua pesquisa.</td>
+                                <td colSpan={4} className="p-8 text-center font-medium text-xs" style={{ color: 'var(--text-muted)' }}>
+                                  Nenhum registo de auditoria corresponde à sua pesquisa.
+                                </td>
                               </tr>
                             )}
                           </tbody>
                         </table>
                       </div>
 
-                      {/* PAGINAÇÃO */}
                       {totalLogPages > 1 && (
-                        <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}>
-                          <span className="text-xs font-medium opacity-75">Página {logPage} de {totalLogPages}</span>
-                          <div className="flex items-center space-x-1.5">
-                            <button aria-label="Anterior" onClick={() => setLogPage(p => Math.max(1, p - 1))} disabled={logPage === 1} className="p-1.5 rounded-lg border hover:bg-black/10 disabled:opacity-30 cursor-pointer transition-colors shadow-sm" style={{ borderColor: 'var(--border-input)' }}><ChevronLeft className="w-4 h-4" /></button>
-                            <div className="flex items-center space-x-1 px-2">
-                               {renderPaginationNumbers(logPage, totalLogPages, setLogPage)}
-                            </div>
-                            <button aria-label="Próximo" onClick={() => setLogPage(p => Math.min(totalLogPages, p + 1))} disabled={logPage === totalLogPages} className="p-1.5 rounded-lg border hover:bg-black/10 disabled:opacity-30 cursor-pointer transition-colors shadow-sm" style={{ borderColor: 'var(--border-input)' }}><ChevronRight className="w-4 h-4" /></button>
+                        <div className="px-5 py-3.5 border-t flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }}>
+                          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                            Página {logPage} de {totalLogPages}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              aria-label="Anterior"
+                              onClick={() => setLogPage((p) => Math.max(1, p - 1))}
+                              disabled={logPage === 1}
+                              className="p-1.5 rounded-lg border hover:bg-[var(--surface-hover)] disabled:opacity-35 cursor-pointer transition-colors"
+                              style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <div className="flex items-center gap-1 px-1">{renderPaginationNumbers(logPage, totalLogPages, setLogPage)}</div>
+                            <button
+                              type="button"
+                              aria-label="Próximo"
+                              onClick={() => setLogPage((p) => Math.min(totalLogPages, p + 1))}
+                              disabled={logPage === totalLogPages}
+                              className="p-1.5 rounded-lg border hover:bg-[var(--surface-hover)] disabled:opacity-35 cursor-pointer transition-colors"
+                              style={{ borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-card)' }}
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    <div className="p-6 rounded-3xl border shadow-sm bg-emerald-500/5 border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-5">
+                    <div
+                      className="p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                      style={{
+                        ...solidCardStyle,
+                        borderLeft: '3.5px solid #059669',
+                      }}
+                    >
                       <div>
-                        <h3 className="font-semibold text-sm md:text-base text-emerald-600 flex items-center"><Archive className="w-4 h-4 mr-2" /> Backup das Mensagens Visíveis (ZIP)</h3>
-                        <p className="text-xs opacity-75 mt-1 max-w-xl font-medium">Exporte as mensagens que sua sessão pode consultar, em ZIP. O limite desta exportação é de 20.000 registros; a ferramenta avisa se houver mais.</p>
+                        <h3 className="font-bold text-sm md:text-base text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                          <Archive className="w-4 h-4" />
+                          Backup das Mensagens Visíveis (ZIP)
+                        </h3>
+                        <p className="text-xs mt-1 max-w-xl leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                          Exporte as mensagens que sua sessão pode consultar, em ZIP. O limite desta exportação é de 20.000 registros; a ferramenta avisa se houver mais.
+                        </p>
                       </div>
-                      <button onClick={handleDownloadZipBackup} disabled={isDownloadingZip || Boolean(isDownloadingTranscript) || Boolean(isPurging) || isPurgingGlobal} className="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer flex items-center justify-center flex-shrink-0 active:scale-95 disabled:opacity-70">
-                        {isDownloadingZip ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <DownloadCloud className="w-4 h-4 mr-2" />}
+                      <button
+                        type="button"
+                        onClick={handleDownloadZipBackup}
+                        disabled={isDownloadingZip || Boolean(isDownloadingTranscript) || Boolean(isPurging) || isPurgingGlobal}
+                        className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-70"
+                      >
+                        {isDownloadingZip ? <Loader2 className="w-4 h-4 animate-spin" /> : <DownloadCloud className="w-4 h-4" />}
                         <span>{isDownloadingZip ? 'A compactar...' : 'Baixar ZIP Global'}</span>
                       </button>
                     </div>
 
-                    <div className="p-6 rounded-3xl border shadow-sm bg-brand-panel/5 border-brand-panel/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div
+                      className="p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4"
+                      style={{
+                        ...solidCardStyle,
+                        borderLeft: '3.5px solid var(--tab-active)',
+                      }}
+                    >
                       <div>
-                        <h3 className="font-semibold text-sm md:text-base text-brand-panel flex items-center"><Database className="w-4 h-4 mr-2" /> Gestão de Espaço do Banco de Dados</h3>
-                        <p className="text-xs opacity-75 mt-1 max-w-xl font-medium">Esta página oferece uma limpeza manual de mensagens anteriores a 7 dias. Ela não configura exclusão automática nem altera o Supabase compartilhado.</p>
-
-                        <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-xl bg-brand-panel/10 border border-brand-panel/20 shadow-xs">
-                          <span className="text-xs font-medium opacity-70 mr-2">Última Limpeza Global efetuada em:</span>
-                          <span className="text-xs font-semibold text-brand-panel">{dataUltimaLimpeza}</span>
+                        <h3 className="font-bold text-sm md:text-base text-brand-panel flex items-center gap-2">
+                          <Database className="w-4 h-4" />
+                          Gestão de Espaço do Banco de Dados
+                        </h3>
+                        <p className="text-xs mt-1 max-w-xl leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                          Esta página oferece uma limpeza manual de mensagens anteriores a 7 dias. Ela não configura exclusão automática nem altera o Supabase compartilhado.
+                        </p>
+                        <div
+                          className="mt-3 inline-flex items-center px-3 py-1.5 rounded-full border text-[11px]"
+                          style={{
+                            backgroundColor: 'color-mix(in srgb, var(--tab-active) 8%, var(--bg-card))',
+                            borderColor: 'color-mix(in srgb, var(--tab-active) 24%, var(--border-input))',
+                          }}
+                        >
+                          <span className="mr-1.5" style={{ color: 'var(--text-muted)' }}>
+                            Última Limpeza Global:
+                          </span>
+                          <span className="font-semibold text-brand-panel">{dataUltimaLimpeza}</span>
                         </div>
                       </div>
 
-                      <button onClick={handlePurgeOldGlobal} disabled={isPurgingGlobal || Boolean(isPurging) || Boolean(isDownloadingTranscript) || isDownloadingZip} className="px-6 py-3.5 rounded-2xl bg-brand-panel text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer flex-shrink-0 active:scale-95 disabled:opacity-70">
-                        {isPurgingGlobal ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : null}
+                      <button
+                        type="button"
+                        onClick={handlePurgeOldGlobal}
+                        disabled={isPurgingGlobal || Boolean(isPurging) || Boolean(isDownloadingTranscript) || isDownloadingZip}
+                        className="px-5 py-2.5 rounded-xl text-white text-xs font-semibold transition-all hover:brightness-105 cursor-pointer flex-shrink-0 flex items-center justify-center gap-2 disabled:opacity-70"
+                        style={primaryActionStyle}
+                      >
+                        {isPurgingGlobal && <Loader2 className="w-4 h-4 animate-spin" />}
                         <span>{isPurgingGlobal ? 'A limpar...' : 'Forçar Limpeza Global'}</span>
                       </button>
                     </div>
 
-                    <div className="space-y-4">
-                       <h3 className="font-semibold text-xs uppercase tracking-widest opacity-75">Extração Individual de Canais</h3>
-                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                          {adminChannels.map(canal => {
-                             const isSpinning = Boolean(isPurging) || Boolean(isDownloadingTranscript) || isPurgingGlobal || isDownloadingZip;
-                             return (
-                              <div key={canal.id} className={`p-5 rounded-3xl border flex flex-col justify-between space-y-4 shadow-sm ${canal.isGhost ? 'bg-red-500/5 border-red-500/20' : ''}`} style={!canal.isGhost ? solidInputStyle : undefined}>
-                                 <div className="flex items-center space-x-3.5">
-                                   <div className={`w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center font-semibold text-white shadow-sm text-sm ${canal.isGhost ? 'bg-red-500' : 'bg-brand-panel'}`}>
-                                     {getInitials(canal.name.replace('Fantasma: ', '').replace('Direta: ', ''))}
-                                   </div>
-                                   <div className="overflow-hidden">
-                                     <p className={`font-semibold text-sm truncate ${canal.isGhost ? 'text-[var(--error-text)]' : ''}`}>{canal.name}</p>
-                                     <p className="text-xs uppercase font-semibold opacity-70 mt-0.5 tracking-wider">
-                                       {canal.isGhost ? 'Chat Inválido / Órfão' : canal.isGroup ? 'Canal / Grupo' : 'Conversa Direta'}
-                                     </p>
-                                   </div>
-                                 </div>
-
-                                 <div className="flex space-x-2 pt-3 border-t" style={{ borderColor: 'var(--border-input)' }}>
-                                   <button onClick={() => handleDownloadTranscript(canal.id, canal.name)} disabled={isSpinning} className="flex-1 py-2.5 rounded-xl bg-brand-panel/10 text-brand-panel hover:bg-brand-panel/20 text-xs font-semibold transition-colors flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-70">
-                                     {isDownloadingTranscript === canal.id ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <DownloadCloud className="w-3.5 h-3.5 mr-1.5" />}
-                                     <span>{isDownloadingTranscript === canal.id ? 'Baixando...' : 'Baixar (.txt)'}</span>
-                                   </button>
-                                   {canal.isGroup ? (
-                                      <button onClick={() => handlePurgeChannel(canal.id, canal.name)} disabled={isSpinning} className="px-3.5 py-2.5 rounded-xl bg-amber-500/10 text-[var(--warning)] hover:bg-amber-500/20 text-xs font-semibold transition-colors cursor-pointer shadow-xs disabled:opacity-70" title="Limpar Histórico deste Grupo (Mantém o canal)">
-                                        {isPurging === canal.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
-                                      </button>
-                                   ) : (
-                                      <button onClick={() => handleDeleteChannel(canal.id, canal.name)} disabled={isSpinning} className="px-3.5 py-2.5 rounded-xl bg-red-500/10 text-[var(--error-text)] hover:bg-red-500/20 text-xs font-semibold transition-colors cursor-pointer shadow-xs disabled:opacity-70" title="Excluir Canal Permanentemente">
-                                        {isPurging === canal.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                      </button>
-                                   )}
-                                 </div>
+                    <div className="space-y-3.5">
+                      <div className="settings-card-head">
+                        <span className="settings-accent-bar" aria-hidden="true" />
+                        <h3 className="font-bold text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                          Extração Individual de Canais
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                        {adminChannels.map((canal) => {
+                          const isSpinning = Boolean(isPurging) || Boolean(isDownloadingTranscript) || isPurgingGlobal || isDownloadingZip;
+                          return (
+                            <div
+                              key={canal.id}
+                              className="p-4 rounded-2xl border flex flex-col justify-between gap-4"
+                              style={
+                                canal.isGhost
+                                  ? {
+                                      backgroundColor: 'color-mix(in srgb, var(--error-text) 5%, var(--bg-card))',
+                                      borderColor: 'color-mix(in srgb, var(--error-text) 28%, var(--border-input))',
+                                    }
+                                  : solidCardStyle
+                              }
+                            >
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center font-bold text-white text-xs ${
+                                    canal.isGhost ? 'bg-red-500' : ''
+                                  }`}
+                                  style={!canal.isGhost ? primaryActionStyle : undefined}
+                                >
+                                  {getInitials(canal.name.replace('Fantasma: ', '').replace('Direta: ', ''))}
+                                </div>
+                                <div className="overflow-hidden">
+                                  <p className={`font-semibold text-sm truncate ${canal.isGhost ? 'text-[var(--error-text)]' : ''}`}>{canal.name}</p>
+                                  <p className="text-[10.5px] uppercase font-semibold tracking-wider mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                                    {canal.isGhost ? 'Chat Inválido / Órfão' : canal.isGroup ? 'Canal / Grupo' : 'Conversa Direta'}
+                                  </p>
+                                </div>
                               </div>
-                             );
-                          })}
-                       </div>
+
+                              <div className="flex gap-2 pt-3 border-t" style={{ borderColor: 'var(--border-input)' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadTranscript(canal.id, canal.name)}
+                                  disabled={isSpinning}
+                                  className="flex-1 py-2 rounded-xl text-brand-panel text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-70"
+                                  style={{ backgroundColor: 'color-mix(in srgb, var(--tab-active) 10%, var(--bg-card))' }}
+                                >
+                                  {isDownloadingTranscript === canal.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <DownloadCloud className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>{isDownloadingTranscript === canal.id ? 'Baixando...' : 'Baixar (.txt)'}</span>
+                                </button>
+                                {canal.isGroup ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePurgeChannel(canal.id, canal.name)}
+                                    disabled={isSpinning}
+                                    className="px-3 py-2 rounded-xl bg-amber-500/12 text-[var(--warning)] hover:bg-amber-500/20 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-70"
+                                    title="Limpar Histórico deste Grupo (Mantém o canal)"
+                                  >
+                                    {isPurging === canal.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteChannel(canal.id, canal.name)}
+                                    disabled={isSpinning}
+                                    className="px-3 py-2 rounded-xl bg-red-500/10 text-[var(--error-text)] hover:bg-red-500/20 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-70"
+                                    title="Excluir Canal Permanentemente"
+                                  >
+                                    {isPurging === canal.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1447,99 +1944,241 @@ export default function ConfiguracoesPage() {
 
             {/* PRIVACIDADE E NOTIFICAÇÕES */}
             {activeTab === 'notificacoes' && (
-              <div className="space-y-4 max-w-3xl">
-                <NotificationPreferences userId={currentUser.user_id}/>
-                <div className="p-6 md:p-8 rounded-3xl border space-y-6" style={solidInputStyle}>
+              <div className="space-y-5 max-w-3xl">
+                <NotificationPreferences userId={currentUser.user_id} />
+                <div className="p-6 rounded-2xl border space-y-5" style={solidCardStyle}>
                   <div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider opacity-75 mb-4">Notificações do Sistema Doo Doo</h3>
-                    <label className="flex items-center justify-between p-4 rounded-2xl border cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm group" style={solidCardStyle}>
+                    <div className="settings-card-head mb-3.5">
+                      <span className="settings-accent-bar" aria-hidden="true" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                        Notificações do Sistema Doo Doo
+                      </h3>
+                    </div>
+                    <label
+                      className="flex items-center justify-between gap-4 p-4 rounded-xl border cursor-pointer hover:border-[var(--tab-active)] transition-colors"
+                      style={solidInputStyle}
+                    >
                       <div>
                         <span className="font-semibold text-sm block">Notificações por E-mail</span>
-                        <span className="text-xs opacity-75 mt-0.5 block font-medium">Preferência para convites e tarefas; o envio depende da configuração do serviço de e-mail.</span>
+                        <span className="text-xs mt-0.5 block leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                          Preferência para convites e tarefas; o envio depende da configuração do serviço de e-mail.
+                        </span>
                       </div>
-                      <input type="checkbox" checked={currentUser.email_notifications ?? false} onChange={() => handleTogglePrivacySetting('email_notifications')} disabled={isUpdatingPrivacy} className="w-5 h-5 rounded border-gray-300 accent-brand-panel cursor-pointer shadow-sm disabled:opacity-70 group-hover:scale-110 transition-transform" />
+                      <input
+                        type="checkbox"
+                        checked={currentUser.email_notifications ?? false}
+                        onChange={() => handleTogglePrivacySetting('email_notifications')}
+                        disabled={isUpdatingPrivacy}
+                        className="w-[18px] h-[18px] rounded accent-brand-panel cursor-pointer disabled:opacity-70 flex-shrink-0"
+                      />
                     </label>
                   </div>
 
-                  <div className="h-px w-full my-6" style={{ backgroundColor: 'var(--border-input)' }}></div>
+                  <div className="h-px w-full" style={{ backgroundColor: 'var(--border-input)' }} />
 
                   <div>
-                    <h3 className="text-sm font-semibold uppercase tracking-wider opacity-75 mb-4">Privacidade no Chat Corporativo</h3>
-                    <label className="flex items-center justify-between p-4 rounded-2xl border cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm group" style={solidCardStyle}>
+                    <div className="settings-card-head mb-3.5">
+                      <span className="settings-accent-bar" aria-hidden="true" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                        Privacidade no Chat Corporativo
+                      </h3>
+                    </div>
+                    <label
+                      className="flex items-center justify-between gap-4 p-4 rounded-xl border cursor-pointer hover:border-[var(--tab-active)] transition-colors"
+                      style={solidInputStyle}
+                    >
                       <div>
                         <span className="font-semibold text-sm block">Confirmação de Leitura (Visto Azul)</span>
-                        <span className="text-xs opacity-75 mt-0.5 block font-medium">Permitir que os seus colegas vejam que você leu as mensagens.</span>
+                        <span className="text-xs mt-0.5 block leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                          Permitir que os seus colegas vejam que você leu as mensagens.
+                        </span>
                       </div>
-                      <input type="checkbox" checked={currentUser.read_receipts ?? true} onChange={() => handleTogglePrivacySetting('read_receipts')} disabled={isUpdatingPrivacy} className="w-5 h-5 rounded border-gray-300 accent-brand-panel cursor-pointer shadow-sm disabled:opacity-70 group-hover:scale-110 transition-transform" />
+                      <input
+                        type="checkbox"
+                        checked={currentUser.read_receipts ?? true}
+                        onChange={() => handleTogglePrivacySetting('read_receipts')}
+                        disabled={isUpdatingPrivacy}
+                        className="w-[18px] h-[18px] rounded accent-brand-panel cursor-pointer disabled:opacity-70 flex-shrink-0"
+                      />
                     </label>
                   </div>
                 </div>
               </div>
             )}
-
           </div>
         </div>
-
       </div>
 
-      {/* MODAIS */}
+      {/* MODAIS V2 */}
       {isUserModalOpen && (
-        <ModalShell open description={<><span className="text-xs font-semibold uppercase tracking-widest text-brand-panel">Registo</span></>} title={<>Novo Colaborador</>} onClose={() => setIsUserModalOpen(false)} busy={isSaving || dialogAction.pending}  footer={<div className="flex justify-end space-x-3 pt-5 border-t" style={{ borderColor: 'var(--border-input)' }}>
-                <button form="modal-form-1" type="button" onClick={() => setIsUserModalOpen(false)} className="px-6 py-3.5 rounded-xl border text-sm font-semibold cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
-                <button form="modal-form-1" type="submit" disabled={isSaving} className="px-7 py-3.5 rounded-xl bg-brand-panel text-white text-sm font-semibold shadow-sm cursor-pointer hover:opacity-90 active:scale-95 transition-transform disabled:opacity-70 flex items-center space-x-2">
-                  {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>Adicionar</span>
-                </button>
-              </div>}>
-{pendingRegistration && <Notice>Autenticação confirmada. Conclua o perfil usando o mesmo e-mail. Sua sessão administrativa foi preservada.</Notice>}
-<form id="modal-form-1" onSubmit={event => { event.preventDefault(); void dialogAction.run(() => handleCreateUser(event)); }} className="p-6 md:p-8 space-y-5 text-xs">
+        <ModalShell
+          open
+          description={<span className="text-xs font-semibold uppercase tracking-widest text-brand-panel">Registo</span>}
+          title="Novo Colaborador"
+          onClose={() => setIsUserModalOpen(false)}
+          busy={isSaving || dialogAction.pending}
+          footer={
+            <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-input)' }}>
+              <button
+                form="modal-form-1"
+                type="button"
+                onClick={() => setIsUserModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl border text-sm font-semibold cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
+                style={{ borderColor: 'var(--border-input)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                form="modal-form-1"
+                type="submit"
+                disabled={isSaving}
+                className="px-6 py-2.5 rounded-xl text-white text-sm font-semibold cursor-pointer hover:brightness-105 transition-all disabled:opacity-70 flex items-center gap-2"
+                style={primaryActionStyle}
+              >
+                {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Adicionar</span>
+              </button>
+            </div>
+          }
+        >
+          {pendingRegistration && (
+            <Notice>Autenticação confirmada. Conclua o perfil usando o mesmo e-mail. Sua sessão administrativa foi preservada.</Notice>
+          )}
+          <form
+            id="modal-form-1"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void dialogAction.run(() => handleCreateUser(event));
+            }}
+            className="p-6 space-y-4 text-xs"
+          >
+            <div>
+              <label htmlFor="field-8" className="text-xs font-semibold block mb-1.5">
+                Nome Completo
+              </label>
+              <input
+                id="field-8"
+                type="text"
+                required
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+                placeholder="Ex: Ana Paula..."
+                className="w-full px-3.5 py-3 rounded-xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors"
+                style={solidInputStyle}
+              />
+            </div>
+            <div>
+              <label htmlFor="field-9" className="text-xs font-semibold block mb-1.5">
+                E-mail Corporativo
+              </label>
+              <input
+                id="field-9"
+                type="email"
+                required
+                disabled={Boolean(pendingRegistration)}
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                placeholder="ana.paula@empresa.com"
+                className="w-full px-3.5 py-3 rounded-xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors"
+                style={solidInputStyle}
+              />
+            </div>
+            <div>
+              <label htmlFor="field-10" className="text-xs font-semibold block mb-1.5">
+                Senha Inicial
+              </label>
+              <input
+                id="field-10"
+                type="password"
+                required
+                disabled={Boolean(pendingRegistration)}
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-3 rounded-xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors"
+                style={solidInputStyle}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="field-8" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Nome Completo</label>
-                <input id="field-8" type="text" required value={newUserName} onChange={(e) => setNewUserName(e.target.value)} placeholder="Ex: Ana Paula..." className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors shadow-sm" style={solidInputStyle} />
+                <label htmlFor="field-11" className="text-xs font-semibold block mb-1.5">
+                  Cargo
+                </label>
+                <select
+                  id="field-11"
+                  value={newUserRole}
+                  onChange={(e) => setNewUserRole(e.target.value as RoleType)}
+                  className="w-full px-3 py-3 rounded-xl border text-xs font-medium outline-none cursor-pointer"
+                  style={solidInputStyle}
+                >
+                  <option value="administrador">Administrador</option>
+                  <option value="gestor">Gestor</option>
+                  <option value="coordenador">Coordenador</option>
+                  <option value="supervisor">Supervisor</option>
+                  <option value="analista">Analista</option>
+                  <option value="colaborador">Colaborador</option>
+                </select>
               </div>
               <div>
-                <label htmlFor="field-9" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">E-mail Corporativo</label>
-                <input id="field-9" type="email" required disabled={Boolean(pendingRegistration)} value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="ana.paula@hospital.com" className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors shadow-sm" style={solidInputStyle} />
+                <label htmlFor="field-12" className="text-xs font-semibold block mb-1.5">
+                  Setor
+                </label>
+                <select
+                  id="field-12"
+                  value={newUserSector}
+                  onChange={(e) => setNewUserSector(e.target.value)}
+                  className="w-full px-3 py-3 rounded-xl border text-xs font-medium outline-none cursor-pointer"
+                  style={solidInputStyle}
+                >
+                  {SECTORS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div>
-                <label htmlFor="field-10" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Senha Inicial</label>
-                <input id="field-10" type="password" required disabled={Boolean(pendingRegistration)} value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3.5 rounded-2xl border text-sm font-medium outline-none focus:border-brand-panel transition-colors shadow-sm" style={solidInputStyle} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="field-11" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Cargo</label>
-                  <select id="field-11" value={newUserRole} onChange={e => setNewUserRole(e.target.value as RoleType)} className="w-full px-3.5 py-3 rounded-2xl border text-[12px] font-medium outline-none cursor-pointer shadow-sm" style={solidInputStyle}>
-                    <option value="administrador">Administrador</option>
-                    <option value="gestor">Gestor</option>
-                    <option value="coordenador">Coordenador</option>
-                    <option value="supervisor">Supervisor</option>
-                    <option value="analista">Analista</option>
-                    <option value="colaborador">Colaborador</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="field-12" className="text-xs font-semibold uppercase tracking-widest opacity-75 block mb-2">Setor</label>
-                  <select id="field-12" value={newUserSector} onChange={(e) => setNewUserSector(e.target.value)} className="w-full px-3.5 py-3 rounded-2xl border text-[12px] font-medium outline-none cursor-pointer shadow-sm" style={solidInputStyle}>
-                    {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-              </div>
-
-            </form>
-</ModalShell>
+            </div>
+          </form>
+        </ModalShell>
       )}
 
       {confirmModal.isOpen && (
-        <ModalShell open title={<>{confirmModal.title}</>} onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} destructive busy={dialogAction.pending}  footer={<div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 px-6 md:px-8 py-5 border-t" style={{ borderColor: 'var(--border-input)' }}>
-              <button onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} className="w-full sm:w-auto px-6 py-3.5 rounded-xl border text-sm font-semibold cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-input)' }}>Cancelar</button>
-              <button onClick={() => dialogAction.run(confirmModal.onConfirm)} className={`w-full sm:w-auto px-7 py-3.5 rounded-xl text-white text-sm font-semibold cursor-pointer transition-colors shadow-sm active:scale-95 ${confirmModal.isDestructive ? 'bg-red-500 hover:bg-red-600' : 'bg-brand-panel hover:opacity-90'}`}>
+        <ModalShell
+          open
+          title={confirmModal.title}
+          onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+          destructive
+          busy={dialogAction.pending}
+          footer={
+            <div className="flex flex-col sm:flex-row justify-end gap-3 px-6 py-4 border-t" style={{ borderColor: 'var(--border-input)' }}>
+              <button
+                type="button"
+                onClick={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border text-sm font-semibold cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
+                style={{ borderColor: 'var(--border-input)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => dialogAction.run(confirmModal.onConfirm)}
+                className={`w-full sm:w-auto px-6 py-2.5 rounded-xl text-white text-sm font-semibold cursor-pointer transition-all ${
+                  confirmModal.isDestructive ? 'bg-red-600 hover:bg-red-700' : 'hover:brightness-105'
+                }`}
+                style={!confirmModal.isDestructive ? primaryActionStyle : undefined}
+              >
                 Confirmar
               </button>
-            </div>}>
-<div className="p-6 md:p-8"><p className="text-sm font-semibold opacity-80 leading-relaxed text-center">{confirmModal.message}</p></div>
-</ModalShell>
+            </div>
+          }
+        >
+          <div className="p-6">
+            <p className="text-sm font-medium leading-relaxed text-center" style={{ color: 'var(--text-muted)' }}>
+              {confirmModal.message}
+            </p>
+          </div>
+        </ModalShell>
       )}
-
     </div>
   );
 }

@@ -1,4 +1,4 @@
-﻿import { randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { tables as original, profile as originalProfile } from './ui-audit.mjs';
 
 const roles = ['administrador','gestor','coordenador','supervisor','analista','colaborador'];
@@ -51,7 +51,7 @@ export function createSandbox({origin='http://127.0.0.1:3300'}={}) {
     if(msg.event==='phx_join'){
      try{const id=JSON.parse(Buffer.from(msg.payload.access_token.split('.')[1],'base64url')).sub;client.user=state.users.find(u=>u.user_id===id)||client.user;}catch{}
 
-     if(msg.topic.startsWith('realtime:doodoo:typing:')){const channelId=msg.topic.slice('realtime:doodoo:typing:'.length);state.typingJoins??=[];state.typingJoins.push({channelId,userId:client.user?.user_id,private:msg.payload?.config?.private});const allowed=!state.typingDeniedIds?.has(channelId)&&msg.payload?.config?.private===true&&tables.doodoo_canais.some(c=>c.id===channelId&&c.membros.some(m=>m.user_id===client.user?.user_id));if(!allowed){send(client,{topic:msg.topic,event:'phx_reply',payload:{status:'error',response:{reason:'not authorized'}},ref:msg.ref,join_ref:msg.join_ref});return;}}
+     if(msg.topic.startsWith('realtime:doodoo:typing:')){const channelId=msg.topic.slice('realtime:doodoo:typing:'.length);state.typingJoins??=[];state.typingJoins.push({channelId,userId:client.user?.user_id,private:msg.payload?.config?.private});const allowed=!state.typingDeniedIds?.has(channelId)&&tables.doodoo_canais.some(c=>c.id===channelId&&c.membros.some(m=>m.user_id===client.user?.user_id));if(!allowed){send(client,{topic:msg.topic,event:'phx_reply',payload:{status:'error',response:{reason:'not authorized'}},ref:msg.ref,join_ref:msg.join_ref});return;}}
      const filters=(msg.payload?.config?.postgres_changes||[]).map((f,i)=>({...f,id:i+1}));client.topics.set(msg.topic,filters);
      send(client,{topic:msg.topic,event:'phx_reply',payload:{status:'ok',response:{postgres_changes:filters}},ref:msg.ref,join_ref:msg.join_ref});
      send(client,{topic:msg.topic,event:'system',payload:{status:'ok',extension:'postgres_changes',message:'fixture'},ref:null});

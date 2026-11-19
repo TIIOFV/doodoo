@@ -20,5 +20,5 @@ export const themeOptions = [
  ['light','Claro'],['dark','Escuro'],['ocean','Oceano'],['nature','Natureza'],['sunset','Pôr do Sol'],['amethyst','Ametista'],['aurora','Aurora'],['solar','Solar'],['coral','Coral'],['graphite','Grafite'],
 ] as const;
 export function ThemeSelect({value,onChange}:{value:string;onChange:(value:string)=>void}) {
- return <label className="flex items-center gap-2 text-xs text-[var(--text-muted)]"><span>Tema</span><select aria-label="Tema visual" value={value} onChange={event=>onChange(event.target.value)} className="min-h-10 rounded-lg border px-3 text-sm" style={inputStyle}>{themeOptions.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>;
+ return <label className="flex items-center gap-2 text-xs font-medium text-[var(--text-muted)]"><span>Tema</span><select aria-label="Tema visual" value={value} onChange={event=>onChange(event.target.value)} className="min-h-9 rounded-xl border px-3 text-xs font-medium cursor-pointer" style={inputStyle}>{themeOptions.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>;
 }

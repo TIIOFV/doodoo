@@ -1,20 +1,25 @@
 'use client';
-import { panelStyle } from './components/ui';
-import { environment } from './lib/environment';
 
-import { ArrowRight,CheckCheck,Eye,EyeOff,Headset,Info,Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCheck, Eye, EyeOff, Headset, Info, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect,useState } from 'react';
+import { useEffect, useState } from 'react';
+import { BrandBadge, heroGridStyle, HeroOrbitalArt, heroSurfaceStyle, primaryActionStyle } from './components/BrandMark';
 import { useTheme } from './contexts/ThemeContext';
-import { supabase } from './lib/supabase'; // Ajuste o caminho se necessário (ex: '../lib/supabase')
+import { environment } from './lib/environment';
+import { supabase } from './lib/supabase';
 
-const LogoDooDoo = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
-  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} style={style}>
-    <rect x="4" y="4" width="56" height="56" rx="18" fill="currentColor" fillOpacity="0.15" />
-    <path d="M22 18H36C45.9411 18 54 26.0589 54 36C54 45.9411 45.9411 54 36 54H22V18Z" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="36" cy="36" r="5" fill="currentColor" />
-  </svg>
-);
+const themes = [
+  { id: 'light', name: 'Claro', color: '#2563eb', border: '#1d4ed8' },
+  { id: 'dark', name: 'Escuro', color: '#0f172a', border: '#475569' },
+  { id: 'ocean', name: 'Oceano', color: '#0284c7', border: '#0369a1' },
+  { id: 'nature', name: 'Natureza', color: '#16a34a', border: '#15803d' },
+  { id: 'sunset', name: 'Pôr do Sol', color: '#dc2626', border: '#b91c1c' },
+  { id: 'amethyst', name: 'Ametista', color: '#9333ea', border: '#7e22ce' },
+  { id: 'aurora', name: 'Aurora', color: '#0d9488', border: '#0f766e' },
+  { id: 'solar', name: 'Solar', color: '#f59e0b', border: '#d97706' },
+  { id: 'coral', name: 'Coral', color: '#e11d48', border: '#be123c' },
+  { id: 'graphite', name: 'Grafite', color: '#52525b', border: '#3f3f46' },
+];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,18 +31,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { theme, changeTheme: setTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<'login' | 'suporte'>('login');
+  const [activeView, setActiveView] = useState<'login' | 'suporte'>('login');
 
   const [isInitializing, setIsInitializing] = useState(true);
 
-  const glassPanel = panelStyle;
-
-  // 3. VERIFICAR SESSÃO ATIVA OU SSO NO ARRANQUE
   useEffect(() => {
     const checkExistingSession = async () => {
-      // A. Verificar Magic Link / SSO Hash
       const hash = window.location.hash;
-      if (environment !== 'shared' && hash) window.history.replaceState(null,'',window.location.pathname);
+      if (environment !== 'shared' && hash) window.history.replaceState(null, '', window.location.pathname);
       if (environment === 'shared' && hash && hash.includes('access_token=') && hash.includes('refresh_token=')) {
         const params = new URLSearchParams(hash.substring(1));
         const access_token = params.get('access_token');
@@ -53,35 +54,51 @@ export default function LoginPage() {
         }
       }
 
-      // B. Verificar Sessão Normal
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         router.push('/dashboard');
         return;
       }
 
-      try { const saved = localStorage.getItem('doodoo_remember_email'); if (saved) { setEmail(saved); setRememberMe(true); } } catch { /* Optional preference. */ }
+      try {
+        const saved = localStorage.getItem('doodoo_remember_email');
+        if (saved) {
+          setEmail(saved);
+          setRememberMe(true);
+        }
+      } catch {
+        /* Optional preference. */
+      }
       setIsInitializing(false);
     };
 
-    checkExistingSession().catch(() => { setError('Não foi possível verificar sua sessão. Tente entrar novamente.'); setIsInitializing(false); });
+    checkExistingSession().catch(() => {
+      setError('Não foi possível verificar sua sessão. Tente entrar novamente.');
+      setIsInitializing(false);
+    });
   }, [router]);
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center transition-colors duration-500" style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-main)' }}>
-        <div className="w-16 h-16 rounded-[1.25rem] bg-brand-panel flex items-center justify-center text-white shadow-sm mb-6 animate-pulse">
-          <Loader2 className="w-8 h-8 animate-spin" />
+      <div
+        className="min-h-screen flex flex-col items-center justify-center px-6 transition-colors duration-300"
+        style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-main)' }}
+      >
+        <BrandBadge size="lg" className="mb-5 animate-pulse" />
+        <div className="flex items-center gap-2 text-base font-semibold tracking-tight">
+          <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--tab-active)' }} />
+          <span>Preparando Ambiente...</span>
         </div>
-        <h2 className="text-xl font-semibold tracking-tight">Preparando Ambiente...</h2>
-        <p className="text-xs mt-2 opacity-60 font-medium">Conectando ao Doo-Doo OS Corporativo</p>
+        <p className="text-xs mt-2 font-medium" style={{ color: 'var(--text-muted)' }}>
+          Conectando ao Doo Doo · Portal Corporativo
+        </p>
       </div>
     );
   }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return; // Bloqueio duplo clique
+    if (loading) return;
 
     setLoading(true);
     setError('');
@@ -109,154 +126,226 @@ export default function LoginPage() {
     }
   };
 
-const themes = [
-    { id: 'light', name: 'Claro', color: '#f5f5f7', border: '#d2d2d7' },
-    { id: 'dark', name: 'Escuro', color: '#0f172a', border: '#475569' },
-    { id: 'ocean', name: 'Oceano', color: '#0284c7', border: '#0369a1' },
-    { id: 'nature', name: 'Natureza', color: '#16a34a', border: '#15803d' },
-    { id: 'sunset', name: 'Pôr do Sol', color: '#dc2626', border: '#b91c1c' },
-    { id: 'amethyst', name: 'Ametista', color: '#9333ea', border: '#7e22ce' },
-    { id: 'aurora', name: 'Aurora', color: '#0d9488', border: '#0f766e' },
-    { id: 'solar', name: 'Solar', color: '#f59e0b', border: '#d97706' },
-    { id: 'coral', name: 'Coral', color: '#e11d48', border: '#be123c' },
-    { id: 'graphite', name: 'Grafite', color: '#52525b', border: '#3f3f46' },
-  ];
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 transition-colors duration-500 relative z-0" style={{ backgroundColor: 'var(--bg-page)' }}>
+    <div
+      className="min-h-screen flex flex-col lg:flex-row transition-colors duration-300"
+      style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-main)' }}
+    >
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            input[type="password"]::-ms-reveal,
+            input[type="password"]::-ms-clear {
+              display: none;
+            }
+          `,
+        }}
+      />
 
-      {/* 🚀 CSS INJETADO PARA CORRIGIR O BUG DOS DOIS OLHOS NO MICROSOFT EDGE */}
-      <style dangerouslySetInnerHTML={{__html: `
-        input[type="password"]::-ms-reveal,
-        input[type="password"]::-ms-clear {
-          display: none;
-        }
-      `}} />
+      {/* PAINEL ESQUERDO INSTITUCIONAL (Desktop - Iris v2 Split Layout) */}
+      <aside
+        className="hidden lg:flex lg:w-[46%] xl:w-[45%] flex-col justify-between p-11 xl:p-14 relative overflow-hidden text-white select-none"
+        style={heroSurfaceStyle}
+      >
+        <div className="absolute inset-0 pointer-events-none" style={heroGridStyle} />
+        <div
+          className="absolute -bottom-24 -right-24 w-[440px] h-[440px] pointer-events-none"
+          style={{ color: 'var(--hero-orbital, #93c5fd)' }}
+        >
+          <HeroOrbitalArt className="w-full h-full" />
+        </div>
 
-      {/* LUZES DE FUNDO AMBIENTE */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[10%] -left-[10%] w-[50vw] h-[50vw] rounded-full bg-brand-panel opacity-20 hidden"></div>
-        <div className="absolute top-[50%] -right-[10%] w-[45vw] h-[45vw] rounded-full bg-brand-panel opacity-20 hidden"></div>
-      </div>
-
-      <main className="w-full max-w-5xl min-h-[600px] flex flex-col md:flex-row rounded-xl md:rounded-xl overflow-hidden transition-all duration-500 relative z-10 border shadow-sm" style={{ ...glassPanel, borderColor: 'var(--border-input)' }}>
-
-        {/* PAINEL ESQUERDO INSTITUCIONAL (Desktop) */}
-        <div className="hidden md:flex w-1/2 p-12 flex-col justify-between relative overflow-hidden transition-all duration-500 bg-brand-panel">
-          <div className="absolute -top-[20%] -left-[10%] w-96 h-96 bg-white/20 blur-3xl rounded-full pointer-events-none"></div>
-          <div className="absolute -bottom-[20%] -right-[10%] w-96 h-96 bg-black/10 blur-3xl rounded-full pointer-events-none"></div>
-
-          <div className="relative z-10">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-[1.25rem] flex items-center justify-center mb-8 border border-white/30 shadow-sm">
-              <LogoDooDoo className="text-white w-10 h-10" />
-            </div>
-            <h1 className="text-white text-4xl lg:text-5xl font-semibold tracking-tight leading-tight">
-              Bem-vindo ao<br />Doo Doo.
-            </h1>
-            <p className="text-white/90 mt-5 text-lg font-medium max-w-sm">
-              O ecossistema corporativo centralizado para a sua equipe.
-            </p>
-          </div>
-
-          <div className="relative z-10">
-            <div className="flex items-center space-x-3 text-white/70 text-sm font-semibold tracking-wide uppercase">
-              <span className="w-8 h-[2px] bg-white/30"></span>
-              <p>Governança & Inovação TI</p>
-            </div>
+        {/* Brand Header */}
+        <div className="relative z-10 flex items-center gap-3.5">
+          <BrandBadge size="md" />
+          <div>
+            <p className="text-lg font-bold tracking-tight leading-none text-white">Doo Doo</p>
+            <p className="text-[11px] font-medium tracking-wide text-white/65 mt-1">Portal Corporativo</p>
           </div>
         </div>
 
-        {/* PAINEL DIREITO - FORMULÁRIO */}
-        <div className="w-full md:w-1/2 flex flex-col p-8 md:p-12 relative transition-all duration-500" style={{ color: 'var(--text-main)' }}>
+        {/* Hero Copy */}
+        <div className="relative z-10 my-auto max-w-md py-12">
+          <h1 className="text-4xl xl:text-[44px] font-bold tracking-[-0.03em] leading-[1.12] text-white">
+            Produtividade corporativa
+            <br />
+            em um só lugar.
+          </h1>
+          <p className="mt-5 text-[15px] leading-relaxed text-white/75 max-w-sm">
+            Conecte conversas, tarefas, agenda e anotações à rotina das equipes em um ambiente integrado.
+          </p>
+        </div>
 
-          <div className="absolute left-0 top-0 bottom-0 w-8 pointer-events-none hidden md:block" style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.02), transparent)' }}></div>
+        {/* Version & Governance Footer */}
+        <div className="relative z-10 flex items-center gap-3 text-xs font-medium text-white/55">
+          <span>Versão 2.0.0</span>
+          <span className="w-1 h-1 rounded-full bg-white/35" />
+          <span>Governança &amp; Inovação TI</span>
+        </div>
+      </aside>
 
-          {/* Cabeçalho Mobile */}
-          <div className="md:hidden flex flex-col items-center mb-8 mt-2">
-            <div className="w-16 h-16 bg-brand-panel rounded-2xl flex items-center justify-center text-white shadow-sm mb-4">
-              <LogoDooDoo className="w-9 h-9" />
-            </div>
-            <h1 className="text-2xl font-semibold tracking-tight">Doo Doo</h1>
+      {/* CABEÇALHO MOBILE COMPACTO (Estilo Hero v2) */}
+      <div
+        className="lg:hidden px-6 pt-8 pb-10 text-white relative overflow-hidden"
+        style={heroSurfaceStyle}
+      >
+        <div className="absolute inset-0 pointer-events-none opacity-80" style={heroGridStyle} />
+        <div
+          className="absolute -bottom-20 -right-16 w-60 h-60 pointer-events-none"
+          style={{ color: 'var(--hero-orbital, #93c5fd)' }}
+        >
+          <HeroOrbitalArt className="w-full h-full" />
+        </div>
+        <div className="relative z-10 flex items-center gap-3">
+          <BrandBadge size="sm" />
+          <div>
+            <p className="text-base font-bold tracking-tight leading-none text-white">Doo Doo</p>
+            <p className="text-[11px] font-medium text-white/70 mt-0.5">Portal Corporativo · v2.0</p>
           </div>
+        </div>
+        <h1 className="relative z-10 mt-5 text-2xl font-bold tracking-tight leading-tight text-white">
+          Produtividade corporativa em um só lugar.
+        </h1>
+      </div>
 
-          {/* MENU DE NAVEGAÇÃO DE ABAS (Estilo Limpo) */}
-          <div className="flex space-x-6 sm:space-x-8 mb-8 sm:mb-10 border-b relative z-10" style={{ borderColor: 'var(--border-input)' }}>
-            <button onClick={() => setActiveTab('login')} className={`pb-3 text-sm font-medium transition-all cursor-pointer relative flex flex-col items-center ${activeTab === 'login' ? 'opacity-100' : 'opacity-40 hover:opacity-80'}`}>
-              <span>Acesso Restrito</span>
-              {activeTab === 'login' && <div className="absolute bottom-[-1px] w-full h-[3px] rounded-t-full transition-all duration-300 shadow-[0_0_8px_var(--tab-active)]" style={{ backgroundColor: 'var(--tab-active)' }}></div>}
-            </button>
-            <button onClick={() => setActiveTab('suporte')} className={`pb-3 text-sm font-medium transition-all cursor-pointer relative flex flex-col items-center ${activeTab === 'suporte' ? 'opacity-100' : 'opacity-40 hover:opacity-80'}`}>
-              <span>Suporte TI</span>
-              {activeTab === 'suporte' && <div className="absolute bottom-[-1px] w-full h-[3px] rounded-t-full transition-all duration-300 shadow-[0_0_8px_var(--tab-active)]" style={{ backgroundColor: 'var(--tab-active)' }}></div>}
-            </button>
-          </div>
+      {/* PAINEL DIREITO - CARD DE ACESSO */}
+      <main className="flex-1 flex flex-col justify-between px-4 sm:px-8 py-8 lg:py-10 relative">
+        <div className="flex-1 flex items-center justify-center -mt-6 lg:mt-0">
+          <div
+            className="w-full max-w-[424px] rounded-2xl border p-7 sm:p-9 transition-all duration-300"
+            style={{
+              backgroundColor: 'var(--bg-card)',
+              borderColor: 'var(--border-input)',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
+            {activeView === 'login' ? (
+              <div>
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--tab-active) 11%, transparent)',
+                    color: 'var(--tab-active)',
+                  }}
+                >
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
 
-          <div className="flex-1 flex flex-col justify-center relative z-10">
-            {activeTab === 'login' ? (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2">Iniciar Sessão</h2>
-                <p className="text-sm mb-6 sm:mb-8 font-medium" style={{ color: 'var(--text-muted)' }}>Insira as suas credenciais corporativas.</p>
+                <h2 className="text-2xl font-bold tracking-tight">Acesse sua conta</h2>
+                <p className="text-sm mt-1.5" style={{ color: 'var(--text-muted)' }}>
+                  Entre com suas credenciais corporativas.
+                </p>
 
                 {error && (
-                  <div role="alert" className="w-full text-sm font-medium px-4 py-3.5 rounded-2xl border mb-6 flex items-center animate-in fade-in" style={{ backgroundColor: 'var(--error-bg)', color: 'var(--error-text)', borderColor: 'var(--error-border)' }}>
-                    <Info className="w-4 h-4 mr-2 flex-shrink-0" />
-                    {error}
+                  <div
+                    role="alert"
+                    className="w-full text-xs sm:text-sm font-medium px-3.5 py-3 rounded-xl border mt-5 flex items-start gap-2.5"
+                    style={{
+                      backgroundColor: 'var(--error-bg)',
+                      color: 'var(--error-text)',
+                      borderColor: 'var(--error-border)',
+                    }}
+                  >
+                    <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>{error}</span>
                   </div>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-6">
-                  <div className="space-y-5">
-                    <div>
-                      <label htmlFor="email" className="text-xs font-medium uppercase tracking-widest mb-1.5 block opacity-70">E-mail corporativo</label>
+                <form onSubmit={handleLogin} className="mt-6 space-y-4">
+                  <div>
+                    <label
+                      htmlFor="email"
+                      className="text-xs font-semibold mb-1.5 block"
+                      style={{ color: 'var(--text-main)' }}
+                    >
+                      E-mail corporativo
+                    </label>
+                    <div className="relative">
+                      <Mail
+                        className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                        style={{ color: 'var(--text-muted)' }}
+                      />
                       <input
                         id="email"
                         type="email"
                         autoComplete="email"
                         inputMode="email"
+                        placeholder="nome@empresa.com"
                         disabled={loading}
-                        className="w-full px-4 py-3.5 text-[16px] md:text-sm font-medium rounded-xl border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all disabled:opacity-50"
-                        style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)', '--tw-ring-color': 'var(--tab-active)' } as React.CSSProperties}
+                        className="w-full pl-10 pr-4 py-3 text-[16px] md:text-sm font-medium rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50"
+                        style={{
+                          backgroundColor: 'var(--bg-input)',
+                          borderColor: 'var(--border-input)',
+                          color: 'var(--text-main)',
+                          '--tw-ring-color': 'var(--tab-active)',
+                        } as React.CSSProperties}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
                       />
                     </div>
-                    <div>
-                      <label htmlFor="password" className="text-xs font-medium uppercase tracking-widest mb-1.5 block opacity-70">Senha</label>
-                      <div className="relative">
-                        <input
-                          id="password"
-                          type={showPassword ? 'text' : 'password'}
-                          autoComplete="current-password"
-                          disabled={loading}
-                          className="w-full pl-4 pr-12 py-3.5 text-[16px] md:text-sm font-medium rounded-xl border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all disabled:opacity-50"
-                          style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-input)', color: 'var(--text-main)', '--tw-ring-color': 'var(--tab-active)' } as React.CSSProperties}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          disabled={loading}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
-                          style={{ color: 'var(--text-muted)' }}
-                          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                        >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </button>
-                      </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="password"
+                      className="text-xs font-semibold mb-1.5 block"
+                      style={{ color: 'var(--text-main)' }}
+                    >
+                      Senha
+                    </label>
+                    <div className="relative">
+                      <Lock
+                        className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                        style={{ color: 'var(--text-muted)' }}
+                      />
+                      <input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        disabled={loading}
+                        className="w-full pl-10 pr-11 py-3 text-[16px] md:text-sm font-medium rounded-xl border focus:outline-none focus:ring-2 transition-all disabled:opacity-50"
+                        style={{
+                          backgroundColor: 'var(--bg-input)',
+                          borderColor: 'var(--border-input)',
+                          color: 'var(--text-main)',
+                          '--tw-ring-color': 'var(--tab-active)',
+                        } as React.CSSProperties}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={loading}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
+                        style={{ color: 'var(--text-muted)' }}
+                        aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1">
-                    <label className="flex items-center space-x-2.5 cursor-pointer group select-none relative">
-                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${rememberMe ? 'border-transparent shadow-sm' : 'border-gray-400 group-hover:border-gray-500'}`} style={rememberMe ? { backgroundColor: 'var(--tab-active)' } : {}}>
-                        {rememberMe && <CheckCheck className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                  <div className="flex items-center justify-between pt-0.5">
+                    <label className="flex items-center gap-2.5 cursor-pointer group select-none relative">
+                      <div
+                        className={`w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center transition-all ${
+                          rememberMe ? 'border-transparent' : 'group-hover:border-slate-400'
+                        }`}
+                        style={
+                          rememberMe
+                            ? { backgroundColor: 'var(--tab-active)' }
+                            : { borderColor: 'var(--border-input)', backgroundColor: 'var(--bg-input)' }
+                        }
+                      >
+                        {rememberMe && <CheckCheck className="w-3 h-3 text-white stroke-[3]" />}
                       </div>
-                      <span className="text-sm font-medium opacity-70 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-main)' }}>Lembrar e-mail</span>
-
-                      {/* sr-only permite navegação por teclado e acessibilidade real */}
+                      <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                        Lembrar e-mail
+                      </span>
                       <input
                         type="checkbox"
                         className="sr-only peer"
@@ -264,75 +353,121 @@ const themes = [
                         onChange={(e) => setRememberMe(e.target.checked)}
                         disabled={loading}
                       />
-                      <div className="absolute inset-0 -left-1 -top-1 -bottom-1 -right-1 rounded-lg border-2 border-transparent peer-focus:border-blue-500 pointer-events-none transition-colors"></div>
+                      <div className="absolute -inset-1 rounded-lg border-2 border-transparent peer-focus-visible:border-blue-500 pointer-events-none" />
                     </label>
                   </div>
 
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-4 rounded-xl text-[15px] font-semibold transition-all hover:scale-[1.01] active:scale-[0.98] flex justify-center items-center shadow-sm mt-4 group border-0 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
-                    style={{ backgroundColor: 'var(--btn-primary)', color: 'var(--btn-text)' }}
+                    className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-[0.99] flex items-center justify-between group border-0 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer mt-2"
+                    style={primaryActionStyle}
                   >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                    {loading ? (
+                      <span className="w-full flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Entrando...</span>
+                      </span>
+                    ) : (
                       <>
-                        Entrar no Dashboard
-                        <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                        <span>Entrar no Dashboard</span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                       </>
                     )}
                   </button>
                 </form>
+
+                <div
+                  className="mt-6 pt-5 border-t flex items-center justify-between gap-2"
+                  style={{ borderColor: 'var(--border-input)' }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('suporte')}
+                    className="text-xs font-semibold hover:underline cursor-pointer"
+                    style={{ color: 'var(--tab-active)' }}
+                  >
+                    Esqueceu a senha ou precisa de suporte?
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="animate-in fade-in slide-in-from-left-4 duration-500 flex flex-col items-center text-center py-6">
-                <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6" style={{ backgroundColor: 'var(--border-input)' }}>
-                  <Headset className="w-10 h-10 opacity-70" style={{ color: 'var(--text-main)' }} />
+              <div>
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--tab-active) 11%, transparent)',
+                    color: 'var(--tab-active)',
+                  }}
+                >
+                  <Headset className="w-5 h-5" />
                 </div>
-                <h2 className="text-2xl font-semibold tracking-tight mb-3">Precisa de Ajuda?</h2>
-                <p className="text-sm mb-8 leading-relaxed max-w-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-                  A criação de contas corporativas e recuperação de credenciais é gerida exclusivamente pela equipe de <strong>Infraestrutura e Governança de TI</strong>.
+
+                <h2 className="text-2xl font-bold tracking-tight">Suporte TI</h2>
+                <p className="text-sm mt-2 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                  A criação de contas corporativas e recuperação de credenciais é gerida exclusivamente pela equipe de{' '}
+                  <strong style={{ color: 'var(--text-main)' }}>Infraestrutura e Governança de TI</strong>.
                 </p>
+
                 <a
                   href="https://gestao.iofv.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-6 py-4 rounded-xl text-sm font-semibold transition-all hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.98] shadow-sm border block w-full max-w-xs text-center cursor-pointer flex items-center justify-center space-x-2"
-                  style={{ borderColor: 'var(--border-input)', color: 'var(--text-main)', backgroundColor: 'transparent' }}
+                  className="mt-6 w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white transition-all hover:brightness-105 active:scale-[0.99] flex items-center justify-between group"
+                  style={primaryActionStyle}
                 >
                   <span>Abrir Chamado no HelpDesk</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </a>
+
+                <div
+                  className="mt-6 pt-5 border-t"
+                  style={{ borderColor: 'var(--border-input)' }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('login')}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold hover:underline cursor-pointer"
+                    style={{ color: 'var(--tab-active)' }}
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Voltar para o login</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
-
-          <div className="mt-10 pt-6 border-t flex items-center justify-between relative z-10" style={{ borderColor: 'var(--border-input)' }}>
-            <span className="text-xs font-medium uppercase tracking-widest opacity-50" style={{ color: 'var(--text-main)' }}>Tema Visual</span>
-
-            {/* 🚀 AQUI ESTÁ A CORREÇÃO: flex-wrap e gap garantem que se adapta no mobile */}
-            <div className="flex flex-wrap justify-end gap-2 sm:gap-2.5 max-w-[200px] sm:max-w-none">
-              {themes.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setTheme(t.id)}
-                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-transform duration-300 cursor-pointer ${
-                    theme === t.id ? 'scale-125 ring-2 ring-offset-2' : 'hover:scale-110 opacity-80 hover:opacity-100'
-                  }`}
-                  style={{
-                    backgroundColor: t.color,
-                    border: `1px solid ${t.border}`,
-                    boxShadow: theme !== t.id ? '0 2px 4px rgba(0,0,0,0.15)' : 'none',
-                    '--tw-ring-color': t.color,
-                    '--tw-ring-offset-color': 'var(--bg-card)'
-                  } as React.CSSProperties}
-                  title={t.name}
-                  aria-label={`Mudar para o tema ${t.name}`}
-                />
-              ))}
-            </div>
-          </div>
-
         </div>
+
+        {/* Barra discreta de Tema Visual */}
+        <footer className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
+          <span
+            className="text-[11px] font-semibold uppercase tracking-wider"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            Tema Visual
+          </span>
+          <div className="flex flex-wrap items-center justify-center gap-2.5">
+            {themes.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTheme(t.id)}
+                className={`w-[18px] h-[18px] rounded-full transition-transform duration-200 cursor-pointer ${
+                  theme === t.id ? 'scale-110 ring-2 ring-offset-2' : 'hover:scale-110 opacity-75 hover:opacity-100'
+                }`}
+                style={{
+                  backgroundColor: t.color,
+                  border: `1px solid ${t.border}`,
+                  '--tw-ring-color': t.color,
+                  '--tw-ring-offset-color': 'var(--bg-page)',
+                } as React.CSSProperties}
+                title={t.name}
+                aria-label={`Mudar para o tema ${t.name}`}
+              />
+            ))}
+          </div>
+        </footer>
       </main>
     </div>
   );

@@ -1,5 +1,5 @@
 .app-shell { height:var(--app-viewport-height,100dvh); }
-.app-shell .portal-page-header { height:auto; min-height:72px; padding-block:10px; gap:16px; }
+.app-shell .portal-page-header { height:auto; min-height:60px; padding-block:8px; gap:16px; }
 .portal-page-header h2 { white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.2; }
 .app-shell .portal-content { min-width:0; }
 .modal-header h2 { min-width:0; overflow-wrap:anywhere; line-height:1.35; }
