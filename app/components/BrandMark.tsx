@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import { useId, type CSSProperties } from 'react';
 
 export const HERO_BG_FALLBACK = 'linear-gradient(135deg, #0b1736 0%, #14285b 52%, #253f8f 100%)';
 export const NAV_ACTIVE_BG_FALLBACK = 'linear-gradient(135deg, #2563eb 0%, #3730a3 100%)';
@@ -24,26 +24,55 @@ export const heroGridStyle: CSSProperties = {
 };
 
 export function LogoDooDoo({ className, style }: { className?: string; style?: CSSProperties }) {
+  const uid = useId().replace(/:/g, '');
+  const ribbonId = `doodoo-ribbon-${uid}`;
+  const lobeId = `doodoo-lobe-${uid}`;
+  const clipId = `doodoo-clip-${uid}`;
+  const shadowId = `doodoo-shadow-${uid}`;
+
   return (
     <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} style={style} aria-hidden="true">
-      <rect x="4" y="4" width="56" height="56" rx="18" fill="currentColor" fillOpacity="0.18" />
-      <path
-        d="M22 18H36C45.9411 18 54 26.0589 54 36C54 45.9411 45.9411 54 36 54H22V18Z"
-        stroke="currentColor"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="36" cy="36" r="5" fill="currentColor" />
+      <defs>
+        <linearGradient id={ribbonId} x1="16" y1="8" x2="38" y2="56" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="1" />
+          <stop offset="52%" stopColor="currentColor" stopOpacity="0.93" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0.80" />
+        </linearGradient>
+        <linearGradient id={lobeId} x1="10" y1="35" x2="39" y2="31" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.37" />
+          <stop offset="58%" stopColor="currentColor" stopOpacity="0.26" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0.16" />
+        </linearGradient>
+        <filter id={shadowId} x="4" y="4" width="56" height="58" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+          <feDropShadow dx="0" dy="1.8" stdDeviation="1.8" floodColor="#09041e" floodOpacity="0.28" />
+        </filter>
+        <clipPath id={clipId}>
+          <path d="M15.72 13.6C16.55 9.5 19.15 8.1 22.55 8.1H34.3C47.0 8.1 54.8 18.1 54.8 30.7C54.8 44.5 44.0 55.9 29.6 55.9H15.5C10.5 55.9 8.35 53.1 9.2 49.5L15.72 13.6Z" />
+        </clipPath>
+      </defs>
+      <g filter={`url(#${shadowId})`}>
+        <g clipPath={`url(#${clipId})`}>
+          {/* Inner folded counter lobe (adapts luminously to every theme background) */}
+          <path
+            d="M12.8 20.9H27.7C35.0 20.9 39.5 24.9 39.5 30.7C39.5 36.5 36.1 40.2 29.2 42.8L7.6 50.4L12.8 20.9Z"
+            fill={`url(#${lobeId})`}
+          />
+          {/* Outer slanted geometric D ribbon */}
+          <path
+            d="M14.35 21.2L15.72 13.6C16.55 9.5 19.15 8.1 22.55 8.1H34.3C47.0 8.1 54.8 18.1 54.8 30.7C54.8 44.5 44.0 55.9 29.6 55.9H15.5C10.5 55.9 8.35 53.1 9.2 49.5L29.1 42.5C35.9 40.0 39.2 36.3 39.2 30.7C39.2 25.1 34.8 21.2 27.6 21.2H14.35Z"
+            fill={`url(#${ribbonId})`}
+          />
+        </g>
+      </g>
     </svg>
   );
 }
 
 export function BrandBadge({ size = 'md', className = '' }: { size?: 'sm' | 'md' | 'lg'; className?: string }) {
   const sizes = {
-    sm: { box: 'w-9 h-9 rounded-xl', icon: 'w-5 h-5' },
-    md: { box: 'w-11 h-11 rounded-[14px]', icon: 'w-6 h-6' },
-    lg: { box: 'w-12 h-12 rounded-2xl', icon: 'w-7 h-7' },
+    sm: { box: 'w-9 h-9 rounded-xl', icon: 'w-[28px] h-[28px]' },
+    md: { box: 'w-11 h-11 rounded-[14px]', icon: 'w-[34px] h-[34px]' },
+    lg: { box: 'w-12 h-12 rounded-2xl', icon: 'w-[38px] h-[38px]' },
   }[size];
 
   return (
@@ -53,7 +82,10 @@ export function BrandBadge({ size = 'md', className = '' }: { size?: 'sm' | 'md'
     >
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(circle at 25% 20%, rgba(255,255,255,0.28), transparent 60%)' }}
+        style={{
+          background:
+            'radial-gradient(circle at 20% 18%, rgba(255,255,255,0.32), transparent 58%), radial-gradient(circle at 86% 86%, rgba(255,255,255,0.12), transparent 52%)',
+        }}
       />
       <LogoDooDoo className={`${sizes.icon} relative z-10`} />
     </div>

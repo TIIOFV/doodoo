@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { notify } from './domain';
+import { serverNowIso } from './serverClock';
 import { supabase } from './supabase';
 
 export function useSignOut() {
@@ -12,7 +13,7 @@ export function useSignOut() {
       if (data.user?.id) {
         await supabase
           .from('doodoo_perfis')
-          .update({ status_presenca: 'offline', last_seen: new Date().toISOString() })
+          .update({ status_presenca: 'offline', last_seen: serverNowIso() })
           .eq('user_id', data.user.id);
       }
     } catch {

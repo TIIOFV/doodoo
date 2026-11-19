@@ -107,9 +107,9 @@ html[data-buzz-shake='true'] .app-shell {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgb(15 23 42 / 0.58);
-  backdrop-filter: blur(5px);
-  animation: chat-buzz-fade 0.18s ease-out;
+  background: rgb(15 23 42 / 0.64);
+  backdrop-filter: blur(6px);
+  animation: chat-buzz-fade 0.14s ease-out;
 }
 
 .chat-buzz-modal {
@@ -118,10 +118,10 @@ html[data-buzz-shake='true'] .app-shell {
   padding: 28px 26px 24px;
   border-radius: 22px;
   border: 2px solid color-mix(in srgb, var(--warning) 65%, var(--border-input));
-  background: var(--bg-card);
+  background: var(--bg-card, #ffffff);
   color: var(--text-main);
   text-align: center;
-  box-shadow: 0 28px 70px rgb(15 23 42 / 0.4), 0 0 0 6px color-mix(in srgb, var(--warning) 18%, transparent);
+  box-shadow: 0 28px 70px rgb(15 23 42 / 0.42), 0 0 0 6px color-mix(in srgb, var(--warning) 18%, transparent);
   animation: chat-spark-buzz 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
@@ -144,27 +144,73 @@ html[data-buzz-shake='true'] .app-shell {
 }
 
 .chat-buzz-emblem {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   margin: 0 auto 14px;
-  border-radius: 18px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: color-mix(in srgb, var(--warning) 16%, var(--bg-card));
-  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--warning) 42%, transparent);
   color: var(--warning);
   box-shadow: 0 0 0 8px color-mix(in srgb, var(--warning) 10%, transparent);
+  animation: chat-buzz-pulse 1.3s ease-in-out infinite;
 }
 
 .chat-buzz-kicker {
-  display: block;
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   font-size: 10.5px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.11em;
   color: var(--warning);
-  margin-bottom: 6px;
+  margin: 0 auto 10px;
+}
+
+.chat-buzz-sender-chip {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 6px;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+}
+
+.chat-buzz-sender-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.chat-buzz-sender-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+@keyframes chat-buzz-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--warning) 12%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 14px color-mix(in srgb, var(--warning) 22%, transparent);
+  }
 }
 
 .chat-buzz-modal h2 {

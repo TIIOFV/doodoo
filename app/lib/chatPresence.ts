@@ -1,3 +1,5 @@
+import { formatPortalDate, formatPortalTime, portalDayKey, serverNowMs } from './serverClock';
+
 export type UserStatusType = 'online' | 'ausente' | 'ocupado' | 'indisponivel' | 'offline';
 
 export const PRESENCE_HEARTBEAT_MS = 25_000;
@@ -20,10 +22,10 @@ export const STATUS_OPTIONS: { value: UserStatusType; label: string; hint: strin
 
 export function getRealUserStatus(
   profile?: { status_presenca?: UserStatusType; last_seen?: string } | null,
-  now = Date.now()
+  now = serverNowMs()
 ) {
   const seen = Date.parse(profile?.last_seen || '');
-  const fresh = Number.isFinite(seen) && now - seen < PRESENCE_TTL_MS;
+  const fresh = Number.isFinite(seen) && now - seen < PRESENCE_TTL_MS && seen - now < PRESENCE_TTL_MS * 3;
   const status: UserStatusType =
     !fresh || !profile || profile.status_presenca === 'offline'
       ? 'offline'
@@ -49,12 +51,11 @@ export function getRealUserStatus(
 
   let lastSeenText = 'Sem atividade recente';
   if (Number.isFinite(seen)) {
-    const date = new Date(seen);
-    const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const time = formatPortalTime(seen);
     lastSeenText =
-      date.toDateString() === new Date(now).toDateString()
+      portalDayKey(seen) === portalDayKey(now)
         ? `Visto hoje às ${time}`
-        : `Visto em ${date.toLocaleDateString('pt-BR')} às ${time}`;
+        : `Visto em ${formatPortalDate(seen)} às ${time}`;
   }
 
   if (status === 'online') lastSeenText = 'Ativo agora';

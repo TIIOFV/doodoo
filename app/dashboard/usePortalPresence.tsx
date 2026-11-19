@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { ensureServerClockSynced, serverNowIso } from '../lib/serverClock';
 import {
   PRESENCE_HEARTBEAT_MS,
   PRESENCE_HIDDEN_GRACE_MS,
@@ -141,10 +142,12 @@ export function usePortalPresence(profile: Profile | null, enabled: boolean): Pr
       writeAbort = new AbortController();
       setSync('saving');
       try {
+        await ensureServerClockSynced();
+        if (!active || departing) return;
         const patch: { status_presenca: UserStatusType; last_seen?: string } =
           next === 'offline' && lastStatus === 'offline'
             ? { status_presenca: 'offline' }
-            : { status_presenca: next, last_seen: new Date().toISOString() };
+            : { status_presenca: next, last_seen: serverNowIso() };
 
         const { data, error } = await supabase
           .from('doodoo_perfis')
@@ -261,6 +264,10 @@ export function usePortalPresence(profile: Profile | null, enabled: boolean): Pr
       if (manual === 'online') void publish();
     }, 5000);
 
+    const onClockSynced = () => {
+      if (manual !== 'offline') void publish(true);
+    };
+
     const events = ['pointerdown', 'pointermove', 'keydown', 'touchstart'];
     for (const event of events) window.addEventListener(event, onActivity, { passive: true });
     document.addEventListener('visibilitychange', onVisibility);
@@ -269,6 +276,7 @@ export function usePortalPresence(profile: Profile | null, enabled: boolean): Pr
     window.addEventListener('pageshow', onVisibility);
     window.addEventListener('pagehide', onUnload);
     window.addEventListener('storage', onStorage);
+    window.addEventListener('doodoo:clock_synced', onClockSynced);
 
     return () => {
       active = false;
@@ -283,6 +291,7 @@ export function usePortalPresence(profile: Profile | null, enabled: boolean): Pr
       window.removeEventListener('pageshow', onVisibility);
       window.removeEventListener('pagehide', onUnload);
       window.removeEventListener('storage', onStorage);
+      window.removeEventListener('doodoo:clock_synced', onClockSynced);
     };
   }, [userId]);
 

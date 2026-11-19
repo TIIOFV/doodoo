@@ -66,9 +66,10 @@ export function showDesktopNotification(options: {
   body: string;
   link?: string;
   eventKey?: string;
+  requireInteraction?: boolean;
   onNavigate?: (link: string) => void;
 }): boolean {
-  const { userId, title, body, link, eventKey, onNavigate } = options;
+  const { userId, title, body, link, eventKey, requireInteraction, onNavigate } = options;
   if (!isDesktopNotificationSupported()) return false;
   if (typeof document !== 'undefined' && document.documentElement?.dataset?.userPresence === 'ocupado') return false;
   if (window.Notification.permission !== 'granted') return false;
@@ -89,6 +90,7 @@ export function showDesktopNotification(options: {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       tag: eventKey || undefined,
+      requireInteraction: Boolean(requireInteraction),
     });
     popup.onclick = () => {
       try {

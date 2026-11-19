@@ -1,6 +1,6 @@
 'use client';
 import { useEffect } from 'react';
-import { localISO } from '../lib/domain';
+import { portalDayKey, serverNowDate } from '../lib/serverClock';
 import { supabase } from '../lib/supabase';
 
 interface AgendaRow {
@@ -63,13 +63,13 @@ export function useAgendaNotifications(
 
     const checkUpcoming = () => {
       if (!active || !events.length) return;
-      const now = new Date();
-      const today = localISO(now);
+      const now = serverNowDate();
+      const today = portalDayKey(now);
       let changed = false;
 
       for (const ev of events) {
         if (!ev.data || ev.data !== today || !ev.hora_inicio) continue;
-        const start = new Date(`${ev.data}T${ev.hora_inicio.slice(0, 5)}:00`);
+        const start = new Date(`${ev.data}T${ev.hora_inicio.slice(0, 5)}:00-03:00`);
         if (Number.isNaN(start.getTime())) continue;
         const diffMs = start.getTime() - now.getTime();
         // Alert within 15 minutes before start up to 1 minute after start.
@@ -96,7 +96,7 @@ export function useAgendaNotifications(
     };
 
     const loadEvents = async () => {
-      const today = localISO(new Date());
+      const today = portalDayKey(serverNowDate());
       const { data, error } = await supabase
         .from('doodoo_agenda')
         .select('id,titulo,data,hora_inicio,hora_fim,local,visibilidade,setor,organizador_id,aceitos_por')

@@ -3,6 +3,7 @@ import { useSignOut } from '@/app/lib/useSignOut';
 
 import { isTaskOverdue,occurrenceId,requireResult,searchKey,taskDeadline } from '@/app/lib/domain';
 import { atomicWrites } from '@/app/lib/environment';
+import { formatPortalDateTime, serverNowDate, serverNowIso } from '@/app/lib/serverClock';
 
 import { Button,inputStyle,panelStyle,sidebarStyle } from '@/app/components/ui';
 import { useHydrated } from '@/app/lib/useHydrated';
@@ -491,8 +492,7 @@ export default function TarefasPage() {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    const now = new Date();
-    const formattedTime = `${now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    const formattedTime = formatPortalDateTime(serverNowDate());
 
     const msg: ChatComment = { id: crypto.randomUUID(), author: currentUser.nome, authorId: currentUser.user_id, text: chatInput.trim(), time: formattedTime, isAlert: isDifficultyAlert };
 
@@ -514,7 +514,7 @@ export default function TarefasPage() {
       const comment = live.chat?.find(c => c.id === edit.id);
       if (!comment || comment.authorId !== currentUser.user_id) throw new Error('A mensagem foi removida ou você não é o autor.');
       if (comment.text !== edit.original) throw new Error('Esta mensagem mudou em outra sessão. Cancele a edição e revise a versão atual.');
-      return {chat: (live.chat || []).map(c => c.id === edit.id ? {...c, text: edit.text.trim(), editedAt: new Date().toISOString()} : c)};
+      return {chat: (live.chat || []).map(c => c.id === edit.id ? {...c, text: edit.text.trim(), editedAt: serverNowIso()} : c)};
     });
     if (saved) setEditingComment(null);
   };
@@ -538,8 +538,7 @@ export default function TarefasPage() {
   const handleSendReminder = async (task: TaskItem) => {
     if (!currentUser || !isMounted) return;
 
-    const now = new Date();
-    const formattedTime = `${now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    const formattedTime = formatPortalDateTime(serverNowDate());
 
     const reminder: ChatComment = { id: crypto.randomUUID(), author: currentUser.nome, authorId: currentUser.user_id, text: `🔔 Solicitou posicionamento / atualização de status para ${task.assignee}.`, time: formattedTime, isAlert: true };
     if(await mutateTask(task.id,live=>({chat:[...(live.chat||[]),reminder],metadata:{...(live.metadata||{}),ultimo_evento:'cobranca',autor_evento:currentUser.nome}})))notifyBell('Cobrança enviada','A solicitação foi registrada no histórico da tarefa.');
@@ -561,8 +560,7 @@ export default function TarefasPage() {
 
   const formatCreatedAt = (dateString: string) => {
     if (!dateString) return 'Data desconhecida';
-    const date = new Date(dateString);
-    return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    return formatPortalDateTime(dateString);
   };
 
   if (isLoading || !isMounted) return <div className="w-full h-full flex flex-col items-center justify-center"><Loader2 className="w-10 h-10 animate-spin opacity-70 text-brand-panel" /></div>;

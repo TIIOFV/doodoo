@@ -20,21 +20,27 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import { HeroOrbitalArt, heroSurfaceStyle } from '../components/BrandMark';
-import { isTaskOverdue, localISO, taskDeadline } from '../lib/domain';
+import { isTaskOverdue, taskDeadline } from '../lib/domain';
+import { formatPortalTime, portalDayKey, PORTAL_TIMEZONE, serverNowDate } from '../lib/serverClock';
 import { useOverviewData, type OverviewTask } from './useOverviewData';
 
 export default function DashboardOverviewPage() {
   const { data, loading, refreshing, refresh } = useOverviewData();
   const [scope, setScope] = useState<'mine' | 'delegated'>('mine');
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState(() => serverNowDate());
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(timer);
+    const updateNow = () => setNow(serverNowDate());
+    const timer = setInterval(updateNow, 30_000);
+    window.addEventListener('doodoo:clock_synced', updateNow);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('doodoo:clock_synced', updateNow);
+    };
   }, []);
 
   const { profile, allowed, tasks, notes, events } = data;
-  const today = localISO(now);
+  const today = portalDayKey(now);
   const has = (key: string) => allowed.includes(key);
 
   const mine = tasks.filter((t) => t.responsavel === profile?.nome);
@@ -136,8 +142,8 @@ export default function DashboardOverviewPage() {
 
         <div className="overview-date">
           <div className="overview-date-meta">
-            <span>{now.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>
-            <strong>{now.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}</strong>
+            <span>{now.toLocaleDateString('pt-BR', { weekday: 'long', timeZone: PORTAL_TIMEZONE })}</span>
+            <strong>{now.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', timeZone: PORTAL_TIMEZONE })}</strong>
           </div>
           <button type="button" onClick={refresh} disabled={refreshing} aria-label="Atualizar resumo">
             <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
@@ -145,7 +151,7 @@ export default function DashboardOverviewPage() {
               {refreshing
                 ? 'Atualizando…'
                 : data.loadedAt
-                  ? 'Atualizado às ' + new Date(data.loadedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                  ? 'Atualizado às ' + formatPortalTime(data.loadedAt)
                   : 'Tentar novamente'}
             </span>
           </button>

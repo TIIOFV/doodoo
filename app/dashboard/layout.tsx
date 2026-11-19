@@ -12,6 +12,7 @@ import {
 } from '../lib/desktopNotifications';
 import { environment } from '../lib/environment';
 import { playPortalSound, unlockPortalAudio } from '../lib/notificationSound';
+import { formatPortalTime, serverNowDate, serverNowIso, startServerClockSync } from '../lib/serverClock';
 import { supabase } from './../lib/supabase';
 import ChatAttention from './ChatAttention';
 import './portal-mobile.css';
@@ -206,6 +207,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     borderTop: '1px solid var(--border-input)',
   };
 
+  useEffect(() => startServerClockSync(), []);
+
   useEffect(() => {
     let mounted = true;
     supabase.auth
@@ -345,7 +348,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       meusCanaisRef.current = mine.map((c) => c.id);
       channelMetaRef.current = new Map(mine.map((c) => [c.id, { id: c.id, nome: c.nome || 'Canal', is_direct: c.is_direct }]));
       if (!window.location.pathname.startsWith('/dashboard/conversas')) {
-        const sevenDaysAgo = new Date();
+        const sevenDaysAgo = serverNowDate();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         const { data: recentMsgs } = await supabase
           .from('doodoo_mensagens')
@@ -420,6 +423,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 senderId: msg.sender_id,
                 sender: msg.sender_nome,
                 channelName: groupLabel,
+                sentAt: msg.created_at,
               },
             })
           );
@@ -430,15 +434,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               body: `Chamada de atenção ${whereText}. Clique para abrir a conversa.`,
               link,
               eventKey: 'chat-buzz:' + msg.id,
+              requireInteraction: true,
               onNavigate: (target) => {
                 router.push(target);
                 if (window.location.pathname.startsWith('/dashboard/conversas')) {
-                  window.dispatchEvent(new CustomEvent('doodoo:switch_chat', { detail: { chatId: msg.canal_id, messageId: msg.id } }));
+                  window.dispatchEvent(
+                    new CustomEvent('doodoo:switch_chat', { detail: { chatId: msg.canal_id, messageId: msg.id, focusInput: true } })
+                  );
                 }
               },
             });
           }
-          const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          const timeStr = formatPortalTime(msg.created_at || serverNowDate());
           setNotifications((prev) =>
             prev.some((n) => n.eventKey === 'chat-buzz:' + msg.id)
               ? prev
@@ -553,18 +560,103 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       });
 
     globalListener.subscribe();
+    void refreshMyChannelsAndUnread();
+
+    // Instant Realtime Broadcast channel for Spark-style Buzz ("Vibrar tela") so alerts trigger in <100ms
+    // across ANY portal page even if postgres_changes experiences WAL lag or reconnection.
+    const buzzChannel = allowedTabs.includes('chat')
+      ? supabase
+          .channel('doodoo:buzz:global', { config: { broadcast: { self: false } } })
+          .on('broadcast', { event: 'buzz' }, ({ payload }) => {
+            const p = payload as {
+              id?: string;
+              channelId?: string;
+              channelName?: string;
+              senderId?: string;
+              sender?: string;
+              recipientIds?: string[];
+              sentAt?: string;
+            } | null;
+            if (!p?.id || !p.channelId || !p.senderId || !p.sender || p.senderId === currentUser.user_id) return;
+            const targeted =
+              (Array.isArray(p.recipientIds) && p.recipientIds.includes(currentUser.user_id)) ||
+              meusCanaisRef.current.includes(p.channelId);
+            if (!targeted) return;
+
+            const link = `/dashboard/conversas?chatId=${encodeURIComponent(p.channelId)}&messageId=${encodeURIComponent(p.id)}`;
+            const whereText = p.channelName ? `no grupo “${p.channelName}”` : 'em conversa direta';
+            window.dispatchEvent(
+              new CustomEvent('doodoo:chat_buzz', {
+                detail: {
+                  id: p.id,
+                  channelId: p.channelId,
+                  senderId: p.senderId,
+                  sender: p.sender,
+                  channelName: p.channelName,
+                  sentAt: p.sentAt,
+                },
+              })
+            );
+            if (document.hidden || !document.hasFocus()) {
+              showDesktopNotification({
+                userId: currentUser.user_id,
+                title: `${p.sender} vibrou sua tela!`,
+                body: `Chamada de atenção ${whereText}. Clique para abrir a conversa.`,
+                link,
+                eventKey: 'chat-buzz:' + p.id,
+                requireInteraction: true,
+                onNavigate: (target) => {
+                  router.push(target);
+                  if (window.location.pathname.startsWith('/dashboard/conversas')) {
+                    window.dispatchEvent(
+                      new CustomEvent('doodoo:switch_chat', { detail: { chatId: p.channelId, messageId: p.id, focusInput: true } })
+                    );
+                  }
+                },
+              });
+            }
+            const timeStr = formatPortalTime(p.sentAt || serverNowDate());
+            setNotifications((prev) =>
+              prev.some((n) => n.eventKey === 'chat-buzz:' + p.id)
+                ? prev
+                : [
+                    {
+                      id: createNotificationId(),
+                      title: `${p.sender} chamou sua atenção`,
+                      desc: `Vibrou sua tela ${whereText}.`,
+                      time: timeStr,
+                      unread: true,
+                      link,
+                      eventKey: 'chat-buzz:' + p.id,
+                    },
+                    ...prev,
+                  ].slice(0, 30)
+            );
+          })
+          .subscribe()
+      : null;
+
+    const onSendBuzzBroadcast = (event: Event) => {
+      if (!buzzChannel) return;
+      const detail = (event as CustomEvent<Record<string, unknown>>).detail;
+      if (!detail) return;
+      void buzzChannel.send({ type: 'broadcast', event: 'buzz', payload: detail }).catch(() => {});
+    };
 
     const onWindowReturn = () => {
       if (document.visibilityState === 'visible') void refreshMyChannelsAndUnread();
     };
+    window.addEventListener('doodoo:send_buzz_broadcast', onSendBuzzBroadcast);
     window.addEventListener('focus', onWindowReturn);
     document.addEventListener('visibilitychange', onWindowReturn);
 
     return () => {
       listening = false;
+      window.removeEventListener('doodoo:send_buzz_broadcast', onSendBuzzBroadcast);
       window.removeEventListener('focus', onWindowReturn);
       document.removeEventListener('visibilitychange', onWindowReturn);
       void supabase.removeChannel(globalListener);
+      if (buzzChannel) void supabase.removeChannel(buzzChannel);
     };
   }, [currentUser, sessionId, allowedTabs, router]);
 
@@ -642,7 +734,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       // Apenas notificações acionáveis e úteis entram na Central de Alertas;
       // toasts transitórios (sem eventKey, como "Enviando...", "Salvo", "Erro") ficam só no banner temporário.
       if (!isPersistentNotificationKey(eventKey)) return;
-      const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const timeStr = formatPortalTime(serverNowDate());
       setNotifications((prev) =>
         eventKey && prev.some((n) => n.eventKey === eventKey)
           ? prev
@@ -908,7 +1000,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (currentUser?.user_id) {
         await supabase
           .from('doodoo_perfis')
-          .update({ status_presenca: 'offline', last_seen: new Date().toISOString() })
+          .update({ status_presenca: 'offline', last_seen: serverNowIso() })
           .eq('user_id', currentUser.user_id);
       }
     } catch {
@@ -1454,7 +1546,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link
               href="/dashboard/configuracoes"
               aria-current={isSettingsActive ? 'page' : undefined}
-              className="relative flex flex-col items-center justify-center px-1 py-1.5 w-16 h-14 cursor-pointer transition-transform active:scale-95"
+              className="relative flex flex-col items-center justify-center px-1 py-1.5 min-w-0 flex-1 h-14 cursor-pointer transition-transform active:scale-95"
             >
               <span
                 className="flex items-center justify-center w-10 h-7 rounded-full mb-0.5 transition-colors"

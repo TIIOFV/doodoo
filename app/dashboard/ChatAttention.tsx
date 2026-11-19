@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
-import { ArrowUpRight, BellRing, X, Zap } from 'lucide-react';
+import { ArrowUpRight, BellRing, MessageSquare, Volume2, X, Zap } from 'lucide-react';
 import { primaryActionStyle } from '@/app/components/BrandMark';
 import { playBuzzSound } from '../lib/notificationSound';
+import { formatPortalTime, serverNowDate } from '../lib/serverClock';
 import './chat-attention.css';
 
 export interface ChatAttentionNotice {
@@ -21,11 +23,19 @@ export interface ChatBuzzNotice {
   senderId: string;
   sender: string;
   channelName?: string;
+  sentAt?: string;
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'DD';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export default function ChatAttention({ userId }: { userId: string }) {
   const [queue, setQueue] = useState<ChatAttentionNotice[]>([]);
-  const [buzzOverlay, setBuzzOverlay] = useState<ChatBuzzNotice | null>(null);
+  const [buzzOverlay, setBuzzOverlay] = useState<(ChatBuzzNotice & { timeLabel: string; pulseKey: number }) | null>(null);
   const seen = useRef(new Set<string>());
   const last = useRef(new Map<string, number>());
   const seenBuzz = useRef(new Set<string>());
@@ -54,7 +64,7 @@ export default function ChatAttention({ userId }: { userId: string }) {
     return () => window.removeEventListener('doodoo:chat_attention', receive);
   }, [userId]);
 
-  // Spark-style Buzz ("Vibrar tela" + prominent overlay on top of any page, respecting "Não incomodar")
+  // Spark-style Buzz ("Vibrar tela" + prominent modal overlay over ANY Doo Doo page, respecting "Não incomodar")
   useEffect(() => {
     let shakeTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -68,28 +78,32 @@ export default function ChatAttention({ userId }: { userId: string }) {
 
       const key = buzz.senderId + ':' + buzz.channelId;
       const now = Date.now();
-      if (now - (lastBuzz.current.get(key) || 0) < 15000) return;
+      if (now - (lastBuzz.current.get(key) || 0) < 10000) return;
       lastBuzz.current.set(key, now);
 
-      // 1. Shake the portal window AND overlay card (Spark / MSN Nudge effect)
+      // 1. Shake the portal window AND overlay modal (Spark / MSN Nudge effect)
       clearTimeout(shakeTimer);
-      document.documentElement.dataset.buzzShake = 'true';
+      delete document.documentElement.dataset.buzzShake;
+      requestAnimationFrame(() => {
+        document.documentElement.dataset.buzzShake = 'true';
+      });
       shakeTimer = setTimeout(() => {
         delete document.documentElement.dataset.buzzShake;
-      }, 950);
+      }, 1050);
 
-      // 2. Mobile haptic vibration + Spark double-pulse buzz sound
+      // 2. Mobile haptic vibration + unmistakable Spark double-ring attention chime
       try {
         if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-          navigator.vibrate([160, 70, 160, 70, 220]);
+          navigator.vibrate([200, 75, 200, 75, 260]);
         }
       } catch {
         /* Ignore vibration restrictions. */
       }
       playBuzzSound(userId);
 
-      // 3. Overlay prominent alert card on top of whatever page the user is currently on
-      setBuzzOverlay(buzz);
+      // 3. Open prominent modal on top of whatever Doo Doo page the user is on
+      const timeLabel = formatPortalTime(buzz.sentAt || serverNowDate());
+      setBuzzOverlay({ ...buzz, timeLabel, pulseKey: Date.now() });
     };
 
     window.addEventListener('doodoo:chat_buzz', triggerBuzz);
@@ -112,11 +126,22 @@ export default function ChatAttention({ userId }: { userId: string }) {
 
   const notice = queue[0];
 
+  // Flash browser tab title while Buzz or Urgent alert is awaiting user action
   useEffect(() => {
     if (!notice && !buzzOverlay) return;
     const previous = document.title;
-    document.title = notice ? 'Urgente · ' + notice.sender : '⚡ ' + buzzOverlay!.sender + ' chamou atenção!';
+    const primary = notice
+      ? `Urgente · ${notice.sender}`
+      : `⚡ ${buzzOverlay!.sender} chamou sua atenção!`;
+    const alternate = notice ? '🔔 Mensagem urgente no Doo Doo' : '🔔 Doo Doo · Chamada de atenção!';
+    let toggle = false;
+    document.title = primary;
+    const interval = window.setInterval(() => {
+      toggle = !toggle;
+      document.title = toggle ? alternate : primary;
+    }, 950);
     return () => {
+      window.clearInterval(interval);
       document.title = previous;
     };
   }, [notice, buzzOverlay]);
@@ -131,12 +156,24 @@ export default function ChatAttention({ userId }: { userId: string }) {
     dismissUrgent();
   };
 
+  const isAlreadyInTargetChat = (() => {
+    if (!buzzOverlay || !pathname.startsWith('/dashboard/conversas') || typeof window === 'undefined') return false;
+    try {
+      const activeParam = new URLSearchParams(window.location.search).get('chatId');
+      return activeParam === buzzOverlay.channelId;
+    } catch {
+      return false;
+    }
+  })();
+
   const openBuzzConversation = () => {
     if (!buzzOverlay) return;
     const targetUrl = `/dashboard/conversas?chatId=${encodeURIComponent(buzzOverlay.channelId)}&messageId=${encodeURIComponent(buzzOverlay.id)}`;
     if (pathnameRef.current.startsWith('/dashboard/conversas')) {
       window.dispatchEvent(
-        new CustomEvent('doodoo:switch_chat', { detail: { chatId: buzzOverlay.channelId, messageId: buzzOverlay.id } })
+        new CustomEvent('doodoo:switch_chat', {
+          detail: { chatId: buzzOverlay.channelId, messageId: buzzOverlay.id, focusInput: true },
+        })
       );
     } else {
       router.push(targetUrl);
@@ -144,10 +181,13 @@ export default function ChatAttention({ userId }: { userId: string }) {
     setBuzzOverlay(null);
   };
 
-  return (
+  if (typeof document === 'undefined' || (!buzzOverlay && !notice)) return null;
+
+  return createPortal(
     <>
       {buzzOverlay && (
         <div
+          key={buzzOverlay.pulseKey}
           className="chat-buzz-backdrop"
           role="alertdialog"
           aria-modal="true"
@@ -168,12 +208,23 @@ export default function ChatAttention({ userId }: { userId: string }) {
               <Zap size={28} />
             </div>
 
-            <span className="chat-buzz-kicker">Chamada de atenção</span>
+            <span className="chat-buzz-kicker">
+              <Volume2 size={13} />
+              Chamada de atenção · {buzzOverlay.timeLabel}
+            </span>
+
+            <div className="chat-buzz-sender-chip">
+              <span className="chat-buzz-sender-avatar" style={primaryActionStyle}>
+                {getInitials(buzzOverlay.sender)}
+              </span>
+              <span className="chat-buzz-sender-name">{buzzOverlay.sender}</span>
+            </div>
+
             <h2>{buzzOverlay.sender} vibrou sua tela!</h2>
             <p>
               {buzzOverlay.channelName
-                ? `Chamando sua atenção no grupo “${buzzOverlay.channelName}”.`
-                : 'Chamando sua atenção em uma conversa direta no Chat Corporativo.'}
+                ? `Está chamando sua atenção agora no grupo “${buzzOverlay.channelName}”.`
+                : 'Está chamando sua atenção agora em uma conversa direta no Chat Corporativo.'}
             </p>
 
             <div className="chat-buzz-modal-actions">
@@ -183,8 +234,8 @@ export default function ChatAttention({ userId }: { userId: string }) {
                 className="chat-buzz-primary"
                 style={primaryActionStyle}
               >
-                <span>Ir para a conversa</span>
-                <ArrowUpRight size={16} />
+                {isAlreadyInTargetChat ? <MessageSquare size={16} /> : <ArrowUpRight size={16} />}
+                <span>{isAlreadyInTargetChat ? 'Responder agora' : 'Abrir conversa agora'}</span>
               </button>
               <button
                 type="button"
@@ -225,6 +276,7 @@ export default function ChatAttention({ userId }: { userId: string }) {
           </div>
         </aside>
       )}
-    </>
+    </>,
+    document.body
   );
 }

@@ -10,6 +10,7 @@ import {useRecordActions} from '../useRecordActions';
 import { heroGridStyle, HeroOrbitalArt, heroSurfaceStyle, primaryActionStyle } from '@/app/components/BrandMark';
 import { inputStyle, Notice, panelStyle } from '@/app/components/ui';
 import { messageOf,notify,requireResult } from '@/app/lib/domain';
+import { formatPortalDateTime } from '@/app/lib/serverClock';
 import type { ChannelRow,MessageRow,PermissionRow } from '@/app/lib/models';
 import JSZip from 'jszip';
 import { Activity,Archive,Bell,ChevronLeft,ChevronRight,Database,DownloadCloud,Loader2,Lock,Plus,Save,Search,Settings,Shield,Tags,Trash2,Unlock,UserPlus,Users } from 'lucide-react';
@@ -561,7 +562,7 @@ export default function ConfiguracoesPage() {
         'AUDITORIA DE CHAT',
         '========================================================',
         '',
-        ...data.map(m => `[${new Date(m.created_at).toLocaleString('pt-BR')}] ${m.sender_nome}: ${m.metadata?.deleted ? '[APAGADA] ' : ''}${m.texto}`),
+        ...data.map(m => `[${formatPortalDateTime(m.created_at)}] ${m.sender_nome}: ${m.metadata?.deleted ? '[APAGADA] ' : ''}${m.texto}`),
       ];
       saveTextOrZip(new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' }), `Auditoria_${canalNome.replace(/[\/\\:?*"<>|]/g, '')}.txt`);
       notifyBell('Exportação concluída', `${data.length} mensagem(ns) incluída(s) no arquivo.`);
@@ -591,7 +592,7 @@ export default function ConfiguracoesPage() {
         const channel = adminChannels.find(c => c.id === channelId);
         const cleanName = (channel?.name || `Chat_${channelId.slice(0, 6)}`).replace(/[\/\\:?*"<>|]/g, '');
         const lines = [`AUDITORIA - ${channel?.name || channelId}`, '', ...messages.map(m =>
-          `[${new Date(m.created_at).toLocaleString('pt-BR')}] ${m.sender_nome}: ${m.metadata?.deleted ? '[APAGADA] ' : ''}${m.texto}`
+          `[${formatPortalDateTime(m.created_at)}] ${m.sender_nome}: ${m.metadata?.deleted ? '[APAGADA] ' : ''}${m.texto}`
         )];
         zip.file(`Auditoria_${cleanName}_${channelId.slice(0, 8)}.txt`, lines.join('\n'));
       });
@@ -776,7 +777,7 @@ export default function ConfiguracoesPage() {
 
   const dataUltimaLimpeza = useMemo(() => {
     const ultimoRegisto = systemLogs.find(log => log.acao === 'Limpeza de Base de Dados');
-    return ultimoRegisto ? new Date(ultimoRegisto.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Não identificada nos registros carregados';
+    return ultimoRegisto ? formatPortalDateTime(ultimoRegisto.created_at) : 'Não identificada nos registros carregados';
   }, [systemLogs]);
 
   if (isLoading || !isMounted) {
@@ -1722,8 +1723,7 @@ export default function ConfiguracoesPage() {
                             {currentLogs.map((log) => (
                               <tr key={log.id} className="hover:bg-[var(--surface-hover)] transition-colors">
                                 <td className="px-5 py-3.5 font-medium" style={{ color: 'var(--text-muted)' }}>
-                                  {new Date(log.created_at).toLocaleDateString('pt-BR')} às{' '}
-                                  {new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  {formatPortalDateTime(log.created_at)}
                                 </td>
                                 <td className="px-5 py-3.5 font-semibold">{log.autor_nome}</td>
                                 <td className="px-5 py-3.5">

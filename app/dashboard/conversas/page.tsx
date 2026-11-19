@@ -15,7 +15,8 @@ import {
   type GameKind,
 } from '@/app/lib/chatGames';
 import { getRealUserStatus, isDoNotDisturb, STATUS_OPTIONS, type UserStatusType } from '../../lib/chatPresence';
-import { playPortalSound } from '../../lib/notificationSound';
+import { playBuzzSentSound, playPortalSound } from '../../lib/notificationSound';
+import { formatPortalDate, formatPortalTime, portalDayKey, serverNowDate, serverNowIso, serverNowMs } from '@/app/lib/serverClock';
 import { useSignOut } from '@/app/lib/useSignOut';
 
 import ModalShell from '../ModalShell';
@@ -87,10 +88,14 @@ const getInitials = (name: string) => {
 };
 
 const getDateLabel = (dateStr: string) => {
-  const msgDate = new Date(dateStr); const today = new Date(); const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
-  if (msgDate.toDateString() === today.toDateString()) return 'Hoje';
-  if (msgDate.toDateString() === yesterday.toDateString()) return 'Ontem';
-  return msgDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const msgDay = portalDayKey(dateStr);
+  const now = serverNowDate();
+  const todayDay = portalDayKey(now);
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const yesterdayDay = portalDayKey(yesterday);
+  if (msgDay && msgDay === todayDay) return 'Hoje';
+  if (msgDay && msgDay === yesterdayDay) return 'Ontem';
+  return formatPortalDate(dateStr);
 };
 
 const formatGroupMembers = (members: Member[], currentUserId: string) => {
@@ -102,7 +107,7 @@ const formatGroupMembers = (members: Member[], currentUserId: string) => {
 };
 
 const mapDbToMessage = (dbMsg: MessageRow): Message => ({
-  id: dbMsg.id, canal_id: dbMsg.canal_id, sender_id: dbMsg.sender_id, sender: dbMsg.sender_nome, text: dbMsg.texto, time: new Date(dbMsg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+  id: dbMsg.id, canal_id: dbMsg.canal_id, sender_id: dbMsg.sender_id, sender: dbMsg.sender_nome, text: dbMsg.texto, time: formatPortalTime(dbMsg.created_at),
   dateLabel: getDateLabel(dbMsg.created_at), type: dbMsg.tipo || 'text', status: 'sent', mediaUrl: dbMsg.metadata?.mediaUrl, fileName: dbMsg.metadata?.fileName, fileSize: dbMsg.metadata?.fileSize,
   eventDetails: dbMsg.metadata?.eventDetails, acceptedBy: dbMsg.metadata?.acceptedBy || [], lidoPor: dbMsg.metadata?.lidoPor || [], replyTo: dbMsg.metadata?.replyTo, created_at: dbMsg.created_at, deleted: dbMsg.metadata?.deleted || false, metadata: dbMsg.metadata
 });
@@ -135,8 +140,16 @@ export default function ConversasPage() {
   const focusedScroll=useRef<string|null>(null);
   const presence=useContext(PortalPresenceContext);
   const userStatus=presence.status;
-  const [presenceTime,tickPresence]=useState(()=>Date.now());
-  useEffect(()=>{const timer=setInterval(()=>tickPresence(Date.now()),10000);return()=>clearInterval(timer);},[]);
+  const [presenceTime, tickPresence] = useState(() => serverNowMs());
+  useEffect(() => {
+    const syncTick = () => tickPresence(serverNowMs());
+    const timer = setInterval(syncTick, 10000);
+    window.addEventListener('doodoo:clock_synced', syncTick);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('doodoo:clock_synced', syncTick);
+    };
+  }, []);
   const [teamMembers, setTeamMembers] = useState<DBProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
@@ -156,8 +169,10 @@ export default function ConversasPage() {
   const inputFieldRef = useRef<HTMLTextAreaElement>(null);
   const activeChatIdRef = useRef<string | null>(null);
   const pendingChatIdRef = useRef<string | null>(null);
+  const channelsRef = useRef<ChatChannel[]>([]);
 
   useEffect(() => { activeChatIdRef.current = activeChatId; }, [activeChatId]);
+  useEffect(() => { channelsRef.current = channels; }, [channels]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -293,7 +308,7 @@ export default function ConversasPage() {
         if (perfilAtual) {
           setCurrentUser(perfilAtual);
 
-          const seteDias = new Date(); seteDias.setDate(seteDias.getDate() - 7);
+          const seteDias = serverNowDate(); seteDias.setDate(seteDias.getDate() - 7);
 
           const [equipeRes, canaisRes, ultimasMsgsRes] = await Promise.all([
             supabase.from('doodoo_perfis').select('*').eq('status', 'ativo'),
@@ -356,7 +371,7 @@ export default function ConversasPage() {
               lastMsgText = c.is_direct ? 'Iniciar conversa' : `${listaMembros.length} participantes`;
             }
 
-            const lastMsgTime = lastMsgObj ? new Date(lastMsgObj.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+            const lastMsgTime = lastMsgObj ? formatPortalTime(lastMsgObj.created_at) : '';
 
             return {
               id: c.id, name: cleanName, isGroup: c.is_group, isDirect: c.is_direct, sector: c.setor, foto_url: c.foto_url,
@@ -434,15 +449,23 @@ export default function ConversasPage() {
 
   useEffect(() => {
     const handleSwitchChat = async (event: Event) => {
-      const detail = (event as CustomEvent<{chatId:string;messageId?:string}>).detail;
+      const detail = (event as CustomEvent<{chatId:string;messageId?:string;focusInput?:boolean}>).detail;
       const id=detail.chatId;
       focusedScroll.current=null;setFocusedMessageId(detail.messageId || null);
       if (!id) return;
+
+      const focusComposerSoon = () => {
+        if (!detail.focusInput) return;
+        setTimeout(() => {
+          inputFieldRef.current?.focus();
+        }, 120);
+      };
 
       if (channels.length > 0) {
         if (channels.some(c => c.id === id)) {
           setActiveChatId(id);
           if (typeof window !== 'undefined') window.history.replaceState(null, '', `/dashboard/conversas?chatId=${id}`);
+          focusComposerSoon();
         } else {
           const { data: missingChannel } = await supabase.from('doodoo_canais').select('*').eq('id', id).single();
           if (missingChannel) {
@@ -453,11 +476,12 @@ export default function ConversasPage() {
              const mapped: ChatChannel = {
                 id: missingChannel.id, name: cleanName, isGroup: missingChannel.is_group, isDirect: missingChannel.is_direct, sector: missingChannel.setor,
                 foto_url: missingChannel.foto_url, unread: 0, members: missingChannel.membros, lastMessage: 'Nova conversa iniciada',
-                lastMessageTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), updatedAt: new Date().toISOString()
+                lastMessageTime: formatPortalTime(serverNowDate()), updatedAt: serverNowIso()
              };
              setChannels(prev => [mapped, ...prev.filter(c=>c.id!==mapped.id)].sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()));
              setActiveChatId(id);
              if (typeof window !== 'undefined') window.history.replaceState(null, '', `/dashboard/conversas?chatId=${id}`);
+             focusComposerSoon();
           }
         }
       } else {
@@ -480,7 +504,7 @@ export default function ConversasPage() {
     throw new Error('A mensagem foi alterada em outra sessão. Tente novamente.');
   },[]);
   const fetchMessagesForActiveChannel = useCallback((channelId: string) => {
-    const seteDias = new Date();
+    const seteDias = serverNowDate();
     seteDias.setDate(seteDias.getDate() - 7);
 
     return supabase
@@ -590,6 +614,24 @@ export default function ConversasPage() {
            });
         });
 
+        // Redundant Spark-style Buzz trigger inside chat view (ChatAttention deduplicates by message ID)
+        // so the modal & chime NEVER miss even if layout's realtime socket is reconnecting.
+        if (incoming.metadata?.buzz === true && !incoming.deleted && incoming.sender_id !== currentUser.user_id) {
+          const targetChan = channelsRef.current.find((c) => c.id === incoming.canal_id);
+          window.dispatchEvent(
+            new CustomEvent('doodoo:chat_buzz', {
+              detail: {
+                id: incoming.id,
+                channelId: incoming.canal_id,
+                senderId: incoming.sender_id,
+                sender: incoming.sender,
+                channelName: targetChan?.isGroup ? targetChan.name : undefined,
+                sentAt: incoming.created_at,
+              },
+            })
+          );
+        }
+
         if (incoming.canal_id === currentActiveId) {
           setActiveMessages(prev => {
             if (prev.some(m => m.id === incoming.id)) return prev;
@@ -628,7 +670,7 @@ export default function ConversasPage() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'doodoo_perfis' }, (payload) => {
         const updatedProfile = payload.new as DBProfile;
         setTeamMembers(prev => prev.map(m => m.user_id === updatedProfile.user_id ? { ...m, ...updatedProfile } : m));
-        tickPresence(Date.now());
+        tickPresence(serverNowMs());
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doodoo_canais' }, (payload) => {
         const newChannel = payload.new;
@@ -640,7 +682,7 @@ export default function ConversasPage() {
             const mapped: ChatChannel = {
               id: newChannel.id, name: cleanName, isGroup: newChannel.is_group, isDirect: newChannel.is_direct, sector: newChannel.setor,
               foto_url: newChannel.foto_url, unread: 1, members: newChannel.membros, lastMessage: 'Conversa iniciada',
-              lastMessageTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), updatedAt: newChannel.created_at
+              lastMessageTime: formatPortalTime(newChannel.created_at || serverNowDate()), updatedAt: newChannel.created_at || serverNowIso()
             };
             const result = [mapped, ...prev];
             return result.sort((a, b) => {
@@ -698,8 +740,9 @@ export default function ConversasPage() {
     if (!currentUser || !requestedChannelId) return false;
 
     let targetChannelId = requestedChannelId;
-    const timeFormatted = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const nowIso = new Date().toISOString();
+    const nowDate = serverNowDate();
+    const timeFormatted = formatPortalTime(nowDate);
+    const nowIso = nowDate.toISOString();
     const tempId = retryId || crypto.randomUUID();
     const replyData = retryId ? metadata.replyTo : replyingTo ? { id: replyingTo.id, sender: replyingTo.sender, text: replyingTo.text } : undefined;
 
@@ -733,12 +776,20 @@ export default function ConversasPage() {
        return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
     }));
 
-    const outgoing:MessageRow={
-        id: tempId, canal_id: targetChannelId, sender_id: currentUser.user_id, sender_nome: currentUser.nome, texto: texto, tipo: tipo,
-        metadata: { ...metadata, lidoPor: [currentUser.nome], replyTo: replyData },created_at:nowIso
+    // Omit created_at on insert so PostgreSQL DEFAULT now() always stamps the canonical server timestamp,
+    // preventing collaborator PC clock skew from corrupting message order or displayed times.
+    const dbInsertPayload = {
+      id: tempId,
+      canal_id: targetChannelId,
+      sender_id: currentUser.user_id,
+      sender_nome: currentUser.nome,
+      texto: texto,
+      tipo: tipo,
+      metadata: { ...metadata, lidoPor: [currentUser.nome], replyTo: replyData },
     };
+    const outgoing: MessageRow = { ...dbInsertPayload, created_at: nowIso };
     const recoverable=retainOutgoing(currentUser.user_id,outgoing);
-    let { data, error } = await supabase.from('doodoo_mensagens').insert([outgoing]).select().single();
+    let { data, error } = await supabase.from('doodoo_mensagens').insert([dbInsertPayload]).select().single();
 
     if(error?.code==='23505'){const existing=await supabase.from('doodoo_mensagens').select('*').eq('id',tempId).single();if(existing.data?.sender_id===currentUser.user_id&&existing.data?.canal_id===targetChannelId&&existing.data?.texto===texto){data=existing.data;error=null;}}
     if (data && !error) {
@@ -749,6 +800,11 @@ export default function ConversasPage() {
         if (!prev.some(m => m.id === tempId)) return [...prev,confirmedMsg];
         return prev.map(m => m.id === tempId ? confirmedMsg : m);
       });
+      setChannels(prev => prev.map(c => c.id === targetChannelId ? {
+        ...c,
+        lastMessageTime: confirmedMsg.time,
+        updatedAt: confirmedMsg.created_at,
+      } : c));
       return true;
     } else {
       setActiveMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'error' } : m));
@@ -770,20 +826,59 @@ export default function ConversasPage() {
   const handleSendBuzz = async () => {
     if (!currentUser || !activeChatId) return;
     if (activeChat?.name === 'Geral' && !isCurrentAdmin) return;
-    const now = new Date().getTime();
+    const now = serverNowMs();
     const until = buzzCooldownRef.current[activeChatId] || 0;
     if (now < until) {
       const remaining = Math.ceil((until - now) / 1000);
       notifyBell('Aguarde um momento', `Você já vibrou a tela nesta conversa. Aguarde ${remaining}s para enviar novamente.`);
       return;
     }
+    let resolvedChannelId = activeChatId;
+    try {
+      resolvedChannelId = await resolveChannel(activeChatId);
+    } catch {
+      notifyBell('Conversa não iniciada', 'Não foi possível chamar atenção agora. Tente novamente.');
+      return;
+    }
     const nextUntil = now + BUZZ_COOLDOWN_MS;
+    buzzCooldownRef.current[resolvedChannelId] = nextUntil;
     buzzCooldownRef.current[activeChatId] = nextUntil;
-    setBuzzCooldownUntil((prev) => ({ ...prev, [activeChatId]: nextUntil }));
-    const sent = await sendToDatabase('text', 'Chamou sua atenção!', { buzz: true }, undefined, activeChatId);
+    setBuzzCooldownUntil((prev) => ({ ...prev, [activeChatId]: nextUntil, [resolvedChannelId]: nextUntil }));
+
+    const buzzId = crypto.randomUUID();
+    const recipientIds = (activeChat?.members || [])
+      .map((m) => m.user_id)
+      .filter((uid) => uid && uid !== currentUser.user_id);
+
+    // 1. Fire instant Realtime Broadcast (<100ms delivery to modal + sound on recipient's screen)
+    window.dispatchEvent(
+      new CustomEvent('doodoo:send_buzz_broadcast', {
+        detail: {
+          id: buzzId,
+          channelId: resolvedChannelId,
+          channelName: activeChat?.isGroup ? activeChat.name : undefined,
+          senderId: currentUser.user_id,
+          sender: currentUser.nome,
+          recipientIds,
+          sentAt: serverNowIso(),
+        },
+      })
+    );
+    playBuzzSentSound(currentUser.user_id);
+
+    // 2. Persist in doodoo_mensagens (also triggers postgres_changes as guaranteed fallback)
+    const sent = await sendToDatabase('text', 'Chamou sua atenção!', { buzz: true }, buzzId, resolvedChannelId);
     if (!sent) {
+      buzzCooldownRef.current[resolvedChannelId] = 0;
       buzzCooldownRef.current[activeChatId] = 0;
-      setBuzzCooldownUntil((prev) => ({ ...prev, [activeChatId]: 0 }));
+      setBuzzCooldownUntil((prev) => ({ ...prev, [activeChatId]: 0, [resolvedChannelId]: 0 }));
+    } else {
+      notifyBell(
+        'Chamada de atenção enviada',
+        activeChat?.isGroup
+          ? `Você vibrou a tela dos participantes em “${activeChat.name}”.`
+          : `Você vibrou a tela de ${activeChat?.name || 'seu colega'}.`
+      );
     }
   };
 
